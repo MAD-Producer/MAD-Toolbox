@@ -26,6 +26,18 @@ cargo test --manifest-path src-tauri/Cargo.toml
 Use `npm run tauri:dev` for interactive testing. Platform packaging
 requirements and commands are documented in `README.md` and `docs/`.
 
+## Code formatting
+
+The repository uses `.editorconfig` for editor-independent whitespace settings
+and `.prettierrc` for TypeScript, TSX, CSS, JSON and other supported text files.
+The Prettier rules preserve the existing two-space indentation, double quotes,
+semicolons and no-trailing-comma style.
+
+Run `npm run format` to format supported files changed relative to `HEAD`, or
+`npm run format:check` to check them without writing changes. CI applies the
+same check to files changed by a pull request or push. Rust code continues to
+use `cargo fmt`.
+
 ## Pull requests
 
 Keep changes focused and explain:
