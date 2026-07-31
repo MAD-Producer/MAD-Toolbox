@@ -9,7 +9,6 @@
   "bracketSpacing": true,
   "bracketSameLine": false,
   "arrowParens": "always",
-  "objectWrap": "preserve",
-  "endOfLine": "auto",
+  "endOfLine": "lf",
   "proseWrap": "preserve"
 }
