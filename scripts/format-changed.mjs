@@ -11,6 +11,10 @@ function runGit(args) {
 }
 
 function collectChangedFiles() {
+  if (process.env.FORMAT_ALL === "1") {
+    return ["."];
+  }
+
   const base = process.env.FORMAT_BASE?.trim();
   if (base && !/^0+$/u.test(base)) {
     return runGit(["diff", "--name-only", "--diff-filter=ACMR", base, "HEAD"]);
@@ -32,7 +36,7 @@ const mode = process.argv.includes("--write") ? "--write" : "--check";
 const prettierCli = fileURLToPath(
   new URL("../node_modules/prettier/bin/prettier.cjs", import.meta.url)
 );
-const result = spawnSync(process.execPath, [prettierCli, mode, "--ignore-unknown", ...files], {
+const result = spawnSync(process.execPath, [prettierCli, mode, "--ignore-unknown", "--", ...files], {
   stdio: "inherit"
 });
 
