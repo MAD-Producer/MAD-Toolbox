@@ -1134,8 +1134,7 @@ button:disabled {
 }
 
 .file-row button,
-.inspection-card header button,
-.console-actions button {
+.inspection-card header button {
   display: grid;
   place-items: center;
   color: #7f858e;
@@ -1885,55 +1884,6 @@ button:disabled {
   line-height: 1.45;
 }
 
-.log-console {
-  width: 100%;
-  overflow: hidden;
-  color: #d8dbe0;
-  border: 1px solid #282c32;
-  border-radius: 10px;
-  background: #17191d;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.16);
-}
-
-.console-header {
-  display: flex;
-  height: 34px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 9px;
-  border-bottom: 1px solid #292d33;
-  background: #1e2126;
-}
-
-.console-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: #c3c7cd;
-  border: 0;
-  background: transparent;
-  font-size: 9px;
-  font-weight: 600;
-}
-
-.log-count {
-  padding: 2px 5px;
-  color: #969ba4;
-  border-radius: 99px;
-  background: #2b2f35;
-  font-size: 7px;
-}
-
-.console-actions {
-  display: flex;
-  gap: 5px;
-}
-
-.console-actions button {
-  width: 24px;
-  height: 23px;
-}
-
 .copy-success {
   color: #58c38d !important;
   background: #20382f !important;
@@ -1963,82 +1913,6 @@ button:disabled {
 
 .command-copy-feedback {
   color: var(--success);
-}
-
-.console-body {
-  height: min(560px, calc(100vh - 190px));
-  min-height: 320px;
-  padding: 14px 16px 18px;
-  overflow: auto;
-  font: 10px/1.7 "SFMono-Regular", Consolas, monospace;
-}
-
-.log-console.maximized {
-  position: fixed;
-  z-index: 80;
-  inset: 42px 26px 26px 254px;
-  margin: 0;
-  border: 1px solid #3a3d45;
-  border-radius: 13px;
-  box-shadow: 0 24px 70px rgba(17, 18, 23, 0.36);
-}
-
-.log-console.maximized .console-body {
-  height: calc(100% - 38px);
-  padding: 16px 18px;
-  font-size: 11px;
-  line-height: 1.75;
-}
-
-.log-console.maximized .log-line {
-  grid-template-columns: 82px 72px minmax(0, 1fr);
-}
-
-.console-empty {
-  padding: 25px 0;
-  color: #686e77;
-  text-align: center;
-}
-
-.log-line {
-  display: grid;
-  grid-template-columns: 58px 55px 1fr;
-  gap: 7px;
-  min-width: 0;
-}
-
-.log-line.stderr,
-.log-line.stdout {
-  color: #c4c8cf;
-}
-
-.log-line.severity-command {
-  color: #b7adff;
-}
-
-.log-line.severity-error {
-  color: #ff8f91;
-}
-
-.log-line.severity-warning {
-  color: #e9bd6d;
-}
-
-.log-line.severity-success {
-  color: #70d6a7;
-}
-
-.log-line.severity-progress {
-  color: #72c6e8;
-}
-
-.log-line.severity-info.system {
-  color: #aaa3ff;
-}
-
-.log-time,
-.log-tool {
-  color: #656b74;
 }
 
 .toast {

@@ -8,7 +8,6 @@ import {
   Music2,
   ScrollText,
   Settings,
-  SquareTerminal,
   SlidersHorizontal
 } from "lucide-react";
 import { useState } from "react";
@@ -16,8 +15,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { useBackend } from "./hooks/useBackend";
 import type {
   MediaInspection,
-  DiagnosticExportRequest,
   DiagnosticExportResult,
+  LogExportRequest,
   MusicdlPlaylistRequest,
   MusicdlSearchRequest,
   NavPage,
@@ -31,10 +30,10 @@ import { MediaPage } from "./pages/MediaPage";
 import { TasksPage } from "./pages/TasksPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { LicensesPage } from "./pages/LicensesPage";
-import { LogsPage } from "./pages/LogsPage";
 import { MusicPage } from "./pages/MusicPage";
 import appIcon from "./assets/app-icon.png";
 import { platformLabel } from "./lib/platform";
+import packageInfo from "../package.json";
 
 const navItems: Array<{
   page: NavPage;
@@ -47,8 +46,7 @@ const navItems: Array<{
   { page: "music", label: "音乐下载", icon: Music2 },
   { page: "media", label: "媒体转换", icon: SlidersHorizontal },
   { page: "streams", label: "封装与抽流", icon: ListVideo },
-  { page: "tasks", label: "任务中心", icon: Gauge },
-  { page: "logs", label: "日志终端", icon: SquareTerminal }
+  { page: "tasks", label: "任务中心", icon: Gauge }
 ];
 
 const utilityItems: Array<{
@@ -87,15 +85,6 @@ export default function App() {
     } catch (error) {
       showError(error);
       throw error;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await invoke("bbdown_logout");
-      await backend.refreshAuth();
-    } catch (error) {
-      showError(error);
     }
   };
 
@@ -188,12 +177,9 @@ export default function App() {
     if (page === "bilibili") {
       return (
         <BilibiliPage
-          auth={backend.auth}
           bbdownAvailable={backend.dependencyMap.get("bbdown")?.available ?? false}
           loginQr={backend.loginQr}
-          defaultOutputDirectory={backend.settings.defaultOutputDirectory}
           onRun={run}
-          onLogout={logout}
         />
       );
     }
@@ -229,9 +215,9 @@ export default function App() {
           jobs={backend.jobs}
           logs={backend.logs}
           onCancel={(jobId) => void backend.cancelJob(jobId).catch(showError)}
-          onExport={async (request: DiagnosticExportRequest) => {
+          onExport={async (request: LogExportRequest) => {
             try {
-              return await invoke<DiagnosticExportResult>("export_job_diagnostics", { request });
+              return await invoke<DiagnosticExportResult>("export_job_log", { request });
             } catch (error) {
               showError(error);
               throw error;
@@ -253,9 +239,6 @@ export default function App() {
         />
       );
     }
-    if (page === "logs") {
-      return <LogsPage logs={backend.logs} onClear={backend.clearLogs} />;
-    }
     return <LicensesPage />;
   };
 
@@ -267,7 +250,7 @@ export default function App() {
           <span className="brand-icon"><img src={appIcon} alt="" /></span>
           <span>
             <strong>MAD Toolbox</strong>
-            <small>v0.5.0 · {distributionMode}</small>
+            <small>v{packageInfo.version} · {distributionMode}</small>
           </span>
         </div>
         <nav>

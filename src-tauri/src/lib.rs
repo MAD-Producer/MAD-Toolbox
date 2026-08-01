@@ -19,6 +19,35 @@ use tokio::{
 };
 use uuid::Uuid;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+fn hide_async_command_window(command: &mut Command) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.as_std_mut().creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = command;
+}
+
+fn hide_std_command_window(command: &mut std::process::Command) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = command;
+}
+
+fn background_command(program: impl AsRef<std::ffi::OsStr>) -> Command {
+    let mut command = Command::new(program);
+    hide_async_command_window(&mut command);
+    command
+}
+
 #[derive(Default)]
 struct AppState {
     cancel_senders: Mutex<HashMap<String, oneshot::Sender<()>>>,
@@ -97,7 +126,6 @@ struct RunRequest {
     tool: ToolName,
     args: Vec<String>,
     working_dir: Option<String>,
-    allow_unauthenticated: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -163,11 +191,12 @@ struct DiagnosticExportResult {
     path: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct AuthStatus {
-    authenticated: bool,
-    session_path: Option<String>,
+struct LogExportRequest {
+    job: DiagnosticJob,
+    logs: Vec<DiagnosticLog>,
+    output_path: String,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -281,9 +310,17 @@ fn command_path() -> OsString {
         }
         if let Some(local) = env::var_os("LOCALAPPDATA") {
             let local = PathBuf::from(local);
-            paths.push(local.join("Microsoft").join("WindowsApps"));
-            paths.push(local.join("Programs").join("Python").join("Scripts"));
+            let python_root = local.join("Programs").join("Python");
+            paths.push(python_root.join("Scripts"));
+            if let Ok(entries) = std::fs::read_dir(&python_root) {
+                for entry in entries.flatten().filter(|entry| entry.path().is_dir()) {
+                    paths.push(entry.path());
+                    paths.push(entry.path().join("Scripts"));
+                }
+            }
+            paths.push(local.join("Microsoft").join("WinGet").join("Links"));
             paths.push(local.join("pipx").join("bin"));
+            paths.push(local.join("Microsoft").join("WindowsApps"));
         }
         if let Some(app_data) = env::var_os("APPDATA") {
             let python_root = PathBuf::from(app_data).join("Python");
@@ -322,6 +359,15 @@ fn find_system_binary(name: &str) -> Option<PathBuf> {
     let filename = executable_filename(name);
     for directory in env::split_paths(&command_path()) {
         let candidate = directory.join(&filename);
+        #[cfg(target_os = "windows")]
+        if matches!(name.to_ascii_lowercase().as_str(), "python" | "python3")
+            && directory
+                .file_name()
+                .and_then(|value| value.to_str())
+                .is_some_and(|value| value.eq_ignore_ascii_case("WindowsApps"))
+        {
+            continue;
+        }
         if candidate.is_file() {
             return Some(candidate);
         }
@@ -343,6 +389,15 @@ fn find_distinct_system_binary(name: &str, bundled: Option<&Path>) -> Option<Pat
     let filename = executable_filename(name);
     for directory in env::split_paths(&command_path()) {
         let candidate = directory.join(&filename);
+        #[cfg(target_os = "windows")]
+        if matches!(name.to_ascii_lowercase().as_str(), "python" | "python3")
+            && directory
+                .file_name()
+                .and_then(|value| value.to_str())
+                .is_some_and(|value| value.eq_ignore_ascii_case("WindowsApps"))
+        {
+            continue;
+        }
         if candidate.is_file()
             && !bundled
                 .map(|bundled| same_binary(&candidate, bundled))
@@ -514,7 +569,9 @@ fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
         );
     }
     if let Some(pipx) = find_system_binary("pipx") {
-        if let Ok(output) = std::process::Command::new(pipx)
+        let mut command = std::process::Command::new(pipx);
+        hide_std_command_window(&mut command);
+        if let Ok(output) = command
             .args(["environment", "--value", "PIPX_LOCAL_VENVS"])
             .output()
         {
@@ -572,6 +629,7 @@ fn musicdl_sessions_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
 async fn tool_version(path: &Path, tool: &ToolName) -> Option<String> {
     let mut command = Command::new(path);
+    hide_async_command_window(&mut command);
     command.env("PATH", command_path());
     command.kill_on_drop(true);
     command.arg(if matches!(tool, ToolName::Bbdown) {
@@ -629,7 +687,7 @@ fn app_settings(app: AppHandle) -> AppSettings {
 }
 
 fn load_app_settings(app: &AppHandle) -> AppSettings {
-    settings_path(&app)
+    settings_path(app)
         .ok()
         .and_then(|path| std::fs::read(path).ok())
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
@@ -661,8 +719,8 @@ fn save_app_settings(app: AppHandle, mut settings: AppSettings) -> Result<AppSet
     Ok(settings)
 }
 
-fn bbdown_session_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let path = app_data_dir(app)?.join("bbdown-session");
+fn bbdown_working_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let path = app_data_dir(app)?.join("bbdown");
     std::fs::create_dir_all(&path).map_err(|error| error.to_string())?;
     #[cfg(unix)]
     {
@@ -671,215 +729,6 @@ fn bbdown_session_dir(app: &AppHandle) -> Result<PathBuf, String> {
             .map_err(|error| error.to_string())?;
     }
     Ok(path)
-}
-
-fn bbdown_auth_files(directory: &Path) -> Vec<PathBuf> {
-    ["BBDown.data", "BBDownWeb.data"]
-        .iter()
-        .map(|name| directory.join(name))
-        .collect()
-}
-
-const BBDOWN_KEYCHAIN_ACCOUNT: &str = "BBDown";
-const BBDOWN_KEYCHAIN_SERVICE: &str = "org.madproducer.toolbox.bbdown";
-const SETTINGS_KEYCHAIN_SERVICE: &str = "org.madproducer.toolbox.settings.v1";
-#[cfg(target_os = "windows")]
-const SETTINGS_ENCRYPTION_KEY_ACCOUNT: &str = "__encryption-key-v1";
-
-fn validate_secure_settings_key(key: &str) -> Result<(), String> {
-    if key.is_empty()
-        || key.len() > 80
-        || !key
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || ".-_".contains(character))
-    {
-        return Err("无效的安全设置键".into());
-    }
-    Ok(())
-}
-
-#[tauri::command]
-fn secure_settings_read(app: AppHandle, key: String) -> Result<Option<String>, String> {
-    validate_secure_settings_key(&key)?;
-    #[cfg(target_os = "windows")]
-    {
-        use aes_gcm::{
-            aead::{Aead, KeyInit},
-            Aes256Gcm, Nonce,
-        };
-        let path = windows_secure_settings_path(&app, &key)?;
-        if path.is_file() {
-            let payload =
-                std::fs::read(&path).map_err(|error| format!("无法读取加密设置：{error}"))?;
-            if payload.len() < 14 || payload[0] != 1 {
-                return Err("加密设置格式无效".into());
-            }
-            let master_key = windows_settings_master_key(false)?
-                .ok_or_else(|| "系统凭据管理器中的设置密钥不存在".to_string())?;
-            let cipher = Aes256Gcm::new_from_slice(&master_key)
-                .map_err(|_| "无法初始化设置解密器".to_string())?;
-            let plain = cipher
-                .decrypt(Nonce::from_slice(&payload[1..13]), &payload[13..])
-                .map_err(|_| "无法解密设置，系统凭据可能已被删除".to_string())?;
-            return String::from_utf8(plain)
-                .map(Some)
-                .map_err(|_| "加密设置不是有效文本".to_string());
-        }
-    }
-    #[cfg(not(target_os = "windows"))]
-    let _ = app;
-    let entry = keyring::Entry::new(SETTINGS_KEYCHAIN_SERVICE, &key)
-        .map_err(|error| format!("无法访问系统凭据管理器：{error}"))?;
-    match entry.get_password() {
-        Ok(value) => Ok(Some(value)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(error) => Err(format!("无法从系统凭据管理器读取加密设置：{error}")),
-    }
-}
-
-#[tauri::command]
-fn secure_settings_write(app: AppHandle, key: String, value: String) -> Result<(), String> {
-    validate_secure_settings_key(&key)?;
-    if value.len() > 524_288 {
-        return Err("设置内容超过 512 KiB，无法保存".into());
-    }
-    #[cfg(target_os = "windows")]
-    {
-        use aes_gcm::{
-            aead::{Aead, KeyInit},
-            Aes256Gcm, Nonce,
-        };
-        let master_key = windows_settings_master_key(true)?
-            .ok_or_else(|| "无法创建 Windows 设置加密密钥".to_string())?;
-        let cipher = Aes256Gcm::new_from_slice(&master_key)
-            .map_err(|_| "无法初始化设置加密器".to_string())?;
-        let mut nonce = [0_u8; 12];
-        getrandom::fill(&mut nonce).map_err(|error| format!("无法生成设置随机数：{error}"))?;
-        let encrypted = cipher
-            .encrypt(Nonce::from_slice(&nonce), value.as_bytes())
-            .map_err(|_| "无法加密设置".to_string())?;
-        let mut payload = Vec::with_capacity(13 + encrypted.len());
-        payload.push(1);
-        payload.extend_from_slice(&nonce);
-        payload.extend_from_slice(&encrypted);
-        let path = windows_secure_settings_path(&app, &key)?;
-        let temporary = path.with_extension(format!("{}.tmp", Uuid::new_v4()));
-        std::fs::write(&temporary, payload)
-            .map_err(|error| format!("无法写入加密设置：{error}"))?;
-        if path.exists() {
-            std::fs::remove_file(&path).map_err(|error| format!("无法更新加密设置：{error}"))?;
-        }
-        return std::fs::rename(&temporary, &path)
-            .map_err(|error| format!("无法保存加密设置：{error}"));
-    }
-    #[cfg(not(target_os = "windows"))]
-    let _ = app;
-    #[cfg(not(target_os = "windows"))]
-    keyring::Entry::new(SETTINGS_KEYCHAIN_SERVICE, &key)
-        .map_err(|error| format!("无法访问系统凭据管理器：{error}"))?
-        .set_password(&value)
-        .map_err(|error| format!("无法将设置加密保存到系统凭据管理器：{error}"))
-}
-
-#[tauri::command]
-fn secure_settings_delete(app: AppHandle, key: String) -> Result<(), String> {
-    validate_secure_settings_key(&key)?;
-    #[cfg(target_os = "windows")]
-    {
-        let path = windows_secure_settings_path(&app, &key)?;
-        if path.is_file() {
-            std::fs::remove_file(path).map_err(|error| format!("无法删除加密设置：{error}"))?;
-        }
-    }
-    #[cfg(not(target_os = "windows"))]
-    let _ = app;
-    let entry = keyring::Entry::new(SETTINGS_KEYCHAIN_SERVICE, &key)
-        .map_err(|error| format!("无法访问系统凭据管理器：{error}"))?;
-    match entry.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(error) => Err(format!("无法从系统凭据管理器删除加密设置：{error}")),
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn windows_secure_settings_path(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
-    let directory = app_data_dir(app)?.join("secure-settings");
-    std::fs::create_dir_all(&directory)
-        .map_err(|error| format!("无法创建加密设置目录：{error}"))?;
-    Ok(directory.join(format!("{key}.bin")))
-}
-
-#[cfg(target_os = "windows")]
-fn windows_settings_master_key(create: bool) -> Result<Option<[u8; 32]>, String> {
-    let entry = keyring::Entry::new(SETTINGS_KEYCHAIN_SERVICE, SETTINGS_ENCRYPTION_KEY_ACCOUNT)
-        .map_err(|error| format!("无法访问 Windows 凭据管理器：{error}"))?;
-    match entry.get_password() {
-        Ok(encoded) => {
-            let decoded = BASE64
-                .decode(encoded)
-                .map_err(|_| "Windows 凭据管理器中的设置密钥无效".to_string())?;
-            decoded
-                .try_into()
-                .map(Some)
-                .map_err(|_| "Windows 凭据管理器中的设置密钥长度无效".to_string())
-        }
-        Err(keyring::Error::NoEntry) if create => {
-            let mut key = [0_u8; 32];
-            getrandom::fill(&mut key)
-                .map_err(|error| format!("无法生成 Windows 设置密钥：{error}"))?;
-            entry
-                .set_password(&BASE64.encode(key))
-                .map_err(|error| format!("无法保存 Windows 设置密钥：{error}"))?;
-            Ok(Some(key))
-        }
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(error) => Err(format!("无法读取 Windows 设置密钥：{error}")),
-    }
-}
-
-fn read_bbdown_cookie() -> Option<String> {
-    let value = keyring::Entry::new(BBDOWN_KEYCHAIN_SERVICE, BBDOWN_KEYCHAIN_ACCOUNT)
-        .ok()?
-        .get_password()
-        .ok()?;
-    (!value.is_empty()).then_some(value)
-}
-
-fn save_bbdown_cookie(cookie: &str) -> Result<(), String> {
-    keyring::Entry::new(BBDOWN_KEYCHAIN_SERVICE, BBDOWN_KEYCHAIN_ACCOUNT)
-        .map_err(|error| format!("无法访问系统凭据管理器：{error}"))?
-        .set_password(cookie)
-        .map_err(|error| format!("无法保存 BBDown 登录凭据：{error}"))
-}
-
-fn delete_bbdown_cookie() -> Result<(), String> {
-    let entry = keyring::Entry::new(BBDOWN_KEYCHAIN_SERVICE, BBDOWN_KEYCHAIN_ACCOUNT)
-        .map_err(|error| format!("无法访问系统凭据管理器：{error}"))?;
-    match entry.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(error) => Err(format!("无法删除 BBDown 登录凭据：{error}")),
-    }
-}
-
-fn is_bbdown_authenticated(app: &AppHandle) -> bool {
-    read_bbdown_cookie().is_some()
-        || bbdown_session_dir(app)
-            .map(|directory| {
-                bbdown_auth_files(&directory)
-                    .iter()
-                    .any(|path| path.is_file())
-            })
-            .unwrap_or(false)
-}
-
-fn extract_sessdata(line: &str) -> Option<String> {
-    let start = line.find("SESSDATA=")?;
-    let value = &line[start..];
-    let end = value
-        .find(|character: char| character.is_whitespace() || character == ';')
-        .unwrap_or(value.len());
-    let cookie = value[..end].trim();
-    (cookie.len() > "SESSDATA=".len()).then(|| cookie.to_string())
 }
 
 fn strip_ansi_codes(line: &str) -> String {
@@ -997,10 +846,9 @@ fn sanitize_diagnostic_text(line: &str, redact_personal_data: bool, home: Option
 }
 
 fn system_command_text(program: &str, args: &[&str]) -> Option<String> {
-    let output = std::process::Command::new(program)
-        .args(args)
-        .output()
-        .ok()?;
+    let mut command = std::process::Command::new(program);
+    hide_std_command_window(&mut command);
+    let output = command.args(args).output().ok()?;
     output
         .status
         .success()
@@ -1021,7 +869,7 @@ fn platform_system_info() -> (String, String, String, String) {
             .and_then(|value| value.parse::<u64>().ok())
             .map(|bytes| format!("{:.1} GiB", bytes as f64 / 1_073_741_824.0))
             .unwrap_or_else(|| "未知".into());
-        return (version, build, cpu, memory);
+        (version, build, cpu, memory)
     }
     #[cfg(target_os = "windows")]
     {
@@ -1041,7 +889,7 @@ fn platform_system_info() -> (String, String, String, String) {
         .and_then(|value| value.parse::<u64>().ok())
         .map(|bytes| format!("{:.1} GiB", bytes as f64 / 1_073_741_824.0))
         .unwrap_or_else(|| "未知".into());
-        return (version, build, cpu, memory);
+        (version, build, cpu, memory)
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
@@ -1120,18 +968,20 @@ async fn stream_output<R>(
 ) where
     R: tokio::io::AsyncRead + Unpin,
 {
-    let mut lines = BufReader::new(reader).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
-        if matches!(tool, ToolName::Bbdown) {
-            if let Some(cookie) = extract_sessdata(&line) {
-                let message = match save_bbdown_cookie(&cookie) {
-                    Ok(()) => "登录成功，凭据已保存到系统凭据管理器。".to_string(),
-                    Err(error) => error,
-                };
-                emit_log(&app, &job_id, &tool, "system", message);
-                continue;
-            }
+    let mut reader = BufReader::new(reader);
+    let mut bytes = Vec::new();
+    loop {
+        bytes.clear();
+        let Ok(length) = reader.read_until(b'\n', &mut bytes).await else {
+            break;
+        };
+        if length == 0 {
+            break;
         }
+        while matches!(bytes.last(), Some(b'\n' | b'\r')) {
+            bytes.pop();
+        }
+        let line = String::from_utf8_lossy(&bytes);
         // BBDown also prints an ANSI-colored QR code. The GUI presents the
         // generated PNG instead, so omit those unreadable terminal rows.
         if matches!(tool, ToolName::Bbdown)
@@ -1139,7 +989,7 @@ async fn stream_output<R>(
         {
             continue;
         }
-        emit_log(&app, &job_id, &tool, stream, redact_output_line(&line));
+        emit_log(&app, &job_id, &tool, stream, strip_ansi_codes(&line));
     }
 }
 
@@ -1165,6 +1015,7 @@ async fn spawn_job(
         let _ = std::fs::remove_file(path);
     }
     let mut command = Command::new(&executable);
+    hide_async_command_window(&mut command);
     command
         .args(&args)
         .env("PATH", command_path())
@@ -1273,9 +1124,7 @@ async fn spawn_job(
         if let Ok(mut senders) = task_app.state::<AppState>().cancel_senders.lock() {
             senders.remove(&task_job_id);
         }
-        if let Some(path) = login_qr_path {
-            let _ = std::fs::remove_file(path);
-        }
+        // Keep files generated by the CLI itself, including qrcode.png.
         emit_log(&task_app, &task_job_id, &tool, "system", message.clone());
         let _ = task_app.emit(
             "job-state",
@@ -1346,20 +1195,20 @@ async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
             install_hint: if resolved.is_none() {
                 match tool {
                     ToolName::Musicdl => Some(if cfg!(target_os = "windows") {
-                        "py -m pip install --user pipx && py -m pipx ensurepath && py -m pipx install musicdl"
+                        "py -m pip install --user --upgrade pipx; py -m pipx ensurepath; py -m pipx install musicdl"
                             .into()
                     } else {
                         "brew install python pipx && pipx ensurepath && pipx install musicdl"
                             .into()
                     }),
                     ToolName::Python => Some(if cfg!(target_os = "windows") {
-                        "winget install --id Python.Python.3.13 -e".into()
+                        "winget install --id Python.Python.3.13 -e --accept-package-agreements --accept-source-agreements".into()
                     } else {
                         "brew install python".into()
                     }),
                     ToolName::Bbdown => None,
                     _ => Some(if cfg!(target_os = "windows") {
-                        "winget install --id Gyan.FFmpeg -e；winget install --id yt-dlp.yt-dlp -e；winget install --id MediaArea.MediaInfo.CLI -e；winget install --id DenoLand.Deno -e"
+                        "请在 PowerShell 中分别使用 winget 安装 FFmpeg、yt-dlp、MediaInfo CLI 和 Deno"
                             .into()
                     } else {
                         "brew install ffmpeg yt-dlp media-info deno".into()
@@ -1372,6 +1221,41 @@ async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
         });
     }
     statuses
+}
+
+#[tauri::command]
+fn export_job_log(request: LogExportRequest) -> Result<DiagnosticExportResult, String> {
+    let output = PathBuf::from(request.output_path);
+    let parent = output
+        .parent()
+        .filter(|path| path.is_dir())
+        .ok_or_else(|| "日志导出目录不存在".to_string())?;
+    let mut text = format!(
+        "MAD Toolbox task log\njob: {}\ntool: {}\nstate: {}\nmessage: {}\n\n",
+        request.job.job_id,
+        request.job.tool.label(),
+        request.job.state,
+        redact_output_line(&request.job.message)
+    );
+    for log in request.logs {
+        let _ = writeln!(
+            text,
+            "[{}] [{}] [{}] {}",
+            log.timestamp,
+            log.tool.label(),
+            log.stream,
+            &log.line
+        );
+    }
+    let temporary = parent.join(format!(".mad-toolbox-log-{}.tmp", Uuid::new_v4()));
+    std::fs::write(&temporary, text).map_err(|error| format!("无法写入任务日志：{error}"))?;
+    if output.is_file() {
+        std::fs::remove_file(&output).map_err(|error| format!("无法覆盖任务日志：{error}"))?;
+    }
+    std::fs::rename(&temporary, &output).map_err(|error| format!("无法保存任务日志：{error}"))?;
+    Ok(DiagnosticExportResult {
+        path: output.to_string_lossy().into_owned(),
+    })
 }
 
 #[tauri::command]
@@ -1393,10 +1277,8 @@ async fn export_job_diagnostics(
         .parent()
         .filter(|path| path.is_dir())
         .ok_or_else(|| "诊断包导出目录不存在".to_string())?;
-    if output.exists() {
-        if !output.is_file() {
-            return Err("诊断包导出目标不是普通文件".into());
-        }
+    if output.exists() && !output.is_file() {
+        return Err("诊断包导出目标不是普通文件".into());
     }
     let temporary_output = parent.join(format!(".mad-toolbox-{}.tmp.zip", Uuid::new_v4()));
 
@@ -1489,7 +1371,7 @@ async fn export_job_diagnostics(
             "dependencyPathsIncluded": request.include_dependency_paths,
             "personalDataRedacted": request.redact_personal_data,
             "credentialsAlwaysRedacted": true,
-            "keychainAndTemplatesExcluded": true,
+            "secureStoreAndTemplatesExcluded": true,
         },
         "logs": logs,
     });
@@ -1556,7 +1438,7 @@ async fn export_job_diagnostics(
     std::fs::write(
         package_dir.join("README.txt"),
         "此诊断包由 MAD Toolbox 在本机生成，不会自动上传。\n\
-         诊断功能不会读取系统凭据管理器或设置模板。\n\
+         诊断功能不会读取设置模板。\n\
          Cookie、Token、密码和代理认证等凭据始终会被隐藏。\n\
          请在提交给开发者前检查其中内容。\n\
          脱敏为尽力而为：第三方工具输出、文件名或自定义参数仍可能包含个人信息。\n",
@@ -1582,7 +1464,7 @@ async fn export_job_diagnostics(
     }
 
     #[cfg(target_os = "macos")]
-    let archive_result = Command::new("/usr/bin/ditto")
+    let archive_result = background_command("/usr/bin/ditto")
         .args(["-c", "-k", "--norsrc", "--keepParent"])
         .arg(&package_dir)
         .arg(&temporary_output)
@@ -1591,7 +1473,7 @@ async fn export_job_diagnostics(
         .await
         .map_err(|error| format!("无法启动 ZIP 打包工具：{error}"));
     #[cfg(target_os = "windows")]
-    let archive_result = Command::new("tar.exe")
+    let archive_result = background_command("tar.exe")
         .args(["-a", "-c", "-f"])
         .arg(&temporary_output)
         .arg("-C")
@@ -1650,7 +1532,7 @@ async fn export_job_diagnostics(
 async fn ffmpeg_encoders(app: AppHandle) -> Result<Vec<String>, String> {
     let (ffmpeg, _) =
         resolve_tool(&app, &ToolName::Ffmpeg).ok_or_else(|| "未找到 FFmpeg".to_string())?;
-    let output = Command::new(ffmpeg)
+    let output = background_command(ffmpeg)
         .args(["-hide_banner", "-encoders"])
         .env("PATH", command_path())
         .kill_on_drop(true)
@@ -1683,31 +1565,6 @@ async fn ffmpeg_encoders(app: AppHandle) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-fn bbdown_auth_status(app: AppHandle) -> AuthStatus {
-    let directory = bbdown_session_dir(&app).ok();
-    AuthStatus {
-        authenticated: is_bbdown_authenticated(&app),
-        session_path: directory.map(|path| path.to_string_lossy().into_owned()),
-    }
-}
-
-#[tauri::command]
-fn bbdown_logout(app: AppHandle) -> Result<(), String> {
-    delete_bbdown_cookie()?;
-    let directory = bbdown_session_dir(&app)?;
-    for path in bbdown_auth_files(&directory) {
-        if path.is_file() {
-            std::fs::remove_file(path).map_err(|error| error.to_string())?;
-        }
-    }
-    let legacy_marker = directory.join(".authenticated");
-    if legacy_marker.is_file() {
-        std::fs::remove_file(legacy_marker).map_err(|error| error.to_string())?;
-    }
-    Ok(())
-}
-
-#[tauri::command]
 async fn run_tool(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -1717,14 +1574,6 @@ async fn run_tool(
         .ok_or_else(|| format!("未找到 {}，请先安装依赖", request.tool.label()))?;
     let is_login = matches!(request.tool, ToolName::Bbdown)
         && request.args.first().map(String::as_str) == Some("login");
-    if matches!(request.tool, ToolName::Bbdown)
-        && !is_login
-        && !is_bbdown_authenticated(&app)
-        && request.allow_unauthenticated != Some(true)
-    {
-        return Err("必须先登录哔哩哔哩账号".into());
-    }
-
     if matches!(request.tool, ToolName::YtDlp)
         && !request.args.iter().any(|arg| arg == "--ffmpeg-location")
     {
@@ -1740,53 +1589,17 @@ async fn run_tool(
     }
 
     let working_dir = if matches!(request.tool, ToolName::Bbdown) {
-        let session = bbdown_session_dir(&app)?;
-        if !is_login {
-            // BBDown documents the media URL as its first positional argument.
-            let option_index = if request
-                .args
-                .first()
-                .is_some_and(|value| !value.starts_with('-'))
-            {
-                1
-            } else {
-                0
-            };
-            if !request
-                .args
-                .iter()
-                .any(|arg| arg == "--cookie" || arg == "-c")
-            {
-                if let Some(cookie) = read_bbdown_cookie() {
-                    request
-                        .args
-                        .splice(option_index..option_index, ["--cookie".into(), cookie]);
-                }
-            }
-            if let Some((ffmpeg, _)) = resolve_tool(&app, &ToolName::Ffmpeg) {
-                if !request.args.iter().any(|arg| arg == "--ffmpeg-path") {
-                    request.args.splice(
-                        option_index..option_index,
-                        [
-                            "--ffmpeg-path".into(),
-                            ffmpeg.to_string_lossy().into_owned(),
-                        ],
-                    );
-                }
-            }
-            if !request.args.iter().any(|arg| arg == "--work-dir") {
-                let output = app
-                    .path()
-                    .download_dir()
-                    .unwrap_or_else(|_| app_data_dir(&app).unwrap_or_else(|_| session.clone()))
-                    .join("MAD Toolbox");
-                request.args.splice(
-                    option_index..option_index,
-                    ["--work-dir".into(), output.to_string_lossy().into_owned()],
-                );
-            }
-        }
-        Some(session)
+        let directory = if is_login || request.args.iter().any(|arg| arg == "--work-dir") {
+            bbdown_working_dir(&app)?
+        } else {
+            load_app_settings(&app)
+                .default_output_directory
+                .map(PathBuf::from)
+                .filter(|path| path.is_dir())
+                .or_else(|| app.path().download_dir().ok())
+                .unwrap_or(bbdown_working_dir(&app)?)
+        };
+        Some(directory)
     } else {
         request.working_dir.map(PathBuf::from)
     };
@@ -1872,7 +1685,7 @@ async fn musicdl_search(
             .map_err(|error| error.to_string())?;
     }
 
-    let mut child = Command::new(python)
+    let mut child = background_command(python)
         .arg(adapter)
         .arg("search")
         .arg(&request_path)
@@ -1943,7 +1756,7 @@ async fn musicdl_search(
                             &output_job_id,
                             &ToolName::Musicdl,
                             "stdout",
-                            redact_output_line(&line),
+                            strip_ansi_codes(&line),
                         );
                     }
                 }
@@ -2185,7 +1998,7 @@ async fn check_youtube_access(proxy: Option<String>) -> Result<bool, String> {
     } else {
         PathBuf::from("/usr/bin/curl")
     };
-    let mut command = Command::new(curl);
+    let mut command = background_command(curl);
     command.args([
         "--location",
         "--silent",
@@ -2379,7 +2192,7 @@ async fn inspect_media(app: AppHandle, path: String) -> Result<MediaInspection, 
         } else {
             return Err("未找到 MediaInfo 或 ffprobe".into());
         };
-    let output = Command::new(executable)
+    let output = background_command(executable)
         .args(args)
         .env("PATH", command_path())
         .output()
@@ -2402,8 +2215,21 @@ async fn inspect_media(app: AppHandle, path: String) -> Result<MediaInspection, 
 
 fn media_files_in(directory: &Path) -> Result<Vec<PathBuf>, String> {
     const EXTENSIONS: &[&str] = &[
-        "mp4", "mkv", "mov", "avi", "webm", "flv", "m4v", "ts", "m2ts", "mp3", "m4a", "aac",
-        "flac", "wav", "ogg", "opus", "aiff", "srt", "ass",
+        // Video containers and elementary streams commonly handled by FFmpeg.
+        "mp4", "mkv", "mov", "avi", "webm", "flv", "f4v", "m4v", "3gp", "3g2", "asf", "wmv", "vob",
+        "ogv", "rm", "rmvb", "divx", "mpg", "mpeg", "mpe", "m1v", "m2v", "ts", "mts", "m2ts",
+        "m2t", "mxf", "mod", "tod", "dat", "y4m", "ivf", "roq", "nsv", "nut", "dv", "qt", "ogm",
+        "wtv", "dvr-ms", "gxf", "lxf", "evo", "m2p", "ps", "trp", "tp", "amv", "bik", "smk", "swf",
+        "mve", "mvi", "svi", "viv", "vivo", "h264", "264", "avc", "h265", "265", "hevc", "av1",
+        "vp8", "vp9", "mjpg", "mjpeg",
+        // Lossless, lossy and professional audio formats.
+        "mp3", "mp2", "mpa", "m4a", "aac", "flac", "wav", "wave", "ogg", "oga", "opus", "aiff",
+        "aif", "aifc", "alac", "ape", "wv", "wma", "ac3", "eac3", "dts", "mka", "amr", "au", "snd",
+        "caf", "tta", "dsf", "dff", "mlp", "thd", "spx", "ra", "ram", "voc", "gsm", "tak", "shn",
+        "xm", "it", "s3m",
+        // Text subtitle formats that FFmpeg can normally convert to SubRip.
+        "srt", "ass", "ssa", "vtt", "webvtt", "sub", "mpl2", "jss", "rt", "sbv", "smi", "sami",
+        "ttml", "dfxp", "lrc",
     ];
     fn visit(directory: &Path, output: &mut Vec<PathBuf>) -> Result<(), String> {
         for entry in std::fs::read_dir(directory).map_err(|error| error.to_string())? {
@@ -2439,7 +2265,12 @@ fn is_text_subtitle_file(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
         .is_some_and(|extension| {
-            extension.eq_ignore_ascii_case("srt") || extension.eq_ignore_ascii_case("ass")
+            [
+                "srt", "ass", "ssa", "vtt", "webvtt", "sub", "mpl2", "jss", "rt", "sbv", "smi",
+                "sami", "ttml", "dfxp", "lrc",
+            ]
+            .iter()
+            .any(|candidate| extension.eq_ignore_ascii_case(candidate))
         })
 }
 
@@ -2461,7 +2292,9 @@ fn expand_media_inputs(
             );
         } else if path.is_file() {
             if is_text_subtitle_file(&path) && !include_subtitles {
-                return Err("SRT/ASS 文件请在「封装与抽流 → 提取字幕流」中处理。".into());
+                return Err(
+                    "字幕文件请在「PR 原生兼容」中统一转为 SRT，或在「封装与抽流」中处理。".into(),
+                );
             }
             output.push(path.to_string_lossy().into_owned());
         } else {
@@ -2473,8 +2306,11 @@ fn expand_media_inputs(
     Ok(output)
 }
 
-async fn probe_codecs(ffprobe: &Path, input: &Path) -> Result<(Vec<String>, Vec<String>), String> {
-    let output = Command::new(ffprobe)
+async fn probe_streams(
+    ffprobe: &Path,
+    input: &Path,
+) -> Result<(Vec<String>, Vec<String>, Vec<String>), String> {
+    let output = background_command(ffprobe)
         .args([
             "-v",
             "error",
@@ -2488,14 +2324,22 @@ async fn probe_codecs(ffprobe: &Path, input: &Path) -> Result<(Vec<String>, Vec<
         .output()
         .await
         .map_err(|error| error.to_string())?;
+    if !output.status.success() {
+        return Err(format!(
+            "无法识别媒体文件 {}：{}",
+            input.to_string_lossy(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
     let value: serde_json::Value =
         serde_json::from_slice(&output.stdout).map_err(|error| error.to_string())?;
-    Ok(codecs_from_probe(&value))
+    Ok(streams_from_probe(&value))
 }
 
-fn codecs_from_probe(value: &serde_json::Value) -> (Vec<String>, Vec<String>) {
+fn streams_from_probe(value: &serde_json::Value) -> (Vec<String>, Vec<String>, Vec<String>) {
     let mut video = Vec::new();
     let mut audio = Vec::new();
+    let mut subtitles = Vec::new();
     if let Some(streams) = value["streams"].as_array() {
         for stream in streams {
             let codec_type = stream["codec_type"].as_str().unwrap_or_default();
@@ -2508,9 +2352,17 @@ fn codecs_from_probe(value: &serde_json::Value) -> (Vec<String>, Vec<String>) {
                 video.push(codec);
             } else if codec_type == "audio" {
                 audio.push(codec);
+            } else if codec_type == "subtitle" {
+                subtitles.push(codec);
             }
         }
     }
+    (video, audio, subtitles)
+}
+
+#[cfg(test)]
+fn codecs_from_probe(value: &serde_json::Value) -> (Vec<String>, Vec<String>) {
+    let (video, audio, _) = streams_from_probe(value);
     (video, audio)
 }
 
@@ -2541,6 +2393,37 @@ fn pr_container(video: &[String], audio_only: bool) -> &'static str {
     }
 }
 
+fn is_lossless_audio(audio: &[String]) -> bool {
+    !audio.is_empty()
+        && audio.iter().all(|codec| {
+            codec.starts_with("pcm_")
+                || codec.starts_with("dsd_")
+                || [
+                    "flac",
+                    "alac",
+                    "ape",
+                    "wavpack",
+                    "tta",
+                    "tak",
+                    "shorten",
+                    "truehd",
+                    "mlp",
+                    "wmalossless",
+                ]
+                .contains(&codec.as_str())
+        })
+}
+
+fn pr_audio_container(audio: &[String]) -> &'static str {
+    if is_lossless_audio(audio) {
+        "wav"
+    } else if !audio.is_empty() && audio.iter().all(|codec| codec == "mp3") {
+        "mp3"
+    } else {
+        "m4a"
+    }
+}
+
 #[tauri::command]
 async fn run_pr_compatible(
     app: AppHandle,
@@ -2555,23 +2438,34 @@ async fn run_pr_compatible(
     let input_path = PathBuf::from(input);
     let inputs = if input_path.is_dir() {
         media_files_in(&input_path)?
-            .into_iter()
-            .filter(|path| !is_text_subtitle_file(path))
-            .collect()
     } else if input_path.is_file() {
-        if is_text_subtitle_file(&input_path) {
-            return Err(
-                "SRT/ASS 字幕不能使用 PR 智能转码，请前往“封装与抽流 → 提取字幕流”处理".into(),
-            );
-        }
         vec![input_path]
     } else {
         return Err("输入文件或目录不存在".into());
     };
     let mut jobs = Vec::new();
     for path in inputs {
-        let (video, audio) = probe_codecs(&ffprobe, &path).await?;
+        let (video, audio, subtitles) = probe_streams(&ffprobe, &path).await?;
         let audio_only = video.is_empty() && !audio.is_empty();
+        let subtitle_only = video.is_empty() && audio.is_empty() && !subtitles.is_empty();
+        if video.is_empty() && audio.is_empty() && subtitles.is_empty() {
+            return Err(format!(
+                "文件中没有可转换的媒体流：{}",
+                path.to_string_lossy()
+            ));
+        }
+        if subtitle_only
+            && subtitles.iter().any(|codec| {
+                ["hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle", "xsub"]
+                    .contains(&codec.as_str())
+            })
+        {
+            return Err(format!(
+                "{} 是图片字幕，需要 OCR 后才能转为 SRT",
+                path.to_string_lossy()
+            ));
+        }
+        let lossless_audio = audio_only && is_lossless_audio(&audio);
         let mov_video_copy = video.iter().all(|codec| {
             ["h264", "hevc", "prores", "dnxhd", "dvvideo", "mpeg2video"].contains(&codec.as_str())
         });
@@ -2589,7 +2483,13 @@ async fn run_pr_compatible(
         let mp4_audio_copy = audio
             .iter()
             .all(|codec| ["aac", "mp3"].contains(&codec.as_str()));
-        let container = pr_container(&video, audio_only);
+        let container = if subtitle_only {
+            "srt"
+        } else if audio_only {
+            pr_audio_container(&audio)
+        } else {
+            pr_container(&video, false)
+        };
         let output = pr_output_path(&path, output_directory.as_deref(), container);
         if let Some(parent) = output.parent() {
             std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
@@ -2598,18 +2498,31 @@ async fn run_pr_compatible(
             "-n".into(),
             "-i".into(),
             path.to_string_lossy().into_owned(),
-            "-map".into(),
-            "0:V:0?".into(),
-            "-map".into(),
-            "0:a?".into(),
-            "-map_metadata".into(),
-            "0".into(),
-            "-map_chapters".into(),
-            "0".into(),
         ];
-        if audio_only {
-            args.extend(["-vn".into(), "-c:a".into(), "pcm_s24le".into()]);
-        } else if container == "mp4" {
+        if subtitle_only {
+            args.extend(["-map".into(), "0:s:0".into(), "-c:s".into(), "srt".into()]);
+        } else if audio_only {
+            args.extend(["-map".into(), "0:a".into(), "-vn".into()]);
+            if lossless_audio {
+                args.extend(["-c:a".into(), "pcm_s24le".into()]);
+            } else if container == "mp3" || audio.iter().all(|codec| codec == "aac") {
+                args.extend(["-c:a".into(), "copy".into()]);
+            } else {
+                args.extend(["-c:a".into(), "aac".into(), "-b:a".into(), "320k".into()]);
+            }
+        } else {
+            args.extend([
+                "-map".into(),
+                "0:V:0?".into(),
+                "-map".into(),
+                "0:a?".into(),
+                "-map_metadata".into(),
+                "0".into(),
+                "-map_chapters".into(),
+                "0".into(),
+            ]);
+        }
+        if !audio_only && !subtitle_only && container == "mp4" {
             args.extend(["-c:v".into(), "copy".into()]);
             if mp4_audio_copy {
                 args.extend(["-c:a".into(), "copy".into()]);
@@ -2620,13 +2533,13 @@ async fn run_pr_compatible(
                 args.extend(["-tag:v".into(), "hvc1".into()]);
             }
             args.extend(["-movflags".into(), "+faststart".into()]);
-        } else if mov_video_copy {
+        } else if !audio_only && !subtitle_only && mov_video_copy {
             args.extend(["-c:v".into(), "copy".into()]);
             args.extend([
                 "-c:a".into(),
                 if mov_audio_copy { "copy" } else { "pcm_s24le" }.into(),
             ]);
-        } else {
+        } else if !audio_only && !subtitle_only {
             args.extend([
                 "-c:v".into(),
                 "prores_ks".into(),
@@ -2663,14 +2576,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_settings,
             save_app_settings,
-            secure_settings_read,
-            secure_settings_write,
-            secure_settings_delete,
             dependency_status,
+            export_job_log,
             export_job_diagnostics,
             ffmpeg_encoders,
-            bbdown_auth_status,
-            bbdown_logout,
             run_tool,
             musicdl_search,
             musicdl_download,
@@ -2688,20 +2597,12 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        codecs_from_probe, extract_sessdata, is_text_subtitle_file, media_info_summary,
-        musicdl_launcher_python, pr_container, redact_output_line, sanitize_diagnostic_text,
-        strip_ansi_codes,
+        codecs_from_probe, is_text_subtitle_file, media_info_summary, musicdl_launcher_python,
+        pr_audio_container, pr_container, redact_output_line, sanitize_diagnostic_text,
+        streams_from_probe, strip_ansi_codes,
     };
     use serde_json::json;
     use std::path::Path;
-
-    #[test]
-    fn extracts_bbdown_login_cookie_without_exposing_following_text() {
-        assert_eq!(
-            extract_sessdata("登录成功: SESSDATA=abc%2C123 trailing"),
-            Some("SESSDATA=abc%2C123".into())
-        );
-    }
 
     #[test]
     fn redacts_bilibili_credentials_from_process_output() {
@@ -2794,6 +2695,14 @@ mod tests {
     }
 
     #[test]
+    fn pr_workflow_selects_native_audio_outputs() {
+        assert_eq!(pr_audio_container(&["flac".into()]), "wav");
+        assert_eq!(pr_audio_container(&["pcm_s24le".into()]), "wav");
+        assert_eq!(pr_audio_container(&["mp3".into()]), "mp3");
+        assert_eq!(pr_audio_container(&["opus".into()]), "m4a");
+    }
+
+    #[test]
     fn pr_workflow_ignores_attached_cover_art() {
         let probe = json!({
             "streams": [
@@ -2824,6 +2733,23 @@ mod tests {
     fn recognizes_text_subtitle_inputs_without_case_sensitivity() {
         assert!(is_text_subtitle_file(Path::new("subtitle.srt")));
         assert!(is_text_subtitle_file(Path::new("subtitle.ASS")));
+        assert!(is_text_subtitle_file(Path::new("subtitle.vtt")));
+        assert!(is_text_subtitle_file(Path::new("subtitle.sub")));
         assert!(!is_text_subtitle_file(Path::new("video.mp4")));
+    }
+
+    #[test]
+    fn pr_workflow_detects_standalone_subtitle_streams() {
+        let probe = json!({
+            "streams": [{
+                "codec_name": "webvtt",
+                "codec_type": "subtitle",
+                "disposition": { "attached_pic": 0 }
+            }]
+        });
+        let (video, audio, subtitles) = streams_from_probe(&probe);
+        assert!(video.is_empty());
+        assert!(audio.is_empty());
+        assert_eq!(subtitles, vec!["webvtt"]);
     }
 }

@@ -1,6 +1,6 @@
 # Windows x64 build
 
-MAD Toolbox 0.5.0 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
+MAD Toolbox 0.5.4 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
 processors (`x86_64-pc-windows-msvc`). ARM64 and 32-bit x86 installers are not
 currently produced.
 
@@ -8,17 +8,15 @@ currently produced.
 
 The Windows GUI uses the same pages and command-generation model as macOS:
 
-- mandatory BBDown QR login, quality/member entitlement handling and advanced
-  parameters;
+- original BBDown CLI login/download behavior and advanced parameters;
 - yt-dlp connectivity testing, global-proxy guidance, explicit proxy and
   advanced parameters;
 - file/folder media probing, Premiere-compatible smart MP4 workflow,
   remuxing, stream extraction, ASS/SRT subtitle extraction, professional
   FFmpeg controls and directory task queues;
 - optional external Python/musicdl integration;
-- encrypted multi-template storage, restoration of the last settings, task
-  cancellation that survives page navigation, color logs and per-task
-  redacted diagnostic ZIP export.
+- plain multi-template storage, restoration of the last settings, task
+  cancellation that survives page navigation and per-task original log export.
 
 Long FFmpeg jobs have no five-minute execution limit. They run until the
 process exits or the user cancels the task. musicdl search has a separate
@@ -27,9 +25,9 @@ process exits or the user cancels the task. musicdl search has a separate
 ## Full and Lite installers
 
 Full bundles BBDown, FFmpeg/ffprobe, MediaInfo CLI, yt-dlp and Deno. Lite
-bundles BBDown and finds the other programs from WinGet/system, custom paths or
-other known Windows installation locations. The executable-source selector in
-Settings allows either installer to prefer a newer system or custom version.
+bundles BBDown and finds the other programs from WinGet/system and other known
+Windows installation locations. Settings allows either installer to prefer a
+newer system version.
 
 Prepare and build:
 
@@ -42,15 +40,13 @@ npm run tauri:build:windows:full
 The scripts download only missing artifacts and verify pinned SHA-256 values.
 The output is a per-user bilingual NSIS installer.
 
-## Credentials and diagnostics
+## CLI state and diagnostics
 
-BBDown sessions are stored by Windows Credential Manager. Secret template
-fields such as cookies are encrypted with AES-256-GCM in the application's
-private data directory; the encryption key is held by Credential Manager.
-
-Diagnostic ZIP files redact command credentials, cookies, proxy credentials,
-user paths and environment secrets. They do not export BBDown sessions,
-encrypted templates, encryption keys or media contents.
+BBDown creates and reads its own `BBDown.data` beside the executable. MAD
+Toolbox does not parse, move, encrypt or inject this native state and does not
+use Credential Manager. Templates are ordinary WebView application data.
+Exported task logs preserve original CLI output and may therefore contain
+cookies, passwords, tokens, proxy credentials, URLs and local paths.
 
 ## Unsigned distribution
 

@@ -46,5 +46,4 @@ FFmpeg source revision and BtbN build-recipe snapshot under
 
 The Windows Lite installer uses `src-tauri/tauri.windows.lite.conf.json` and
 contains BBDown only. Full and Lite share the same application code; runtime
-tool-source settings decide whether bundled, system or custom executables are
-used.
+tool-source settings decide whether bundled or system executables are used.

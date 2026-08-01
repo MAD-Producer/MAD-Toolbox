@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
-  AuthStatus,
   AppSettings,
   DependencyStatus,
   JobLog,
@@ -17,10 +16,6 @@ export function useBackend() {
   const [dependencies, setDependencies] = useState<DependencyStatus[]>([]);
   const [logs, setLogs] = useState<JobLog[]>([]);
   const [jobs, setJobs] = useState<JobState[]>([]);
-  const [auth, setAuth] = useState<AuthStatus>({
-    authenticated: false,
-    sessionPath: null
-  });
   const [loadingDependencies, setLoadingDependencies] = useState(true);
   const [ffmpegEncoders, setFfmpegEncoders] = useState<string[]>([]);
   const [loginQr, setLoginQr] = useState<LoginQr | null>(null);
@@ -44,10 +39,6 @@ export function useBackend() {
     }
   }, []);
 
-  const refreshAuth = useCallback(async () => {
-    setAuth(await invoke<AuthStatus>("bbdown_auth_status"));
-  }, []);
-
   const refreshSettings = useCallback(async () => {
     setSettings(await invoke<AppSettings>("app_settings"));
   }, []);
@@ -60,7 +51,6 @@ export function useBackend() {
 
   useEffect(() => {
     void refreshDependencies();
-    void refreshAuth();
     void refreshSettings();
     const unlistenLog = listen<JobLog>("job-log", ({ payload }) => {
       setLogs((current) => [...current.slice(-4999), payload]);
@@ -73,9 +63,6 @@ export function useBackend() {
         const without = current.filter((job) => job.jobId !== payload.jobId);
         return [payload, ...without].slice(0, 200);
       });
-      if (payload.tool === "bbdown" && payload.state === "completed") {
-        void refreshAuth();
-      }
       if (payload.state !== "running") {
         setLoginQr((current) => (current?.jobId === payload.jobId ? null : current));
       }
@@ -85,7 +72,7 @@ export function useBackend() {
       void unlistenState.then((dispose) => dispose());
       void unlistenQr.then((dispose) => dispose());
     };
-  }, [refreshAuth, refreshDependencies, refreshSettings]);
+  }, [refreshDependencies, refreshSettings]);
 
   const runTool = useCallback(async (request: RunRequest) => {
     return invoke<RunResult>("run_tool", { request });
@@ -94,8 +81,6 @@ export function useBackend() {
   const cancelJob = useCallback(async (jobId: string) => {
     await invoke("cancel_job", { jobId });
   }, []);
-
-  const clearLogs = useCallback(() => setLogs([]), []);
 
   const dependencyMap = useMemo(
     () => new Map<ToolName, DependencyStatus>(dependencies.map((item) => [item.tool, item])),
@@ -109,14 +94,11 @@ export function useBackend() {
     loadingDependencies,
     logs,
     jobs,
-    auth,
     loginQr,
     settings,
     saveSettings,
     refreshDependencies,
-    refreshAuth,
     runTool,
-    cancelJob,
-    clearLogs
+    cancelJob
   };
 }

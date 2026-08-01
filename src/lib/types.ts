@@ -51,20 +51,20 @@ export interface DiagnosticExportResult {
   path: string;
 }
 
+export interface LogExportRequest {
+  job: JobState;
+  logs: JobLog[];
+  outputPath: string;
+}
+
 export interface RunRequest {
   tool: ToolName;
   args: string[];
   workingDir?: string | null;
-  allowUnauthenticated?: boolean;
 }
 
 export interface RunResult {
   jobId: string;
-}
-
-export interface AuthStatus {
-  authenticated: boolean;
-  sessionPath: string | null;
 }
 
 export interface AppSettings {
@@ -134,6 +134,5 @@ export type NavPage =
   | "media"
   | "streams"
   | "tasks"
-  | "logs"
   | "settings"
   | "licenses";

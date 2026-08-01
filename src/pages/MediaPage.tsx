@@ -188,7 +188,7 @@ export function MediaPage({
   );
   const preview =
     options.operation === "pr-compatible" && firstInput
-      ? `ffmpeg -i ${JSON.stringify(firstInput)}  # 智能检测：优先输出 MP4，必要时回退 MOV/WAV`
+      ? `PR 兼容处理：${firstInput}`
       : commandPreview("ffmpeg", args);
   const templateOptions = useMemo(() => {
     const { inputs: _inputs, ...settings } = options;
@@ -323,8 +323,8 @@ export function MediaPage({
           <div className="notice info">
             <Sparkles size={18} />
             <div>
-              <strong>复制优先策略</strong>
-              <p>H.264/HEVC 优先重新封装为 MP4 并尽量复制媒体流；ProRes 等格式使用 MOV，其他不兼容视频才回退 ProRes 422。</p>
+              <strong>视频、音频与字幕自动兼容</strong>
+              <p>FLV、WebM、MKV、AVI 等视频会自动封装或转为 PR 兼容的 MP4/MOV；无损音频转 WAV，有损音频输出 MP3 或 AAC/M4A，文字字幕统一转 SRT。</p>
             </div>
           </div>
         )}

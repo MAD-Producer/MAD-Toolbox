@@ -49,7 +49,7 @@ export function HomePage({
           <span className="feature-icon">B</span>
           <span>
             <strong>哔哩哔哩下载</strong>
-            <small>登录后使用 BBDown</small>
+            <small>BBDown · 原始 CLI 参数</small>
           </span>
         </button>
         <button className="feature-card network" onClick={() => onNavigate("network")}>

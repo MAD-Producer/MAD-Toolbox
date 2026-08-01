@@ -35,10 +35,9 @@ winget install --id MediaArea.MediaInfo.CLI -e
 winget install --id DenoLand.Deno -e
 ```
 
-MAD Toolbox searches the inherited `PATH`, WindowsApps, Scoop and Chocolatey
-locations, pipx locations, user Python `Scripts` directories and the selected
-custom executable paths. Use Settings to switch each tool between the bundled,
-system and custom versions.
+MAD Toolbox searches the inherited `PATH`, WindowsApps, WinGet Links, Scoop and
+Chocolatey locations, pipx locations and user Python directories. Use Settings
+to choose whether bundled or system tools are preferred.
 
 Official or project-designated release pages:
 

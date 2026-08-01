@@ -1,6 +1,5 @@
 import { Check, FolderInput, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { SelectInput, TextInput } from "./Field";
 
 interface SavedTemplate<T> {
@@ -62,67 +61,32 @@ export function TemplateManager<T>({
   );
 
   useEffect(() => {
-    let cancelled = false;
     restoring.current = true;
     loaded.current = false;
-    void (async () => {
-      try {
-        const templatesKey = `${featureKey}.templates`;
-        const lastKey = `${featureKey}.last`;
-        let rawTemplates = await invoke<string | null>("secure_settings_read", {
-          key: templatesKey
-        });
-        let rawLast = await invoke<string | null>("secure_settings_read", {
-          key: lastKey
-        });
-        const legacyTemplates = window.localStorage.getItem(
-          `${STORAGE_PREFIX}${featureKey}`
-        );
-        const legacyLast = window.localStorage.getItem(
-          `${LAST_SETTINGS_PREFIX}${featureKey}`
-        );
-        if (rawTemplates === null && legacyTemplates !== null) {
-          rawTemplates = legacyTemplates;
-          await invoke("secure_settings_write", {
-            key: templatesKey,
-            value: legacyTemplates
-          });
-        }
-        if (rawLast === null && legacyLast !== null) {
-          rawLast = legacyLast;
-          await invoke("secure_settings_write", {
-            key: lastKey,
-            value: legacyLast
-          });
-        }
-        window.localStorage.removeItem(`${STORAGE_PREFIX}${featureKey}`);
-        window.localStorage.removeItem(`${LAST_SETTINGS_PREFIX}${featureKey}`);
-        if (cancelled) return;
-        const stored = parseTemplates<T>(rawTemplates);
-        setTemplates(stored);
-        setSelectedId(stored[0]?.id ?? "");
-        setName("");
-        setFeedback(null);
-        if (rawLast) onApplyRef.current(JSON.parse(rawLast) as T);
-        loaded.current = true;
-        restoring.current = false;
-      } catch {
-        if (cancelled) return;
-        loaded.current = true;
-        restoring.current = false;
-        setFeedback("无法读取加密设置，已使用默认值");
-      }
-    })();
+    try {
+      const rawTemplates = window.localStorage.getItem(`${STORAGE_PREFIX}${featureKey}`);
+      const rawLast = window.localStorage.getItem(`${LAST_SETTINGS_PREFIX}${featureKey}`);
+      const stored = parseTemplates<T>(rawTemplates);
+      setTemplates(stored);
+      setSelectedId(stored[0]?.id ?? "");
+      setName("");
+      setFeedback(null);
+      if (rawLast) onApplyRef.current(JSON.parse(rawLast) as T);
+    } catch {
+      setFeedback("无法读取设置，已使用默认值");
+    } finally {
+      loaded.current = true;
+      restoring.current = false;
+    }
     return () => {
-      cancelled = true;
       if (saveTimer.current !== null) {
         window.clearTimeout(saveTimer.current);
       }
       if (loaded.current) {
-        void invoke("secure_settings_write", {
-          key: `${featureKey}.last`,
-          value: JSON.stringify(latestValue.current)
-        });
+        window.localStorage.setItem(
+          `${LAST_SETTINGS_PREFIX}${featureKey}`,
+          JSON.stringify(latestValue.current)
+        );
       }
     };
   }, [featureKey]);
@@ -131,20 +95,25 @@ export function TemplateManager<T>({
     if (restoring.current || !loaded.current) return;
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
-      void invoke("secure_settings_write", {
-        key: `${featureKey}.last`,
-        value: JSON.stringify(latestValue.current)
-      }).catch(() => setFeedback("无法加密保存上次设置"));
+      try {
+        window.localStorage.setItem(
+          `${LAST_SETTINGS_PREFIX}${featureKey}`,
+          JSON.stringify(latestValue.current)
+        );
+      } catch {
+        setFeedback("无法保存上次设置");
+      }
       saveTimer.current = null;
     }, 500);
   }, [featureKey, value]);
 
   const persist = (next: SavedTemplate<T>[]) => {
     setTemplates(next);
-    void invoke("secure_settings_write", {
-      key: `${featureKey}.templates`,
-      value: JSON.stringify(next)
-    }).catch(() => setFeedback("无法将模板加密保存到系统凭据管理器"));
+    try {
+      window.localStorage.setItem(`${STORAGE_PREFIX}${featureKey}`, JSON.stringify(next));
+    } catch {
+      setFeedback("无法保存模板");
+    }
   };
 
   const save = () => {
@@ -195,7 +164,7 @@ export function TemplateManager<T>({
       <div className="template-heading">
         <div>
           <strong>设置模板</strong>
-          <span>上次参数和多个模板均加密保存在系统凭据管理器，可包含 Cookie；不会保存链接或输入文件。</span>
+          <span>自动保存上次参数，也可创建多个常用设置模板；不会保存链接或输入文件。</span>
         </div>
         {feedback && (
           <span className="template-feedback">

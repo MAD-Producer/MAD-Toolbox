@@ -1,7 +1,7 @@
-import { CircleHelp, LogIn, LogOut, QrCode, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CircleHelp, LogIn, QrCode, ShieldCheck } from "lucide-react";
+import { useMemo, useState } from "react";
 import { buildBilibiliArgs, commandPreview, type BilibiliOptions } from "../lib/commands";
-import type { AuthStatus, LoginQr, RunRequest, RunResult } from "../lib/types";
+import type { LoginQr, RunRequest, RunResult } from "../lib/types";
 import { CommandBar } from "../components/CommandBar";
 import { Field, SelectInput, TextArea, TextInput, Toggle } from "../components/Field";
 import { DirectoryInput } from "../components/DirectoryInput";
@@ -9,12 +9,9 @@ import { TemplateManager } from "../components/TemplateManager";
 import { defaultOutputPlaceholder } from "../lib/platform";
 
 interface BilibiliPageProps {
-  auth: AuthStatus;
   bbdownAvailable: boolean;
   loginQr: LoginQr | null;
-  defaultOutputDirectory: string | null;
   onRun: (request: RunRequest) => Promise<RunResult>;
-  onLogout: () => Promise<void>;
 }
 
 const initialOptions: BilibiliOptions = {
@@ -22,7 +19,7 @@ const initialOptions: BilibiliOptions = {
   mode: "video",
   api: "web",
   pages: "",
-  encodingPriority: "hevc,av1,avc",
+  encodingPriority: "",
   qualityPriority: "",
   filePattern: "",
   multiFilePattern: "",
@@ -34,7 +31,7 @@ const initialOptions: BilibiliOptions = {
   skipMux: false,
   skipSubtitle: false,
   skipCover: false,
-  skipAi: true,
+  skipAi: false,
   multiThread: false,
   forceHttp: false,
   downloadDanmaku: false,
@@ -61,12 +58,9 @@ const initialOptions: BilibiliOptions = {
 };
 
 export function BilibiliPage({
-  auth,
   bbdownAvailable,
   loginQr,
-  defaultOutputDirectory,
-  onRun,
-  onLogout
+  onRun
 }: BilibiliPageProps) {
   const [options, setOptions] = useState(initialOptions);
   const [advanced, setAdvanced] = useState(false);
@@ -81,19 +75,10 @@ export function BilibiliPage({
     setOptions((current) => ({ ...current, [key]: value }));
   };
 
-  useEffect(() => {
-    if (defaultOutputDirectory) {
-      setOptions((current) =>
-        current.outputDirectory ? current : { ...current, outputDirectory: defaultOutputDirectory }
-      );
-    }
-  }, [defaultOutputDirectory]);
-
   const beginLogin = () =>
     onRun({
       tool: "bbdown",
-      args: ["login"],
-      allowUnauthenticated: true
+      args: ["login"]
     });
 
   return (
@@ -102,7 +87,7 @@ export function BilibiliPage({
         <div>
           <span className="eyebrow">内置 BBDOWN</span>
           <h1>哔哩哔哩下载</h1>
-          <p>必须登录后才可解析或下载。默认由 BBDown 自动选择最高规格。</p>
+          <p>粘贴哔哩哔哩链接或 ID，BBDown 将自动选择可用的最高规格。</p>
         </div>
         <button className="help-button" type="button" onClick={() => setShowLinks(!showLinks)}>
           <CircleHelp size={16} />
@@ -125,34 +110,23 @@ export function BilibiliPage({
         </section>
       )}
 
-      <section className={`auth-card ${auth.authenticated ? "authenticated" : ""}`}>
+      <section className="auth-card">
         <div className="auth-icon">
-          {auth.authenticated ? <ShieldCheck size={24} /> : <QrCode size={24} />}
+          <QrCode size={24} />
         </div>
         <div className="auth-copy">
-          <strong>{auth.authenticated ? "已完成 BBDown 登录" : "下载前请先扫码登录"}</strong>
-          <span>
-            {auth.authenticated
-              ? "登录凭据加密保存在本机系统凭据管理器。"
-              : "点击后请按照日志控制台中的二维码或提示操作。"}
-          </span>
+          <strong>扫码登录哔哩哔哩</strong>
+          <span>使用哔哩哔哩手机客户端扫码，登录后可获取账号可用的下载规格。</span>
         </div>
-        {auth.authenticated ? (
-          <button className="secondary-button" type="button" onClick={() => void onLogout()}>
-            <LogOut size={15} />
-            退出登录
-          </button>
-        ) : (
-          <button
-            className="primary-button"
-            type="button"
-            onClick={() => void beginLogin()}
-            disabled={!bbdownAvailable}
-          >
-            <LogIn size={15} />
-            扫码登录
-          </button>
-        )}
+        <button
+          className="primary-button"
+          type="button"
+          onClick={() => void beginLogin()}
+          disabled={!bbdownAvailable}
+        >
+          <LogIn size={15} />
+          扫码登录
+        </button>
       </section>
 
       <section className="membership-note">
@@ -163,13 +137,13 @@ export function BilibiliPage({
         </div>
       </section>
 
-      {loginQr && !auth.authenticated && (
+      {loginQr && (
         <section className="login-qr-card">
           <img src={loginQr.dataUrl} alt="BBDown 哔哩哔哩登录二维码" />
           <div>
             <span className="eyebrow">BILIBILI LOGIN</span>
             <strong>请使用哔哩哔哩手机客户端扫码</strong>
-            <p>在手机上确认登录后，本页面会自动解锁下载功能。临时二维码会在任务结束后删除。</p>
+            <p>请在手机上确认登录，完成后即可返回继续下载。</p>
           </div>
         </section>
       )}
@@ -186,8 +160,7 @@ export function BilibiliPage({
         }
       />
 
-      <section className={`tool-panel ${!auth.authenticated ? "locked" : ""}`}>
-        {!auth.authenticated && <div className="locked-overlay">完成登录后即可使用下载功能</div>}
+      <section className="tool-panel">
         <Field
           label="视频链接或 ID"
           hint="支持 BV、av、ep、ss、分 P、课程、合集以及 b23.tv 短链接。"
@@ -273,7 +246,7 @@ export function BilibiliPage({
                   placeholder="留空使用 BBDown 默认值"
                 />
               </Field>
-              <Field label="输出目录" hint="留空保存到“下载/MAD Toolbox”。">
+              <Field label="输出目录" hint="留空使用“设置与分发”中的默认下载目录。">
                 <DirectoryInput
                   value={options.outputDirectory}
                   onChange={(value) => update("outputDirectory", value)}
@@ -286,7 +259,7 @@ export function BilibiliPage({
               <Field label="User-Agent">
                 <TextInput value={options.userAgent} onChange={(e) => update("userAgent", e.target.value)} />
               </Field>
-              <Field label="Cookie" hint="敏感内容不会显示在命令预览和日志中。">
+              <Field label="Cookie" hint="可选，用于手动指定 BBDown 登录 Cookie。">
                 <TextInput type="password" value={options.cookie} onChange={(e) => update("cookie", e.target.value)} />
               </Field>
               <Field label="Access Token" hint="TV、APP 或 BiliPlus 接口所需。">
@@ -359,8 +332,8 @@ export function BilibiliPage({
       <CommandBar
         command={preview}
         onRun={() => void onRun({ tool: "bbdown", args })}
-        disabled={!auth.authenticated || !options.url.trim() || !bbdownAvailable}
-        disabledReason={!auth.authenticated ? "请先登录" : "请填写链接"}
+        disabled={!options.url.trim() || !bbdownAvailable}
+        disabledReason="请填写链接"
       />
     </div>
   );

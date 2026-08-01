@@ -23,7 +23,7 @@ export function CommandBar({ command, disabled, disabledReason, onRun }: Command
   return (
     <div className="command-bar">
       <div className="command-preview">
-        <span className="command-kicker">即将执行</span>
+        <span className="command-kicker">任务摘要</span>
         <code>{command || "请先填写输入内容"}</code>
       </div>
       {copyState !== "idle" && (

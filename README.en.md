@@ -19,32 +19,29 @@ FFmpeg, MediaInfo and an optional external musicdl installation. Supported
 targets are Windows 10 22H2/Windows 11 x64 (`x86_64-pc-windows-msvc`) and
 Apple Silicon macOS 12 or newer.
 
-The application turns form values into argument arrays, displays a redacted
-command preview, runs the selected CLI without a shell, and streams stdout and
-stderr into an integrated log console.
+The application turns form values into argument arrays, runs the selected CLI
+without a shell, and streams its original stdout and stderr into per-task logs
+that can be exported from Task Center.
 
 ## Features
 
-- BBDown Bilibili downloads with mandatory in-app QR login, account-aware
-  quality selection, beginner presets and advanced CLI parameters.
+- BBDown Bilibili downloads that follow the original CLI behavior, with
+  beginner presets and advanced CLI parameters.
 - yt-dlp downloads with YouTube reachability testing, global-proxy guidance,
   explicit HTTP/HTTPS/SOCKS proxy settings and advanced format controls.
 - FFmpeg media processing with drag-and-drop files or folders, localized
   MediaInfo inspection, remuxing, stream extraction, ASS/SRT subtitles,
   conversion, bitrate/frame-rate/scaling controls, GIFs and image sequences.
-- Smart Premiere Pro compatibility mode that prefers stream-copy MP4 and only
-  transcodes when compatibility requires it.
-- Persistent last-used settings and multiple encrypted templates per feature.
-- Background jobs that survive page navigation, color logs, cancellation and
-  redacted per-task diagnostic ZIP export.
-- Full and Lite distributions with per-tool bundled/system/custom executable
-  selection.
+- Premiere Pro compatibility for common video containers, lossless/lossy
+  audio and text subtitle files, with stream copy whenever possible.
+- Persistent last-used settings and multiple plain templates per feature.
+- Background jobs that survive page navigation, cancellation and original
+  per-task log export.
+- Full and Lite distributions with bundled/system executable selection.
 
-BBDown login is kept inside the application: MAD Toolbox displays BBDown's
-generated QR image in the login page and unlocks downloads only after BBDown
-has returned a valid session. The session credential is redacted from logs,
-stored in the operating system credential manager and automatically passed to
-later BBDown jobs.
+QR login uses BBDown's native session behavior and enables the download
+qualities available to the current account. Users may also provide a Cookie
+through BBDown's own `--cookie` option.
 Available quality, premium content, HDR, Dolby Vision and high-bitrate streams
 depend on the logged-in Bilibili account's membership, content and region
 permissions. "Highest quality" means the highest quality available to that
