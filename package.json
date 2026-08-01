@@ -14,6 +14,8 @@
     "tauri:build:windows:lite": "powershell -ExecutionPolicy Bypass -File scripts/build-windows.ps1 -Edition Lite",
     "tauri:build:windows:full": "powershell -ExecutionPolicy Bypass -File scripts/build-windows.ps1 -Edition Full",
     "check": "tsc --noEmit",
+    "format": "node scripts/format-changed.mjs --write",
+    "format:check": "node scripts/format-changed.mjs --check",
     "verify:bundled": "sh scripts/verify-bundled-tools.sh",
     "verify:windows:lite": "powershell -ExecutionPolicy Bypass -File scripts/verify-windows-tools.ps1 -Edition Lite",
     "verify:windows:full": "powershell -ExecutionPolicy Bypass -File scripts/verify-windows-tools.ps1 -Edition Full"
@@ -31,6 +33,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "3.9.6",
     "typescript": "~5.7.2",
     "vite": "^6.0.3"
   }
