@@ -2,6 +2,11 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 0.5.6 - 2026-08-01
+
+- Updated the pinned Windows Full FFmpeg asset and executable checksums after
+  the previous BtbN release asset was retired.
+
 ## 0.5.5 - 2026-08-01
 
 - Simplified BBDown defaults so a normal download runs as `BBDown <link>` and

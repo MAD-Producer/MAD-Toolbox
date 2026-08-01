@@ -78,9 +78,9 @@ try {
     $FfmpegDestination = Join-Path $BinaryRoot "ffmpeg-$Target.exe"
     $FfprobeDestination = Join-Path $BinaryRoot "ffprobe-$Target.exe"
     $FfmpegValid = (Test-Path -LiteralPath $FfmpegDestination -PathType Leaf) -and `
-      ((Get-FileHash -LiteralPath $FfmpegDestination -Algorithm SHA256).Hash.ToLowerInvariant() -eq "11601949baf79bd99f043abadc80b91ae725b80d35131fcdc6cdf88381fba34a")
+      ((Get-FileHash -LiteralPath $FfmpegDestination -Algorithm SHA256).Hash.ToLowerInvariant() -eq "6099366f31293cdc6c283ea44ffb32f07e3139cd0caf6d0db652a7d064d089cb")
     $FfprobeValid = (Test-Path -LiteralPath $FfprobeDestination -PathType Leaf) -and `
-      ((Get-FileHash -LiteralPath $FfprobeDestination -Algorithm SHA256).Hash.ToLowerInvariant() -eq "b5d6e611a26e7e6d96dba8c39e762fcacd308b2bd4265598dfeaeb2be475fe7b")
+      ((Get-FileHash -LiteralPath $FfprobeDestination -Algorithm SHA256).Hash.ToLowerInvariant() -eq "4c2f730969c9551aec21c5ca07eb73f63bb0920204c9cd6c9a6e7be6be0458d2")
     if (-not ($FfmpegValid -and $FfprobeValid)) {
       $Archive = Join-Path $TemporaryRoot "ffmpeg.zip"
       $Expanded = Join-Path $TemporaryRoot "ffmpeg"
@@ -89,9 +89,9 @@ try {
         "X-GitHub-Api-Version" = "2022-11-28"
       }
       Get-VerifiedFile `
-        -Url "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/assets/492780283" `
+        -Url "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/assets/496789330" `
         -Output $Archive `
-        -Sha256 "c1503dd324cd423a41e1ab11698b47b1f8f3d7aa52c1f247735fcca0318aff84" `
+        -Sha256 "a8c13448b26bcee24d22559324d6364173c16f9a85e36bb3642840622bec0f2a" `
         -Headers $Headers
       Expand-VerifiedArchive -Archive $Archive -Destination $Expanded
       $Bin = Get-ChildItem -LiteralPath $Expanded -Filter "ffmpeg.exe" -File -Recurse | Select-Object -First 1
@@ -102,8 +102,8 @@ try {
       Copy-Item -LiteralPath $Bin.FullName -Destination $FfmpegDestination -Force
       Copy-Item -LiteralPath $Probe.FullName -Destination $FfprobeDestination -Force
     }
-    Assert-Hash -Path $FfmpegDestination -Expected "11601949baf79bd99f043abadc80b91ae725b80d35131fcdc6cdf88381fba34a"
-    Assert-Hash -Path $FfprobeDestination -Expected "b5d6e611a26e7e6d96dba8c39e762fcacd308b2bd4265598dfeaeb2be475fe7b"
+    Assert-Hash -Path $FfmpegDestination -Expected "6099366f31293cdc6c283ea44ffb32f07e3139cd0caf6d0db652a7d064d089cb"
+    Assert-Hash -Path $FfprobeDestination -Expected "4c2f730969c9551aec21c5ca07eb73f63bb0920204c9cd6c9a6e7be6be0458d2"
 
     $YtDlpDestination = Join-Path $BinaryRoot "yt-dlp-$Target.exe"
     Install-VerifiedBinary `

@@ -39,8 +39,8 @@
       "../third_party/licenses/MediaInfo-License.html": "licenses/MediaInfo-License.html",
       "../third_party/licenses/yt-dlp-Unlicense.txt": "licenses/yt-dlp-Unlicense.txt",
       "../third_party/licenses/yt-dlp-THIRD_PARTY_LICENSES.txt": "licenses/yt-dlp-THIRD_PARTY_LICENSES.txt",
-      "../third_party/source_archives/ffmpeg-8c9502e9b048e21e1cae96477e338ac0635645ba.tar.gz": "third_party/source_archives/ffmpeg-8c9502e9b048e21e1cae96477e338ac0635645ba.tar.gz",
-      "../third_party/source_archives/btbn-ffmpeg-builds-20260728.tar.gz": "third_party/source_archives/btbn-ffmpeg-builds-20260728.tar.gz",
+      "../third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz": "third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz",
+      "../third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz": "third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz",
       "resources/MediaInfo-LIBCURL.DLL": "LIBCURL.DLL",
       "resources/musicdl-adapter.py": "musicdl-adapter.py"
     },
