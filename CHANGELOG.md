@@ -4,14 +4,11 @@ All notable changes to MAD Toolbox are documented here.
 
 ## 0.5.8 - 2026-08-01
 
-- Fixed BBDown login synchronization with standalone CLI installations on
-  macOS and Windows. When a user CLI with a native `BBDown.data` is found,
-  the GUI now invokes that exact executable and shares its session file.
-- Added discovery of common per-user tool directories, including
-  `Documents/apps/ffmpeg`, so GUI launches from Finder use the same `bbdown`
-  command that works in a terminal.
-- Added regression coverage for distinguishing a complete native session from
-  an incomplete QR-login ticket file.
+- Fixed bundled BBDown login state on macOS and Windows when an older GUI left
+  a temporary QR ticket in `BBDown.data`. The bundled runtime now keeps one
+  native BBDown state directory and lets BBDown recreate that file normally.
+- Added a small login-state indicator without parsing or storing credentials in
+  the GUI.
 
 ## 0.5.7 - 2026-08-01
 

@@ -305,9 +305,6 @@ fn command_path() -> OsString {
         }
         if let Some(profile) = env::var_os("USERPROFILE") {
             let profile = PathBuf::from(profile);
-            paths.push(profile.join("Documents").join("apps").join("ffmpeg"));
-            paths.push(profile.join("Documents").join("apps"));
-            paths.push(profile.join("bin"));
             paths.push(profile.join(".local").join("bin"));
             paths.push(profile.join("scoop").join("shims"));
         }
@@ -339,11 +336,7 @@ fn command_path() -> OsString {
     }
     #[cfg(not(target_os = "windows"))]
     if let Some(home) = env::var_os("HOME") {
-        let home = PathBuf::from(home);
-        paths.push(home.join("Documents").join("apps").join("ffmpeg"));
-        paths.push(home.join("Documents").join("apps"));
-        paths.push(home.join("bin"));
-        paths.push(home.join(".local").join("bin"));
+        paths.push(PathBuf::from(home).join(".local").join("bin"));
     }
     if let Ok(current) = env::current_exe() {
         if let Some(parent) = current.parent() {
@@ -362,33 +355,21 @@ fn executable_filename(name: &str) -> String {
     }
 }
 
-fn executable_filenames(name: &str) -> Vec<String> {
-    let primary = executable_filename(name);
-    if name.eq_ignore_ascii_case("bbdown") {
-        let alternate = executable_filename("bbdown");
-        if alternate != primary {
-            return vec![primary, alternate];
-        }
-    }
-    vec![primary]
-}
-
 fn find_system_binary(name: &str) -> Option<PathBuf> {
+    let filename = executable_filename(name);
     for directory in env::split_paths(&command_path()) {
-        for filename in executable_filenames(name) {
-            let candidate = directory.join(filename);
-            #[cfg(target_os = "windows")]
-            if matches!(name.to_ascii_lowercase().as_str(), "python" | "python3")
-                && directory
-                    .file_name()
-                    .and_then(|value| value.to_str())
-                    .is_some_and(|value| value.eq_ignore_ascii_case("WindowsApps"))
-            {
-                continue;
-            }
-            if candidate.is_file() {
-                return Some(candidate);
-            }
+        let candidate = directory.join(&filename);
+        #[cfg(target_os = "windows")]
+        if matches!(name.to_ascii_lowercase().as_str(), "python" | "python3")
+            && directory
+                .file_name()
+                .and_then(|value| value.to_str())
+                .is_some_and(|value| value.eq_ignore_ascii_case("WindowsApps"))
+        {
+            continue;
+        }
+        if candidate.is_file() {
+            return Some(candidate);
         }
     }
     None
@@ -405,25 +386,24 @@ fn same_binary(left: &Path, right: &Path) -> bool {
 }
 
 fn find_distinct_system_binary(name: &str, bundled: Option<&Path>) -> Option<PathBuf> {
+    let filename = executable_filename(name);
     for directory in env::split_paths(&command_path()) {
-        for filename in executable_filenames(name) {
-            let candidate = directory.join(filename);
-            #[cfg(target_os = "windows")]
-            if matches!(name.to_ascii_lowercase().as_str(), "python" | "python3")
-                && directory
-                    .file_name()
-                    .and_then(|value| value.to_str())
-                    .is_some_and(|value| value.eq_ignore_ascii_case("WindowsApps"))
-            {
-                continue;
-            }
-            if candidate.is_file()
-                && !bundled
-                    .map(|bundled| same_binary(&candidate, bundled))
-                    .unwrap_or(false)
-            {
-                return Some(candidate);
-            }
+        let candidate = directory.join(&filename);
+        #[cfg(target_os = "windows")]
+        if matches!(name.to_ascii_lowercase().as_str(), "python" | "python3")
+            && directory
+                .file_name()
+                .and_then(|value| value.to_str())
+                .is_some_and(|value| value.eq_ignore_ascii_case("WindowsApps"))
+        {
+            continue;
+        }
+        if candidate.is_file()
+            && !bundled
+                .map(|bundled| same_binary(&candidate, bundled))
+                .unwrap_or(false)
+        {
+            return Some(candidate);
         }
     }
     None
@@ -464,28 +444,32 @@ fn bundled_binary(app: &AppHandle, name: &str) -> Option<PathBuf> {
     candidates.into_iter().find(|path| path.is_file())
 }
 
-/// BBDown's original CLI keeps web/TV login state beside the executable.  A
-/// user may already have logged in with a standalone `bbdown` command, so
-/// detect that native state before falling back to the bundled copy.  This is
-/// deliberately a structural check only; the CLI remains responsible for
-/// validating expiry and account permissions.
+/// BBDown's original CLI keeps web/TV login state beside the executable. This
+/// small shape check only prevents an old GUI QR ticket from being mistaken for
+/// a native state file; BBDown remains the only code that reads, validates, and
+/// writes the credentials.
+fn bbdown_state_file_is_native(path: &Path, filename: &str) -> bool {
+    let Ok(contents) = std::fs::read_to_string(path) else {
+        return false;
+    };
+    let contents = contents.to_ascii_lowercase();
+    match filename {
+        "BBDown.data" => {
+            contents.contains("sessdata=")
+                && (contents.contains("bili_jct=") || contents.contains("dedeuserid="))
+        }
+        "BBDownTV.data" | "BBDownApp.data" => contents.contains("access_token="),
+        _ => false,
+    }
+}
+
 fn bbdown_has_native_session(executable: &Path) -> bool {
     let Some(parent) = executable.parent() else {
         return false;
     };
-    for filename in ["BBDown.data", "BBDownTV.data", "BBDownApp.data"] {
-        let path = parent.join(filename);
-        let Ok(contents) = std::fs::read_to_string(path) else {
-            continue;
-        };
-        let contents = contents.to_ascii_lowercase();
-        let web_session = contents.contains("sessdata=")
-            && (contents.contains("bili_jct=") || contents.contains("dedeuserid="));
-        if web_session || contents.contains("access_token=") {
-            return true;
-        }
-    }
-    false
+    ["BBDown.data", "BBDownTV.data", "BBDownApp.data"]
+        .iter()
+        .any(|filename| bbdown_state_file_is_native(&parent.join(filename), filename))
 }
 
 fn resolve_tool(app: &AppHandle, tool: &ToolName) -> Option<(PathBuf, bool)> {
@@ -496,18 +480,11 @@ fn resolve_tool(app: &AppHandle, tool: &ToolName) -> Option<(PathBuf, bool)> {
     )
     .map(|path| (path, false));
 
-    // Match the standalone CLI when it already has a native login file. This
-    // keeps `bbdown login` followed by `bbdown <url>` and the GUI on one state
-    // file instead of silently creating a second bundled session.
-    if matches!(tool, ToolName::Bbdown)
-        && system
-            .as_ref()
-            .is_some_and(|(path, _)| bbdown_has_native_session(path))
-    {
-        return system;
-    }
-
-    if matches!(
+    if matches!(tool, ToolName::Bbdown) {
+        // BBDown owns its adjacent BBDown.data file. Keep the bundled binary
+        // and its native state together even when other tools use System mode.
+        bundled.or(system)
+    } else if matches!(
         load_app_settings(app).dependency_preference,
         DependencyPreference::System
     ) {
@@ -822,12 +799,25 @@ fn prepare_bbdown_runtime(app: &AppHandle, bundled: &Path) -> Result<PathBuf, St
         "BBDown.archives",
     ] {
         let target = runtime_dir.join(filename);
-        if target.is_file() {
+        let native_state_file =
+            matches!(filename, "BBDown.data" | "BBDownTV.data" | "BBDownApp.data");
+        if target.is_file()
+            && (!native_state_file || bbdown_state_file_is_native(&target, filename))
+        {
             continue;
+        }
+        // An older GUI version could leave a temporary QR ticket in
+        // BBDown.data. Remove only that invalid state; valid native files are
+        // never touched and BBDown still owns all login writes.
+        if native_state_file && target.is_file() {
+            let _ = std::fs::remove_file(&target);
         }
         for directory in &legacy_dirs {
             let source = directory.join(filename);
-            if source.is_file() && !same_binary(&source, &target) {
+            if source.is_file()
+                && !same_binary(&source, &target)
+                && (!native_state_file || bbdown_state_file_is_native(&source, filename))
+            {
                 let _ = std::fs::copy(&source, &target);
                 if target.is_file() {
                     break;
@@ -1770,12 +1760,7 @@ async fn run_tool(
     }
 
     let working_dir = if matches!(request.tool, ToolName::Bbdown) {
-        let directory = if is_login && !bundled {
-            executable
-                .parent()
-                .map(Path::to_path_buf)
-                .unwrap_or(bbdown_working_dir(&app)?)
-        } else if is_login || request.args.iter().any(|arg| arg == "--work-dir") {
+        let directory = if is_login || request.args.iter().any(|arg| arg == "--work-dir") {
             bbdown_working_dir(&app)?
         } else {
             load_app_settings(&app)
@@ -2784,9 +2769,10 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        bbdown_has_native_session, codecs_from_probe, is_text_subtitle_file, media_info_summary,
-        musicdl_launcher_python, pr_audio_container, pr_container, redact_output_line,
-        sanitize_diagnostic_text, streams_from_probe, strip_ansi_codes,
+        bbdown_has_native_session, bbdown_state_file_is_native, codecs_from_probe,
+        is_text_subtitle_file, media_info_summary, musicdl_launcher_python, pr_audio_container,
+        pr_container, redact_output_line, sanitize_diagnostic_text, streams_from_probe,
+        strip_ansi_codes,
     };
     use serde_json::json;
     use std::fs;
@@ -2794,7 +2780,7 @@ mod tests {
     use uuid::Uuid;
 
     #[test]
-    fn detects_native_bbdown_session_next_to_standalone_cli() {
+    fn detects_native_bbdown_session_next_to_runtime() {
         let directory = std::env::temp_dir().join(format!("mad-toolbox-bbdown-{}", Uuid::new_v4()));
         fs::create_dir_all(&directory).unwrap();
         let executable = directory.join("BBDown");
@@ -2811,6 +2797,16 @@ mod tests {
         )
         .unwrap();
         assert!(!bbdown_has_native_session(&executable));
+        assert!(!bbdown_state_file_is_native(
+            &directory.join("BBDown.data"),
+            "BBDown.data"
+        ));
+
+        fs::write(directory.join("BBDownTV.data"), "access_token=sample").unwrap();
+        assert!(bbdown_state_file_is_native(
+            &directory.join("BBDownTV.data"),
+            "BBDownTV.data"
+        ));
         fs::remove_dir_all(directory).unwrap();
     }
 

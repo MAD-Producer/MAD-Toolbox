@@ -42,15 +42,13 @@ The output is a per-user bilingual NSIS installer.
 
 ## CLI state and diagnostics
 
-If a standalone `BBDown` is found in the user's normal tool directories and it
-already has a native login file, MAD Toolbox invokes that exact executable.
-This means `BBDown login` followed by `BBDown <url>` in a terminal and the GUI
-share the same `BBDown.data` on macOS and Windows. Otherwise the bundled
-BBDown is copied to the per-user application data directory at first use, with
-its native `BBDown.data` kept beside that runtime copy. A legacy file beside
-an older bundled executable is migrated once when the new location is empty.
-Running QR login again lets BBDown overwrite the active file with the newly
-returned session, exactly as its original CLI does.
+The bundled BBDown is copied to the per-user application data directory at
+first use, with its native `BBDown.data` kept beside that runtime copy. Login
+and later downloads always run this same bundled executable, so BBDown reads
+and writes its own file exactly as in the original CLI. An old temporary QR
+ticket is ignored once and a valid native file beside an older bundled
+executable can be migrated. The GUI does not parse, encrypt, or inject the
+credentials.
 
 MAD Toolbox does not parse, encrypt or inject this native state and does not
 use Credential Manager. Templates are ordinary WebView application data.

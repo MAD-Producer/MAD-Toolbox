@@ -86,7 +86,7 @@ export function BilibiliPage({
   const authCopy = {
     unknown: {
       title: "登录状态待检测",
-      hint: "优先沿用终端 bbdown 已保存的原生状态；没有时再扫码登录。",
+      hint: "点击扫码登录，BBDown 会按原生方式保存并读取登录状态。",
       button: "扫码登录"
     },
     authenticated: {
