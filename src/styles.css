@@ -1,7 +1,14 @@
 :root {
   font-family:
-    Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display",
-    "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "PingFang SC",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
   color: #22252a;
   background: #eef0f3;
   font-synthesis: none;
@@ -1201,7 +1208,10 @@ button:disabled {
   margin: 0;
   overflow: auto;
   color: #444a53;
-  font: 9px/1.55 "SFMono-Regular", Consolas, monospace;
+  font:
+    9px/1.55 "SFMono-Regular",
+    Consolas,
+    monospace;
   white-space: pre-wrap;
 }
 
@@ -1412,7 +1422,10 @@ button:disabled {
   border: 1px solid #ebe8f1;
   border-radius: 7px;
   background: #f7f6fa;
-  font: 9px/1.4 "SFMono-Regular", Consolas, monospace;
+  font:
+    9px/1.4 "SFMono-Regular",
+    Consolas,
+    monospace;
   white-space: nowrap;
 }
 
@@ -1502,7 +1515,10 @@ button:disabled {
 .pip-mirror-grid article > code,
 .pip-reset-row code {
   color: #565079;
-  font: 8px/1.45 "SFMono-Regular", Consolas, monospace;
+  font:
+    8px/1.45 "SFMono-Regular",
+    Consolas,
+    monospace;
   overflow-wrap: anywhere;
   white-space: normal;
   word-break: break-word;

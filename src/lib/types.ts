@@ -1,12 +1,5 @@
 export type ToolName =
-  | "bbdown"
-  | "yt-dlp"
-  | "musicdl"
-  | "ffmpeg"
-  | "ffprobe"
-  | "mediainfo"
-  | "deno"
-  | "python";
+  "bbdown" | "yt-dlp" | "musicdl" | "ffmpeg" | "ffprobe" | "mediainfo" | "deno" | "python";
 
 export interface DependencyStatus {
   tool: ToolName;

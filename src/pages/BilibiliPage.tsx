@@ -153,7 +153,9 @@ export function BilibiliPage({
         <ShieldCheck size={17} />
         <div>
           <strong>下载规格取决于当前 B站账号权限</strong>
-          <p>“最高规格”指该账号当前可访问的最高规格。大会员画质、HDR、杜比视界、高码率及会员视频需要账号具备对应会员、内容与地区权限。</p>
+          <p>
+            “最高规格”指该账号当前可访问的最高规格。大会员画质、HDR、杜比视界、高码率及会员视频需要账号具备对应会员、内容与地区权限。
+          </p>
         </div>
       </section>
 
@@ -274,43 +276,83 @@ export function BilibiliPage({
                 />
               </Field>
               <Field label="混流音频语言" hint="ISO 639-2 代码，例如 chi、jpn。">
-                <TextInput value={options.language} onChange={(e) => update("language", e.target.value)} />
+                <TextInput
+                  value={options.language}
+                  onChange={(e) => update("language", e.target.value)}
+                />
               </Field>
               <Field label="User-Agent">
-                <TextInput value={options.userAgent} onChange={(e) => update("userAgent", e.target.value)} />
+                <TextInput
+                  value={options.userAgent}
+                  onChange={(e) => update("userAgent", e.target.value)}
+                />
               </Field>
               <Field label="Cookie" hint="可选，用于手动指定 BBDown 登录 Cookie。">
-                <TextInput type="password" value={options.cookie} onChange={(e) => update("cookie", e.target.value)} />
+                <TextInput
+                  type="password"
+                  value={options.cookie}
+                  onChange={(e) => update("cookie", e.target.value)}
+                />
               </Field>
               <Field label="Access Token" hint="TV、APP 或 BiliPlus 接口所需。">
-                <TextInput type="password" value={options.accessToken} onChange={(e) => update("accessToken", e.target.value)} />
+                <TextInput
+                  type="password"
+                  value={options.accessToken}
+                  onChange={(e) => update("accessToken", e.target.value)}
+                />
               </Field>
               <Field label="合集分 P 间隔（秒）">
-                <TextInput type="number" min={0} value={options.delayPerPage} onChange={(e) => update("delayPerPage", e.target.value)} />
+                <TextInput
+                  type="number"
+                  min={0}
+                  value={options.delayPerPage}
+                  onChange={(e) => update("delayPerPage", e.target.value)}
+                />
               </Field>
               <Field label="UPOS 服务器">
-                <TextInput value={options.uposHost} onChange={(e) => update("uposHost", e.target.value)} />
+                <TextInput
+                  value={options.uposHost}
+                  onChange={(e) => update("uposHost", e.target.value)}
+                />
               </Field>
               <Field label="aria2c 路径">
-                <TextInput value={options.aria2cPath} onChange={(e) => update("aria2cPath", e.target.value)} />
+                <TextInput
+                  value={options.aria2cPath}
+                  onChange={(e) => update("aria2cPath", e.target.value)}
+                />
               </Field>
               <Field label="aria2c 附加参数">
-                <TextInput value={options.aria2cArgs} onChange={(e) => update("aria2cArgs", e.target.value)} />
+                <TextInput
+                  value={options.aria2cArgs}
+                  onChange={(e) => update("aria2cArgs", e.target.value)}
+                />
               </Field>
               <Field label="MP4Box 路径">
-                <TextInput value={options.mp4boxPath} onChange={(e) => update("mp4boxPath", e.target.value)} />
+                <TextInput
+                  value={options.mp4boxPath}
+                  onChange={(e) => update("mp4boxPath", e.target.value)}
+                />
               </Field>
               <Field label="BBDown 配置文件">
-                <TextInput value={options.configFile} onChange={(e) => update("configFile", e.target.value)} />
+                <TextInput
+                  value={options.configFile}
+                  onChange={(e) => update("configFile", e.target.value)}
+                />
               </Field>
               <Field label="BiliPlus Host">
                 <TextInput value={options.host} onChange={(e) => update("host", e.target.value)} />
               </Field>
               <Field label="BiliPlus EP Host">
-                <TextInput value={options.epHost} onChange={(e) => update("epHost", e.target.value)} />
+                <TextInput
+                  value={options.epHost}
+                  onChange={(e) => update("epHost", e.target.value)}
+                />
               </Field>
               <Field label="BiliPlus 地区">
-                <SelectInput value={options.area} onChange={(e) => update("area", e.target.value as BilibiliOptions["area"])}>
+                <SelectInput
+                  value={options.area}
+                  onChange={(e) => update("area", e.target.value as BilibiliOptions["area"])}
+                >
                   <option value="">不指定</option>
                   <option value="hk">香港（hk）</option>
                   <option value="tw">台湾（tw）</option>
@@ -319,25 +361,99 @@ export function BilibiliPage({
               </Field>
             </div>
             <div className="toggle-grid">
-              <Toggle checked={options.useMp4box} onChange={(v) => update("useMp4box", v)} label="使用 MP4Box 混流" />
-              <Toggle checked={options.useAria2c} onChange={(v) => update("useAria2c", v)} label="使用 aria2c 下载" />
-              <Toggle checked={options.showAll} onChange={(v) => update("showAll", v)} label="展示全部分 P" />
-              <Toggle checked={options.hideStreams} onChange={(v) => update("hideStreams", v)} label="隐藏可用音视频流" />
-              <Toggle checked={options.skipMux} onChange={(v) => update("skipMux", v)} label="跳过混流" />
-              <Toggle checked={options.skipSubtitle} onChange={(v) => update("skipSubtitle", v)} label="跳过字幕" />
-              <Toggle checked={options.skipCover} onChange={(v) => update("skipCover", v)} label="跳过封面" />
-              <Toggle checked={options.skipAi} onChange={(v) => update("skipAi", v)} label="跳过 AI 字幕" />
-              <Toggle checked={options.multiThread} onChange={(v) => update("multiThread", v)} label="显式启用多线程" hint="BBDown 默认已开启。" />
-              <Toggle checked={options.forceHttp} onChange={(v) => update("forceHttp", v)} label="强制使用 HTTP" hint="BBDown 默认已开启。" />
-              <Toggle checked={options.downloadDanmaku} onChange={(v) => update("downloadDanmaku", v)} label="随视频下载弹幕" />
-              <Toggle checked={options.videoAscending} onChange={(v) => update("videoAscending", v)} label="视频最小体积优先" />
-              <Toggle checked={options.audioAscending} onChange={(v) => update("audioAscending", v)} label="音频最小体积优先" />
-              <Toggle checked={options.allowPcdn} onChange={(v) => update("allowPcdn", v)} label="允许 PCDN" />
-              <Toggle checked={options.forceReplaceHost} onChange={(v) => update("forceReplaceHost", v)} label="强制替换下载 Host" hint="BBDown 默认已开启。" />
-              <Toggle checked={options.saveArchive} onChange={(v) => update("saveArchive", v)} label="记录下载历史" />
-              <Toggle checked={options.debug} onChange={(v) => update("debug", v)} label="调试日志" />
+              <Toggle
+                checked={options.useMp4box}
+                onChange={(v) => update("useMp4box", v)}
+                label="使用 MP4Box 混流"
+              />
+              <Toggle
+                checked={options.useAria2c}
+                onChange={(v) => update("useAria2c", v)}
+                label="使用 aria2c 下载"
+              />
+              <Toggle
+                checked={options.showAll}
+                onChange={(v) => update("showAll", v)}
+                label="展示全部分 P"
+              />
+              <Toggle
+                checked={options.hideStreams}
+                onChange={(v) => update("hideStreams", v)}
+                label="隐藏可用音视频流"
+              />
+              <Toggle
+                checked={options.skipMux}
+                onChange={(v) => update("skipMux", v)}
+                label="跳过混流"
+              />
+              <Toggle
+                checked={options.skipSubtitle}
+                onChange={(v) => update("skipSubtitle", v)}
+                label="跳过字幕"
+              />
+              <Toggle
+                checked={options.skipCover}
+                onChange={(v) => update("skipCover", v)}
+                label="跳过封面"
+              />
+              <Toggle
+                checked={options.skipAi}
+                onChange={(v) => update("skipAi", v)}
+                label="跳过 AI 字幕"
+              />
+              <Toggle
+                checked={options.multiThread}
+                onChange={(v) => update("multiThread", v)}
+                label="显式启用多线程"
+                hint="BBDown 默认已开启。"
+              />
+              <Toggle
+                checked={options.forceHttp}
+                onChange={(v) => update("forceHttp", v)}
+                label="强制使用 HTTP"
+                hint="BBDown 默认已开启。"
+              />
+              <Toggle
+                checked={options.downloadDanmaku}
+                onChange={(v) => update("downloadDanmaku", v)}
+                label="随视频下载弹幕"
+              />
+              <Toggle
+                checked={options.videoAscending}
+                onChange={(v) => update("videoAscending", v)}
+                label="视频最小体积优先"
+              />
+              <Toggle
+                checked={options.audioAscending}
+                onChange={(v) => update("audioAscending", v)}
+                label="音频最小体积优先"
+              />
+              <Toggle
+                checked={options.allowPcdn}
+                onChange={(v) => update("allowPcdn", v)}
+                label="允许 PCDN"
+              />
+              <Toggle
+                checked={options.forceReplaceHost}
+                onChange={(v) => update("forceReplaceHost", v)}
+                label="强制替换下载 Host"
+                hint="BBDown 默认已开启。"
+              />
+              <Toggle
+                checked={options.saveArchive}
+                onChange={(v) => update("saveArchive", v)}
+                label="记录下载历史"
+              />
+              <Toggle
+                checked={options.debug}
+                onChange={(v) => update("debug", v)}
+                label="调试日志"
+              />
             </div>
-            <Field label="其他参数（每行一个）" hint="临时兼容尚未列出的 BBDown 参数；不会经过 Shell 执行。">
+            <Field
+              label="其他参数（每行一个）"
+              hint="临时兼容尚未列出的 BBDown 参数；不会经过 Shell 执行。"
+            >
               <TextArea
                 rows={4}
                 value={options.extraArgs}

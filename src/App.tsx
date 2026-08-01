@@ -64,9 +64,7 @@ export default function App() {
   const backend = useBackend();
   const distributionMode =
     backend.dependencies.some((item) => item.required) &&
-    backend.dependencies.every(
-      (item) => !item.required || item.bundledAvailable
-    )
+    backend.dependencies.every((item) => !item.required || item.bundledAvailable)
       ? "Full"
       : "Lite";
 
@@ -248,10 +246,14 @@ export default function App() {
       <aside className="sidebar">
         <div className="window-drag" data-tauri-drag-region />
         <div className="brand">
-          <span className="brand-icon"><img src={appIcon} alt="" /></span>
+          <span className="brand-icon">
+            <img src={appIcon} alt="" />
+          </span>
           <span>
             <strong>MAD Toolbox</strong>
-            <small>v{packageInfo.version} · {distributionMode}</small>
+            <small>
+              v{packageInfo.version} · {distributionMode}
+            </small>
           </span>
         </div>
         <nav>
