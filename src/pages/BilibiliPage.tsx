@@ -86,11 +86,11 @@ export function BilibiliPage({
   const authCopy = {
     unknown: {
       title: "登录状态待检测",
-      hint: "点击扫码登录，BBDown 会按原生方式保存并读取登录状态。",
+      hint: "优先沿用终端 bbdown 已保存的原生状态；没有时再扫码登录。",
       button: "扫码登录"
     },
     authenticated: {
-      title: "已检测到哔哩哔哩登录",
+      title: "已检测到 BBDown 登录状态",
       hint: "BBDown 已取得账号权限，最终画质仍取决于账号和视频本身。",
       button: "重新登录"
     },

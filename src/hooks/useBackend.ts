@@ -54,6 +54,9 @@ export function useBackend() {
   useEffect(() => {
     void refreshDependencies();
     void refreshSettings();
+    void invoke<BbdownAuthStatus>("bbdown_auth_status")
+      .then((status) => setBbdownAuthStatus(status))
+      .catch(() => setBbdownAuthStatus("unknown"));
     const unlistenLog = listen<JobLog>("job-log", ({ payload }) => {
       setLogs((current) => [...current.slice(-4999), payload]);
       if (payload.tool === "bbdown") {
