@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
   AppSettings,
+  BbdownAuthStatus,
   DependencyStatus,
   JobLog,
   JobState,
@@ -19,6 +20,7 @@ export function useBackend() {
   const [loadingDependencies, setLoadingDependencies] = useState(true);
   const [ffmpegEncoders, setFfmpegEncoders] = useState<string[]>([]);
   const [loginQr, setLoginQr] = useState<LoginQr | null>(null);
+  const [bbdownAuthStatus, setBbdownAuthStatus] = useState<BbdownAuthStatus>("unknown");
   const [settings, setSettings] = useState<AppSettings>({
     defaultOutputDirectory: null,
     dependencyPreference: "bundled"
@@ -54,6 +56,22 @@ export function useBackend() {
     void refreshSettings();
     const unlistenLog = listen<JobLog>("job-log", ({ payload }) => {
       setLogs((current) => [...current.slice(-4999), payload]);
+      if (payload.tool === "bbdown") {
+        const line = payload.line.replace(/\s+/g, "").toLowerCase();
+        if (line.includes("登录成功")) {
+          setBbdownAuthStatus("authenticated");
+        } else if (
+          line.includes("尚未登录") ||
+          line.includes("未登录") ||
+          line.includes("未获取到b站账号") ||
+          line.includes("解析可能受到限制") ||
+          line.includes("cookie无效") ||
+          line.includes("cookie失效") ||
+          line.includes("cookie过期")
+        ) {
+          setBbdownAuthStatus("unauthenticated");
+        }
+      }
     });
     const unlistenQr = listen<LoginQr>("bbdown-login-qr", ({ payload }) => {
       setLoginQr(payload);
@@ -75,6 +93,9 @@ export function useBackend() {
   }, [refreshDependencies, refreshSettings]);
 
   const runTool = useCallback(async (request: RunRequest) => {
+    if (request.tool === "bbdown" && request.args[0] === "login") {
+      setBbdownAuthStatus("unknown");
+    }
     return invoke<RunResult>("run_tool", { request });
   }, []);
 
@@ -95,6 +116,7 @@ export function useBackend() {
     logs,
     jobs,
     loginQr,
+    bbdownAuthStatus,
     settings,
     saveSettings,
     refreshDependencies,

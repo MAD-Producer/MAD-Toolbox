@@ -77,6 +77,8 @@ export interface LoginQr {
   dataUrl: string;
 }
 
+export type BbdownAuthStatus = "unknown" | "authenticated" | "unauthenticated";
+
 export interface MediaInspection {
   path: string;
   summary: string;

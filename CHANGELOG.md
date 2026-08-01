@@ -2,6 +2,15 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 0.5.7 - 2026-08-01
+
+- Fixed bundled BBDown login state on macOS and Windows by running it from a
+  writable app-data directory, keeping `BBDown.data` beside the executable as
+  expected by the original CLI, and allowing a new QR login to replace the
+  previous session.
+- Added live login-state feedback so a failed BBDown account check is not
+  mistaken for a successful local-cookie load.
+
 ## 0.5.6 - 2026-08-01
 
 - Updated the pinned Windows Full FFmpeg asset and executable checksums after

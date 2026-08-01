@@ -731,6 +731,106 @@ fn bbdown_working_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+/// BBDown 1.6.3 stores BBDown.data beside its own executable (Program.APP_DIR),
+/// not beside the download output directory.  A bundled executable inside an
+/// installed app is not a reliable place for a user-writable session file,
+/// especially on Windows and signed macOS app bundles.  Run a private copy from
+/// the app-data directory so login and download always share the same native
+/// BBDown files on both platforms.
+fn prepare_bbdown_runtime(app: &AppHandle, bundled: &Path) -> Result<PathBuf, String> {
+    let runtime_dir = bbdown_working_dir(app)?;
+    let runtime_binary = runtime_dir.join(executable_filename("BBDown"));
+
+    // Preserve files created by the original CLI, including an existing login,
+    // config, and archive file next to a previously bundled executable.
+    let mut legacy_dirs = Vec::new();
+    if let Some(parent) = bundled.parent() {
+        legacy_dirs.push(parent.to_path_buf());
+    }
+    if let Ok(resources) = app.path().resource_dir() {
+        legacy_dirs.push(resources.clone());
+        legacy_dirs.push(resources.join("binaries"));
+    }
+    if let Ok(current) = env::current_exe() {
+        if let Some(parent) = current.parent() {
+            legacy_dirs.push(parent.to_path_buf());
+        }
+    }
+    legacy_dirs.sort();
+    legacy_dirs.dedup();
+    for filename in [
+        "BBDown.data",
+        "BBDownTV.data",
+        "BBDownApp.data",
+        "BBDown.config",
+        "BBDown.archives",
+    ] {
+        let target = runtime_dir.join(filename);
+        if target.is_file() {
+            continue;
+        }
+        for directory in &legacy_dirs {
+            let source = directory.join(filename);
+            if source.is_file() && !same_binary(&source, &target) {
+                let _ = std::fs::copy(&source, &target);
+                if target.is_file() {
+                    break;
+                }
+            }
+        }
+    }
+
+    // The bundled BBDown is a self-contained executable.  Copy it once (or
+    // refresh it when the packaged size changes) into the same directory as
+    // BBDown.data.  If Windows has an older runtime process open, retain the
+    // already working copy instead of breaking a new task.
+    let source_size = std::fs::metadata(bundled)
+        .map_err(|error| format!("无法读取 BBDown：{error}"))?
+        .len();
+    let needs_copy = !runtime_binary.is_file()
+        || std::fs::metadata(&runtime_binary)
+            .map(|metadata| metadata.len() != source_size)
+            .unwrap_or(true);
+    if needs_copy {
+        let temporary = runtime_dir.join(format!(".BBDown-{}.tmp", Uuid::new_v4()));
+        let copy_result = (|| {
+            std::fs::copy(bundled, &temporary)
+                .map_err(|error| format!("无法准备 BBDown：{error}"))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mode = std::fs::metadata(bundled)
+                    .map_err(|error| format!("无法读取 BBDown 权限：{error}"))?
+                    .permissions()
+                    .mode();
+                std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(mode | 0o111))
+                    .map_err(|error| format!("无法设置 BBDown 权限：{error}"))?;
+            }
+            if runtime_binary.is_file() {
+                std::fs::remove_file(&runtime_binary)
+                    .map_err(|error| format!("无法更新 BBDown：{error}"))?;
+            }
+            std::fs::rename(&temporary, &runtime_binary)
+                .map_err(|error| format!("无法保存 BBDown：{error}"))?;
+            Ok::<(), String>(())
+        })();
+        if copy_result.is_err() {
+            let _ = std::fs::remove_file(&temporary);
+            if !runtime_binary.is_file() {
+                return Err(copy_result
+                    .err()
+                    .unwrap_or_else(|| "无法准备 BBDown 运行文件".into()));
+            }
+        }
+    }
+
+    if runtime_binary.is_file() {
+        Ok(runtime_binary)
+    } else {
+        Err("无法准备 BBDown 运行文件".into())
+    }
+}
+
 fn strip_ansi_codes(line: &str) -> String {
     let mut output = String::with_capacity(line.len());
     let mut characters = line.chars().peekable();
@@ -989,6 +1089,8 @@ async fn stream_output<R>(
         {
             continue;
         }
+        // Preserve the original CLI output in the task center; credential
+        // redaction remains available for the diagnostic ZIP export.
         emit_log(&app, &job_id, &tool, stream, strip_ansi_codes(&line));
     }
 }
@@ -1570,8 +1672,13 @@ async fn run_tool(
     state: State<'_, AppState>,
     mut request: RunRequest,
 ) -> Result<RunResult, String> {
-    let (executable, _) = resolve_tool(&app, &request.tool)
+    let (resolved_executable, bundled) = resolve_tool(&app, &request.tool)
         .ok_or_else(|| format!("未找到 {}，请先安装依赖", request.tool.label()))?;
+    let executable = if matches!(request.tool, ToolName::Bbdown) && bundled {
+        prepare_bbdown_runtime(&app, &resolved_executable)?
+    } else {
+        resolved_executable
+    };
     let is_login = matches!(request.tool, ToolName::Bbdown)
         && request.args.first().map(String::as_str) == Some("login");
     if matches!(request.tool, ToolName::YtDlp)

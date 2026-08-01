@@ -1,7 +1,7 @@
 import { CircleHelp, LogIn, QrCode, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { buildBilibiliArgs, commandPreview, type BilibiliOptions } from "../lib/commands";
-import type { LoginQr, RunRequest, RunResult } from "../lib/types";
+import type { BbdownAuthStatus, LoginQr, RunRequest, RunResult } from "../lib/types";
 import { CommandBar } from "../components/CommandBar";
 import { Field, SelectInput, TextArea, TextInput, Toggle } from "../components/Field";
 import { DirectoryInput } from "../components/DirectoryInput";
@@ -10,6 +10,7 @@ import { defaultOutputPlaceholder } from "../lib/platform";
 
 interface BilibiliPageProps {
   bbdownAvailable: boolean;
+  bbdownAuthStatus: BbdownAuthStatus;
   loginQr: LoginQr | null;
   onRun: (request: RunRequest) => Promise<RunResult>;
 }
@@ -59,6 +60,7 @@ const initialOptions: BilibiliOptions = {
 
 export function BilibiliPage({
   bbdownAvailable,
+  bbdownAuthStatus,
   loginQr,
   onRun
 }: BilibiliPageProps) {
@@ -80,6 +82,24 @@ export function BilibiliPage({
       tool: "bbdown",
       args: ["login"]
     });
+
+  const authCopy = {
+    unknown: {
+      title: "登录状态待检测",
+      hint: "点击扫码登录，BBDown 会按原生方式保存并读取登录状态。",
+      button: "扫码登录"
+    },
+    authenticated: {
+      title: "已检测到哔哩哔哩登录",
+      hint: "BBDown 已取得账号权限，最终画质仍取决于账号和视频本身。",
+      button: "重新登录"
+    },
+    unauthenticated: {
+      title: "未检测到有效登录",
+      hint: "BBDown 报告账号未登录，请重新扫码并在手机上确认。",
+      button: "重新扫码登录"
+    }
+  }[bbdownAuthStatus];
 
   return (
     <div className="page">
@@ -110,13 +130,13 @@ export function BilibiliPage({
         </section>
       )}
 
-      <section className="auth-card">
+      <section className={`auth-card ${bbdownAuthStatus}`}>
         <div className="auth-icon">
           <QrCode size={24} />
         </div>
         <div className="auth-copy">
-          <strong>扫码登录哔哩哔哩</strong>
-          <span>使用哔哩哔哩手机客户端扫码，登录后可获取账号可用的下载规格。</span>
+          <strong>{authCopy.title}</strong>
+          <span>{authCopy.hint}</span>
         </div>
         <button
           className="primary-button"
@@ -125,7 +145,7 @@ export function BilibiliPage({
           disabled={!bbdownAvailable}
         >
           <LogIn size={15} />
-          扫码登录
+          {authCopy.button}
         </button>
       </section>
 

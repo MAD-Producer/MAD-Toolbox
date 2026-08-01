@@ -598,6 +598,15 @@ button:disabled {
   background: #f5fbf8;
 }
 
+.auth-card.unauthenticated {
+  border-color: #e8d4dc;
+  background: #fff8fa;
+}
+
+.auth-card.unauthenticated .auth-icon {
+  color: #d65380;
+}
+
 .login-qr-card {
   display: flex;
   align-items: center;
