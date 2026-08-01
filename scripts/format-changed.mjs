@@ -36,9 +36,13 @@ const mode = process.argv.includes("--write") ? "--write" : "--check";
 const prettierCli = fileURLToPath(
   new URL("../node_modules/prettier/bin/prettier.cjs", import.meta.url)
 );
-const result = spawnSync(process.execPath, [prettierCli, mode, "--ignore-unknown", "--", ...files], {
-  stdio: "inherit"
-});
+const result = spawnSync(
+  process.execPath,
+  [prettierCli, mode, "--ignore-unknown", "--", ...files],
+  {
+    stdio: "inherit"
+  }
+);
 
 if (result.error) {
   throw result.error;
