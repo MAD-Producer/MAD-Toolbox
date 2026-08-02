@@ -20,7 +20,7 @@ binary_directory="src-tauri/binaries"
 suffix="aarch64-apple-darwin"
 
 verify_checksum "$binary_directory/BBDown-$suffix" \
-  "33597b2b7b83eecb4fbb4f0a50a43f1ada3ac1d9b6adf4eadda8399c700ea470"
+  "f60cb75a09447e3df0ac332469accaeff36d8215b042f9bcfbf9e00d00ef86ac"
 verify_checksum "$binary_directory/ffmpeg-$suffix" \
   "ee4226e41c6f018affcf2c62e683a35d132b18eb16de364448a035afb548939e"
 verify_checksum "$binary_directory/ffprobe-$suffix" \

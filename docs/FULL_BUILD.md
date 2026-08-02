@@ -35,7 +35,10 @@ configure flags and configure output. Never package an `--enable-nonfree`
 build.
 
 The macOS tool pack and reproducible arm64 build procedure are pinned in
-`third_party/sources.json` and `third_party/build/`.
+`third_party/sources.json` and `third_party/build/`. The bundled macOS BBDown
+binary carries the small patch listed there: its native login still writes and
+reads `BBDown.data`, disables the unused platform cookie container, and skips
+terminal QR rendering because MAD Toolbox displays `qrcode.png` in the GUI.
 
 The Windows tool pack is pinned in `third_party/windows-sources.json`. Run
 `scripts/prepare-windows-tools.ps1 -Edition Full` to download missing official

@@ -2,6 +2,15 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 0.5.9 - 2026-08-02
+
+- Run the bundled BBDown directly from its own application directory so its
+  native `BBDown.data` and login overwrite behavior remain untouched. The GUI
+  no longer copies BBDown or migrates data from any other installation.
+- Rebuilt the bundled macOS BBDown with only the GUI-safe login adjustment:
+  BBDown still performs the QR polling and writes its native data file, while
+  its unused platform cookie container and terminal QR renderer are skipped.
+
 ## 0.5.8 - 2026-08-01
 
 - Fixed bundled BBDown login state on macOS and Windows when an older GUI left

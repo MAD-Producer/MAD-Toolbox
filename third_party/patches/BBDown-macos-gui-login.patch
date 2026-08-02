@@ -1,0 +1,21 @@
+diff --git a/BBDown.Core/Util/HTTPUtil.cs b/BBDown.Core/Util/HTTPUtil.cs
+index 77342c4..54f23e5 100644
+--- a/BBDown.Core/Util/HTTPUtil.cs
++++ b/BBDown.Core/Util/HTTPUtil.cs
+@@ -14,0 +15,4 @@ namespace BBDown.Core.Util
++            // BBDown always sends its cookie string in the request headers.
++            // Avoid creating the platform CookieContainer, which fails in
++            // NativeAOT GUI processes that do not have a local domain name.
++            UseCookies = false,
+diff --git a/BBDown/BBDownLoginUtil.cs b/BBDown/BBDownLoginUtil.cs
+index 1d3aac2..17c6653 100644
+--- a/BBDown/BBDownLoginUtil.cs
++++ b/BBDown/BBDownLoginUtil.cs
+@@ -39,2 +39 @@ namespace BBDown
+-                var consoleQRCode = new ConsoleQRCode(qrCodeData);
+-                consoleQRCode.GetGraphic();
++                // The GUI consumes qrcode.png; do not render a terminal QR code.
+@@ -96,2 +95 @@ namespace BBDown
+-                var consoleQRCode = new ConsoleQRCode(qrCodeData);
+-                consoleQRCode.GetGraphic();
++                // The GUI consumes qrcode.png; do not render a terminal QR code.

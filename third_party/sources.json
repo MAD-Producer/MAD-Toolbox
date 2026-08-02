@@ -13,7 +13,9 @@
       "artifactUrl": "https://sourceforge.net/projects/bbdown.mirror/files/1.6.3/BBDown_1.6.3_20240814_osx-arm64.zip/download",
       "sourceUrl": "https://sourceforge.net/projects/bbdown.mirror/files/1.6.3/BBDown%20v1.6.3%20source%20code.tar.gz/download",
       "artifactSha256": "4df84014d818bd6dff2b365b847645340e8955c4450fe965688f41af89a38baa",
-      "binarySha256": "33597b2b7b83eecb4fbb4f0a50a43f1ada3ac1d9b6adf4eadda8399c700ea470",
+      "binarySha256": "f60cb75a09447e3df0ac332469accaeff36d8215b042f9bcfbf9e00d00ef86ac",
+      "patchedFromBinarySha256": "33597b2b7b83eecb4fbb4f0a50a43f1ada3ac1d9b6adf4eadda8399c700ea470",
+      "patch": "third_party/patches/BBDown-macos-gui-login.patch",
       "license": "MIT",
       "licenseFiles": ["third_party/licenses/BBDown-MIT.txt"],
       "upstreamArchived": true

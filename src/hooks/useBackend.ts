@@ -54,9 +54,6 @@ export function useBackend() {
   useEffect(() => {
     void refreshDependencies();
     void refreshSettings();
-    void invoke<BbdownAuthStatus>("bbdown_auth_status")
-      .then((status) => setBbdownAuthStatus(status))
-      .catch(() => setBbdownAuthStatus("unknown"));
     const unlistenLog = listen<JobLog>("job-log", ({ payload }) => {
       setLogs((current) => [...current.slice(-4999), payload]);
       if (payload.tool === "bbdown") {
@@ -84,11 +81,6 @@ export function useBackend() {
         const without = current.filter((job) => job.jobId !== payload.jobId);
         return [payload, ...without].slice(0, 200);
       });
-      if (payload.tool === "bbdown" && payload.state !== "running") {
-        void invoke<BbdownAuthStatus>("bbdown_auth_status")
-          .then((status) => setBbdownAuthStatus(status))
-          .catch(() => setBbdownAuthStatus("unknown"));
-      }
       if (payload.state !== "running") {
         setLoginQr((current) => (current?.jobId === payload.jobId ? null : current));
       }
