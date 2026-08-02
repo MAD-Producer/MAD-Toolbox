@@ -22,7 +22,7 @@ endorsed by the original BBDown author.
 - Project: FFmpeg
 - Website: https://ffmpeg.org/
 - macOS version: 8.1.2
-- Windows version: n8.1 latest (2026-07-31)
+- Windows version: n8.1 latest (2026-08-02)
 - License: LGPL-2.1-or-later (macOS) / LGPL-3.0-or-later (Windows build)
 - macOS source: https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz
 - Windows source commit: https://github.com/FFmpeg/FFmpeg/commit/9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b

@@ -19,11 +19,11 @@ if ($Edition -eq "Full") {
   $Files += @(
     [pscustomobject]@{
       Name = "ffmpeg-$Target.exe"
-      Sha256 = "6099366f31293cdc6c283ea44ffb32f07e3139cd0caf6d0db652a7d064d089cb"
+      Sha256 = "0df0daa264f1c6a6dd6e41a0b931b58050726194ee25c18f5e31843545e70e46"
     },
     [pscustomobject]@{
       Name = "ffprobe-$Target.exe"
-      Sha256 = "4c2f730969c9551aec21c5ca07eb73f63bb0920204c9cd6c9a6e7be6be0458d2"
+      Sha256 = "4a745d4c13cc672b4c84f80cb4fa4af1c32f189d02ef500d076161e06a27d20e"
     },
     [pscustomobject]@{
       Name = "mediainfo-$Target.exe"
