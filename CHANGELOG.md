@@ -2,6 +2,16 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 0.6.0 - 正式版 (2026-08-12)
+
+- 修复 Windows 子进程中文输出乱码：自动识别 UTF-8，必要时按 GBK/CP936 解码；任务中心、依赖信息、媒体错误信息和导出日志统一修复，Windows 导出日志同时写入 UTF-8 BOM。
+- 修复哔哩哔哩、网络视频、音乐下载和媒体处理的输出目录逻辑：显式填写的目录优先，未填写时使用设置中的默认目录，再回退到系统下载目录。
+- 修复 yt-dlp 浏览器 Cookie 兜底重试与首次请求使用不同输出目录的问题。
+- 修复哔哩哔哩下载没有使用设置页默认目录的问题，并保留 BBDown 的原生工作目录和登录状态行为。
+- 移除设置中的自定义 Logo 功能，界面统一使用正式应用图标。
+- 修复 Windows Lite 的 WebView2 setup 弹窗；Lite 使用系统已有 Runtime，Full 保留离线 WebView2 安装能力。
+- 完善 Windows Full/Lite 与 macOS Apple Silicon Full/Lite 的构建和离线依赖打包验证。
+
 ## 0.5.12 - Pre-release (2026-08-12)
 
 - 移除设置中的自定义 Logo 功能，应用界面统一使用正式图标，避免只修改局部界面而造成误解。
