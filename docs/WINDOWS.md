@@ -1,6 +1,6 @@
 # Windows x64 build
 
-MAD Toolbox 0.5.11 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
+MAD Toolbox 0.5.12 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
 processors (`x86_64-pc-windows-msvc`). ARM64 and 32-bit x86 installers are not
 currently produced.
 
@@ -40,8 +40,11 @@ the WebView2 offline installer. After the Full installer has been downloaded,
 installation and application startup do not require an internet connection.
 Lite bundles BBDown and finds the other programs from WinGet/system and other
 known Windows installation locations, so Lite still requires those dependencies
-to be installed separately. Settings allows either installer to prefer a newer
-system version.
+to be installed separately. Lite also skips the WebView2 installation step and
+uses the system WebView2 Runtime, so it does not show a WebView2 setup dialog or
+carry the Full installer's offline runtime payload. Windows 10 22H2 and Windows
+11 normally include the runtime; if it is missing, install it separately or use
+Full. Settings allows either installer to prefer a newer system version.
 
 Prepare and build:
 
@@ -53,9 +56,10 @@ npm run tauri:build:windows:full
 
 The build scripts download only missing artifacts and verify pinned SHA-256
 values. The output is a per-user bilingual NSIS installer. The build machine
-needs network access when a pinned artifact or the WebView2 offline package is
-not already cached; this does not create a network requirement for the shipped
-Full installer.
+needs network access when a pinned artifact or the Full-only WebView2 offline
+package is not already cached; this does not create a network requirement for
+the shipped Full installer. Lite does not download or package the WebView2
+offline installer.
 
 ## CLI state and diagnostics
 

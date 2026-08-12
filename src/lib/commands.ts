@@ -8,7 +8,8 @@ const SECRET_FLAGS = new Set([
   "--proxy",
   "--username",
   "--password",
-  "--video-password"
+  "--video-password",
+  "--cookies-from-browser"
 ]);
 
 export function shellQuote(value: string): string {
@@ -227,14 +228,18 @@ export interface YtDlpOptions {
   verbose: boolean;
 }
 
-export function buildYtDlpArgs(options: YtDlpOptions, denoPath?: string | null): string[] {
+export function buildYtDlpArgs(
+  options: YtDlpOptions,
+  denoPath?: string | null,
+  includeBrowserCookies = true
+): string[] {
   const args: string[] = [];
   if (denoPath) args.push("--js-runtimes", `deno:${denoPath}`);
   if (options.proxy.trim()) args.push("--proxy", options.proxy.trim());
   if (options.outputDirectory.trim()) args.push("-P", options.outputDirectory.trim());
   if (options.outputTemplate.trim()) args.push("-o", options.outputTemplate.trim());
   if (options.format.trim()) args.push("-f", options.format.trim());
-  if (options.cookiesBrowser.trim()) {
+  if (includeBrowserCookies && options.cookiesBrowser.trim()) {
     args.push("--cookies-from-browser", options.cookiesBrowser.trim());
   }
   if (options.playlistItems.trim()) args.push("-I", options.playlistItems.trim());

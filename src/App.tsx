@@ -35,17 +35,6 @@ import appIcon from "./assets/app-icon.png";
 import { platformLabel } from "./lib/platform";
 import packageInfo from "../package.json";
 
-const APP_LOGO_STORAGE_KEY = "mad-toolbox.custom-logo";
-
-function loadStoredLogo() {
-  try {
-    const stored = localStorage.getItem(APP_LOGO_STORAGE_KEY);
-    return stored?.startsWith("data:image/") ? stored : appIcon;
-  } catch {
-    return appIcon;
-  }
-}
-
 const navItems: Array<{
   page: NavPage;
   label: string;
@@ -72,7 +61,6 @@ const utilityItems: Array<{
 export default function App() {
   const [page, setPage] = useState<NavPage>("home");
   const [toast, setToast] = useState<string | null>(null);
-  const [logo, setLogo] = useState(loadStoredLogo);
   const backend = useBackend();
   const distributionMode =
     backend.dependencies.some((item) => item.required) &&
@@ -84,19 +72,6 @@ export default function App() {
     const message = error instanceof Error ? error.message : String(error);
     setToast(message);
     window.setTimeout(() => setToast(null), 5000);
-  };
-
-  const updateLogo = (nextLogo: string | null) => {
-    try {
-      if (nextLogo) {
-        localStorage.setItem(APP_LOGO_STORAGE_KEY, nextLogo);
-      } else {
-        localStorage.removeItem(APP_LOGO_STORAGE_KEY);
-      }
-      setLogo(nextLogo || appIcon);
-    } catch {
-      throw new Error("无法保存 Logo，请选择更小的图片后重试");
-    }
   };
 
   const run = async (request: RunRequest) => {
@@ -255,9 +230,6 @@ export default function App() {
         <SettingsPage
           settings={backend.settings}
           distributionMode={distributionMode}
-          logo={logo}
-          logoIsCustom={logo !== appIcon}
-          onLogoChange={updateLogo}
           onSave={async (settings) => {
             const saved = await backend.saveSettings(settings);
             await backend.refreshDependencies();
@@ -275,7 +247,7 @@ export default function App() {
         <div className="window-drag" data-tauri-drag-region />
         <div className="brand">
           <span className="brand-icon">
-            <img src={logo} alt="" />
+            <img src={appIcon} alt="" />
           </span>
           <span>
             <strong>MAD Toolbox</strong>

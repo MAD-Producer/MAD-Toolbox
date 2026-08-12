@@ -13,27 +13,16 @@ import {
 interface SettingsPageProps {
   settings: AppSettings;
   distributionMode: "Lite" | "Full";
-  logo: string;
-  logoIsCustom: boolean;
-  onLogoChange: (logo: string | null) => void;
   onSave: (settings: AppSettings) => Promise<AppSettings>;
 }
 
-export function SettingsPage({
-  settings,
-  distributionMode,
-  logo,
-  logoIsCustom,
-  onLogoChange,
-  onSave
-}: SettingsPageProps) {
+export function SettingsPage({ settings, distributionMode, onSave }: SettingsPageProps) {
   const [directory, setDirectory] = useState(settings.defaultOutputDirectory || "");
   const [dependencyPreference, setDependencyPreference] = useState(settings.dependencyPreference);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [preferenceState, setPreferenceState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle"
   );
-  const [logoError, setLogoError] = useState<string | null>(null);
 
   useEffect(() => {
     setDirectory(settings.defaultOutputDirectory || "");
@@ -66,35 +55,6 @@ export function SettingsPage({
     } catch {
       setPreferenceState("error");
     }
-  };
-
-  const chooseLogo = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (!(file.type === "image/png" || file.type === "image/jpeg" || file.type === "image/webp")) {
-      setLogoError("Logo 只支持 PNG、JPEG 或 WebP 图片。");
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setLogoError("Logo 图片不能超过 2 MB。");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        setLogoError("Logo 读取失败，请换一张图片。");
-        return;
-      }
-      try {
-        onLogoChange(reader.result);
-        setLogoError(null);
-      } catch (error) {
-        setLogoError(error instanceof Error ? error.message : "Logo 保存失败。");
-      }
-    };
-    reader.onerror = () => setLogoError("Logo 读取失败，请换一张图片。");
-    reader.readAsDataURL(file);
   };
 
   return (
@@ -133,48 +93,6 @@ export function SettingsPage({
         {state === "error" && (
           <span className="setting-error">保存失败，请选择一个存在的目录。</span>
         )}
-      </section>
-      <section className="settings-section">
-        <h2>应用 Logo</h2>
-        <p>
-          可上传第三方设计的 PNG、JPEG 或 WebP 图片。它只更换应用界面中的
-          Logo，安装包和系统任务栏图标仍使用正式图标；选择后会在重启时保留。
-        </p>
-        <div className="logo-settings-row">
-          <span className="logo-settings-preview">
-            <img src={logo} alt="当前应用 Logo" />
-          </span>
-          <div className="logo-settings-actions">
-            <strong>{logoIsCustom ? "正在使用自定义 Logo" : "正在使用默认 Logo"}</strong>
-            <div>
-              <label className="secondary-button logo-upload-button">
-                选择图片
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={chooseLogo}
-                  hidden
-                />
-              </label>
-              <button
-                className="secondary-button"
-                type="button"
-                disabled={!logoIsCustom}
-                onClick={() => {
-                  try {
-                    onLogoChange(null);
-                    setLogoError(null);
-                  } catch (error) {
-                    setLogoError(error instanceof Error ? error.message : "Logo 恢复失败。");
-                  }
-                }}
-              >
-                恢复默认
-              </button>
-            </div>
-          </div>
-        </div>
-        {logoError && <span className="setting-error">{logoError}</span>}
       </section>
       <section className="settings-section">
         <div className="settings-heading-row">

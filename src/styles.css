@@ -952,48 +952,6 @@ button:disabled {
   font-size: 9px;
 }
 
-.logo-settings-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 13px;
-}
-
-.logo-settings-preview {
-  display: grid;
-  width: 58px;
-  height: 58px;
-  flex: 0 0 auto;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid #e2e1e7;
-  border-radius: 13px;
-  background: #f7f6ff;
-}
-
-.logo-settings-preview img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.logo-settings-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.logo-settings-actions > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.logo-upload-button {
-  cursor: pointer;
-}
-
 .parameter-section {
   margin-top: 18px;
   padding-top: 16px;

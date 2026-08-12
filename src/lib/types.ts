@@ -53,6 +53,7 @@ export interface LogExportRequest {
 export interface RunRequest {
   tool: ToolName;
   args: string[];
+  fallbackArgs?: string[] | null;
   workingDir?: string | null;
 }
 

@@ -39,6 +39,11 @@ MAD Toolbox searches the inherited `PATH`, WindowsApps, WinGet Links, Scoop and
 Chocolatey locations, pipx locations and user Python directories. Use Settings
 to choose whether bundled or system tools are preferred.
 
+The Windows Lite installer does not install WebView2. It uses the system
+WebView2 Runtime, which is normally present on Windows 10 22H2 and Windows 11;
+install the runtime separately if it is missing. Use the Full installer when a
+network-free WebView2 installation is required.
+
 Official or project-designated release pages:
 
 - FFmpeg official build index: https://ffmpeg.org/download.html

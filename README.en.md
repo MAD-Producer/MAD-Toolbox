@@ -26,7 +26,8 @@ that can be exported from Task Center.
 - BBDown Bilibili downloads that follow the original CLI behavior, with
   beginner presets and advanced CLI parameters.
 - yt-dlp downloads with YouTube reachability testing, global-proxy guidance,
-  explicit HTTP/HTTPS/SOCKS proxy settings and advanced format controls.
+  explicit HTTP/HTTPS/SOCKS proxy settings, browser-Cookie fallback and
+  advanced format controls.
 - FFmpeg media processing with drag-and-drop files or folders, localized
   MediaInfo inspection, remuxing, stream extraction, ASS/SRT subtitles,
   conversion, bitrate/frame-rate/scaling controls, GIFs and image sequences.
@@ -78,6 +79,11 @@ winget install --id yt-dlp.yt-dlp -e
 winget install --id MediaArea.MediaInfo.CLI -e
 winget install --id DenoLand.Deno -e
 ```
+
+The Windows Lite installer does not embed or launch a WebView2 installer. It
+uses the system WebView2 Runtime, which is normally available on Windows 10
+22H2 and Windows 11. If the runtime is missing, install it separately or use
+the Full build, which includes the offline installer.
 
 ### Full
 

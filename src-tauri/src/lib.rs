@@ -18,7 +18,7 @@ use std::{
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
-    process::Command,
+    process::{Child, Command},
     sync::oneshot,
     time::{sleep, timeout, Duration},
 };
@@ -130,6 +130,7 @@ struct DependencyStatus {
 struct RunRequest {
     tool: ToolName,
     args: Vec<String>,
+    fallback_args: Option<Vec<String>>,
     working_dir: Option<String>,
 }
 
@@ -1314,6 +1315,7 @@ fn safe_command(tool: &ToolName, args: &[String]) -> String {
         "--proxy",
         "--username",
         "--password",
+        "--cookies-from-browser",
     ];
     let mut output = vec![tool.executable().to_string()];
     let mut redact_next = false;
@@ -1349,6 +1351,18 @@ fn validate_args(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+fn ensure_ffmpeg_location(args: &mut Vec<String>, ffmpeg: &Path) {
+    if !args.iter().any(|arg| arg == "--ffmpeg-location") {
+        args.splice(
+            0..0,
+            [
+                "--ffmpeg-location".into(),
+                ffmpeg.to_string_lossy().into_owned(),
+            ],
+        );
+    }
+}
+
 fn emit_log(app: &AppHandle, job_id: &str, tool: &ToolName, stream: &'static str, line: String) {
     let _ = app.emit(
         "job-log",
@@ -1362,17 +1376,31 @@ fn emit_log(app: &AppHandle, job_id: &str, tool: &ToolName, stream: &'static str
     );
 }
 
+fn yt_dlp_browser_cookie_fallback_requested(line: &str) -> bool {
+    let normalized = line.to_ascii_lowercase().replace('’', "'");
+    [
+        "sign in to confirm",
+        "confirm you're not a bot",
+        "use --cookies-from-browser",
+        "use --cookies",
+    ]
+    .iter()
+    .any(|marker| normalized.contains(marker))
+}
+
 async fn stream_output<R>(
     reader: R,
     app: AppHandle,
     job_id: String,
     tool: ToolName,
     stream: &'static str,
-) where
+) -> bool
+where
     R: tokio::io::AsyncRead + Unpin,
 {
     let mut reader = BufReader::new(reader);
     let mut bytes = Vec::new();
+    let mut browser_cookie_fallback_requested = false;
     loop {
         bytes.clear();
         let Ok(length) = reader.read_until(b'\n', &mut bytes).await else {
@@ -1385,6 +1413,9 @@ async fn stream_output<R>(
             bytes.pop();
         }
         let line = String::from_utf8_lossy(&bytes);
+        if matches!(tool, ToolName::YtDlp) && yt_dlp_browser_cookie_fallback_requested(&line) {
+            browser_cookie_fallback_requested = true;
+        }
         // BBDown also prints an ANSI-colored QR code. The GUI presents the
         // generated PNG instead, so omit those unreadable terminal rows.
         if matches!(tool, ToolName::Bbdown)
@@ -1396,6 +1427,94 @@ async fn stream_output<R>(
         // redaction remains available for the diagnostic ZIP export.
         emit_log(&app, &job_id, &tool, stream, strip_ansi_codes(&line));
     }
+    browser_cookie_fallback_requested
+}
+
+fn spawn_child(
+    executable: &Path,
+    args: &[String],
+    working_dir: Option<&Path>,
+    tool: &ToolName,
+) -> Result<Child, String> {
+    let mut command = Command::new(executable);
+    hide_async_command_window(&mut command);
+    command
+        .args(args)
+        .env("PATH", command_path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    if let Some(directory) = working_dir {
+        std::fs::create_dir_all(directory).map_err(|error| error.to_string())?;
+        command.current_dir(directory);
+    }
+    command
+        .spawn()
+        .map_err(|error| format!("无法启动 {}：{error}", tool.label()))
+}
+
+async fn wait_for_child(
+    mut child: Child,
+    app: AppHandle,
+    job_id: String,
+    tool: ToolName,
+    cancel_rx: &mut oneshot::Receiver<()>,
+) -> (&'static str, Option<i32>, String, bool, bool) {
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let task_app = app.clone();
+    let task_job_id = job_id.clone();
+    let stdout_task = stdout.map(|pipe| {
+        tauri::async_runtime::spawn(stream_output(
+            pipe,
+            task_app.clone(),
+            task_job_id.clone(),
+            tool.clone(),
+            "stdout",
+        ))
+    });
+    let stderr_task = stderr.map(|pipe| {
+        tauri::async_runtime::spawn(stream_output(
+            pipe,
+            task_app,
+            task_job_id,
+            tool.clone(),
+            "stderr",
+        ))
+    });
+
+    let (state_name, exit_code, message, cancelled) = tokio::select! {
+        result = child.wait() => {
+            match result {
+                Ok(status) if status.success() => {
+                    ("completed", status.code(), format!("{} 已完成", tool.label()), false)
+                }
+                Ok(status) => ("failed", status.code(), format!("{} 执行失败", tool.label()), false),
+                Err(error) => ("failed", None, format!("{} 等待进程失败：{error}", tool.label()), false),
+            }
+        }
+        _ = cancel_rx => {
+            let _ = child.kill().await;
+            ("cancelled", None, format!("{} 已取消", tool.label()), true)
+        }
+    };
+
+    let stdout_requested = match stdout_task {
+        Some(task) => task.await.unwrap_or(false),
+        None => false,
+    };
+    let stderr_requested = match stderr_task {
+        Some(task) => task.await.unwrap_or(false),
+        None => false,
+    };
+    (
+        state_name,
+        exit_code,
+        message,
+        cancelled,
+        stdout_requested || stderr_requested,
+    )
 }
 
 async fn spawn_job(
@@ -1405,27 +1524,14 @@ async fn spawn_job(
     executable: PathBuf,
     args: Vec<String>,
     working_dir: Option<PathBuf>,
+    fallback_args: Option<Vec<String>>,
 ) -> Result<RunResult, String> {
     validate_args(&args)?;
-    let job_id = Uuid::new_v4().to_string();
-    let mut command = Command::new(&executable);
-    hide_async_command_window(&mut command);
-    command
-        .args(&args)
-        .env("PATH", command_path())
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .kill_on_drop(true);
-    if let Some(directory) = &working_dir {
-        std::fs::create_dir_all(directory).map_err(|error| error.to_string())?;
-        command.current_dir(directory);
+    if let Some(fallback_args) = &fallback_args {
+        validate_args(fallback_args)?;
     }
-    let mut child = command
-        .spawn()
-        .map_err(|error| format!("无法启动 {}：{error}", tool.label()))?;
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
+    let job_id = Uuid::new_v4().to_string();
+    let child = spawn_child(&executable, &args, working_dir.as_deref(), &tool)?;
     let (cancel_tx, mut cancel_rx) = oneshot::channel();
     state
         .cancel_senders
@@ -1453,58 +1559,79 @@ async fn spawn_job(
 
     let task_app = app.clone();
     let task_job_id = job_id.clone();
+    let task_tool = tool.clone();
     tauri::async_runtime::spawn(async move {
-        let stdout_task = stdout.map(|pipe| {
-            tauri::async_runtime::spawn(stream_output(
-                pipe,
+        let (mut state_name, mut exit_code, mut message, cancelled, browser_cookie_error) =
+            wait_for_child(
+                child,
                 task_app.clone(),
                 task_job_id.clone(),
-                tool.clone(),
-                "stdout",
-            ))
-        });
-        let stderr_task = stderr.map(|pipe| {
-            tauri::async_runtime::spawn(stream_output(
-                pipe,
-                task_app.clone(),
-                task_job_id.clone(),
-                tool.clone(),
-                "stderr",
-            ))
-        });
+                task_tool.clone(),
+                &mut cancel_rx,
+            )
+            .await;
 
-        let (state_name, exit_code, message) = tokio::select! {
-            result = child.wait() => {
-                match result {
-                    Ok(status) if status.success() => {
-                        ("completed", status.code(), format!("{} 已完成", tool.label()))
+        if !cancelled && cancel_rx.try_recv().is_ok() {
+            state_name = "cancelled";
+            exit_code = None;
+            message = format!("{} 已取消", task_tool.label());
+        }
+
+        if state_name == "failed" && browser_cookie_error && !cancelled {
+            if let Some(retry_args) = fallback_args.as_ref() {
+                emit_log(
+                    &task_app,
+                    &task_job_id,
+                    &task_tool,
+                    "system",
+                    "yt-dlp 首次请求未使用浏览器 Cookie，检测到需要登录，正在使用浏览器 Cookie 重试。"
+                        .into(),
+                );
+                emit_log(
+                    &task_app,
+                    &task_job_id,
+                    &task_tool,
+                    "system",
+                    format!("$ {}", safe_command(&task_tool, retry_args)),
+                );
+                match spawn_child(&executable, retry_args, working_dir.as_deref(), &task_tool) {
+                    Ok(retry_child) => {
+                        let (retry_state, retry_exit_code, retry_message, _, _) = wait_for_child(
+                            retry_child,
+                            task_app.clone(),
+                            task_job_id.clone(),
+                            task_tool.clone(),
+                            &mut cancel_rx,
+                        )
+                        .await;
+                        state_name = retry_state;
+                        exit_code = retry_exit_code;
+                        message = retry_message;
                     }
-                    Ok(status) => ("failed", status.code(), format!("{} 执行失败", tool.label())),
-                    Err(error) => ("failed", None, format!("{} 等待进程失败：{error}", tool.label())),
+                    Err(error) => {
+                        state_name = "failed";
+                        exit_code = None;
+                        message = format!("yt-dlp 浏览器 Cookie 重试无法启动：{error}");
+                    }
                 }
             }
-            _ = &mut cancel_rx => {
-                let _ = child.kill().await;
-                ("cancelled", None, format!("{} 已取消", tool.label()))
-            }
-        };
-
-        if let Some(task) = stdout_task {
-            let _ = task.await;
-        }
-        if let Some(task) = stderr_task {
-            let _ = task.await;
         }
         if let Ok(mut senders) = task_app.state::<AppState>().cancel_senders.lock() {
             senders.remove(&task_job_id);
         }
         // Keep files generated by the CLI itself, including qrcode.png.
-        emit_log(&task_app, &task_job_id, &tool, "system", message.clone());
+        emit_log(
+            &task_app,
+            &task_job_id,
+            &task_tool,
+            "system",
+            message.clone(),
+        );
         let _ = task_app.emit(
             "job-state",
             JobState {
                 job_id: task_job_id,
-                tool,
+                tool: task_tool,
                 state: state_name,
                 exit_code,
                 message,
@@ -1944,6 +2071,18 @@ async fn run_tool(
     state: State<'_, AppState>,
     mut request: RunRequest,
 ) -> Result<RunResult, String> {
+    if let Some(fallback_args) = request.fallback_args.as_ref() {
+        if !matches!(request.tool, ToolName::YtDlp) {
+            return Err("浏览器 Cookie 兜底只能用于 yt-dlp".into());
+        }
+        if !fallback_args
+            .iter()
+            .any(|arg| arg == "--cookies-from-browser")
+        {
+            return Err("浏览器 Cookie 兜底参数缺少 --cookies-from-browser".into());
+        }
+        validate_args(fallback_args)?;
+    }
     let (resolved_executable, _bundled) = resolve_tool(&app, &request.tool)
         .ok_or_else(|| format!("未找到 {}，请先安装依赖", request.tool.label()))?;
     let executable = resolved_executable;
@@ -1953,13 +2092,10 @@ async fn run_tool(
         && !request.args.iter().any(|arg| arg == "--ffmpeg-location")
     {
         if let Some((ffmpeg, _)) = resolve_tool(&app, &ToolName::Ffmpeg) {
-            request.args.splice(
-                0..0,
-                [
-                    "--ffmpeg-location".into(),
-                    ffmpeg.to_string_lossy().into_owned(),
-                ],
-            );
+            ensure_ffmpeg_location(&mut request.args, &ffmpeg);
+            if let Some(fallback_args) = request.fallback_args.as_mut() {
+                ensure_ffmpeg_location(fallback_args, &ffmpeg);
+            }
         }
     }
 
@@ -1981,6 +2117,7 @@ async fn run_tool(
         executable,
         request.args,
         working_dir,
+        request.fallback_args,
     )
     .await
 }
@@ -2261,6 +2398,7 @@ async fn musicdl_download(
             selected,
         ],
         None,
+        None,
     )
     .await
 }
@@ -2342,6 +2480,7 @@ async fn musicdl_playlist(
             "playlist".into(),
             request_path.to_string_lossy().into_owned(),
         ],
+        None,
         None,
     )
     .await
@@ -2929,6 +3068,7 @@ async fn run_pr_compatible(
                 ffmpeg.clone(),
                 args,
                 None,
+                None,
             )
             .await?,
         );
@@ -2969,6 +3109,7 @@ mod tests {
         is_text_subtitle_file, media_info_summary, musicdl_launcher_python, parse_query_fields,
         poll_bbdown_qr_at, pr_audio_container, pr_container, redact_output_line,
         sanitize_diagnostic_text, streams_from_probe, strip_ansi_codes,
+        yt_dlp_browser_cookie_fallback_requested,
     };
     use serde_json::json;
     use std::{
@@ -3124,6 +3265,22 @@ mod tests {
             strip_ansi_codes("Searching \u{1b}[93m稻香\u{1b}[0m From Migu"),
             "Searching 稻香 From Migu"
         );
+    }
+
+    #[test]
+    fn recognizes_yt_dlp_browser_cookie_fallback_errors() {
+        assert!(yt_dlp_browser_cookie_fallback_requested(
+            "ERROR: Sign in to confirm you're not a bot."
+        ));
+        assert!(yt_dlp_browser_cookie_fallback_requested(
+            "Use --cookies-from-browser or --cookies for the authentication."
+        ));
+        assert!(yt_dlp_browser_cookie_fallback_requested(
+            "Please sign in to confirm you’re not a bot."
+        ));
+        assert!(!yt_dlp_browser_cookie_fallback_requested(
+            "ERROR: Unable to download webpage: network timeout"
+        ));
     }
 
     #[test]

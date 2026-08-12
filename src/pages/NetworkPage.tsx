@@ -55,7 +55,8 @@ export function NetworkPage({
   const [advanced, setAdvanced] = useState(false);
   const [network, setNetwork] = useState<"unknown" | "checking" | "online" | "offline">("unknown");
   const checkedOnce = useRef(false);
-  const args = useMemo(() => buildYtDlpArgs(options, denoPath), [options, denoPath]);
+  const args = useMemo(() => buildYtDlpArgs(options, denoPath, false), [options, denoPath]);
+  const fallbackArgs = useMemo(() => buildYtDlpArgs(options, denoPath), [options, denoPath]);
   const preview = commandPreview("yt-dlp", args);
   const templateOptions = useMemo(() => {
     const { url: _url, ...settings } = options;
@@ -155,7 +156,7 @@ export function NetworkPage({
         <div className="form-grid network-auth-grid">
           <Field
             label="浏览器 Cookie"
-            hint="YouTube 出现“需要登录或确认不是机器人”时，选择已经登录的浏览器。应用只传递浏览器名称，不保存 Cookie 内容；Windows 上建议先完全退出浏览器再运行。"
+            hint="先进行无 Cookie 请求；只有 yt-dlp 返回需要登录或确认不是机器人时，才会使用这里选择的浏览器 Cookie 重试。应用只传递浏览器名称，不保存 Cookie 内容；Windows 上建议先完全退出浏览器再运行。"
           >
             <SelectInput
               value={selectedBrowserCookie}
@@ -191,9 +192,20 @@ export function NetworkPage({
             <div>
               <strong>YouTube 可能要求登录</strong>
               <p>
-                如果任务日志出现 “Sign in to confirm you’re not a
-                bot”，请在上方选择已登录的浏览器；这只读取本机浏览器 Cookie，不会把 Cookie
-                内容写入应用设置。
+                如果任务日志出现 “Sign in to confirm you’re not a bot”，请在上方选择已登录的
+                浏览器。选择后会先尝试无 Cookie 请求，只有检测到这类登录验证错误时才会自动
+                读取浏览器 Cookie 重试。
+              </p>
+            </div>
+          </div>
+        )}
+        {options.cookiesBrowser.trim() && (
+          <div className="notice info">
+            <div>
+              <strong>已启用浏览器 Cookie 失败兜底</strong>
+              <p>
+                当前命令预览保持无 Cookie 请求；如果 yt-dlp 报告需要登录或人机验证，任务会在同一
+                个任务中自动使用所选浏览器 Cookie 重试。
               </p>
             </div>
           </div>
@@ -324,7 +336,13 @@ export function NetworkPage({
       </section>
       <CommandBar
         command={preview}
-        onRun={() => void onRun({ tool: "yt-dlp", args })}
+        onRun={() =>
+          void onRun({
+            tool: "yt-dlp",
+            args,
+            fallbackArgs: options.cookiesBrowser.trim() ? fallbackArgs : undefined
+          })
+        }
         disabled={!options.url.trim() || !ytDlpAvailable || youtubeBlocked}
         disabledReason={
           !ytDlpAvailable

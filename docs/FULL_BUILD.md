@@ -51,6 +51,8 @@ FFmpeg source revision and BtbN build-recipe snapshot under
 The Windows Full NSIS configuration uses WebView2's `offlineInstaller` mode, so
 the WebView2 runtime is embedded in the installer instead of being fetched from
 the internet during installation. The Windows Lite installer uses
-`src-tauri/tauri.windows.lite.conf.json` and contains BBDown only. Full and Lite
-share the same application code; runtime tool-source settings decide whether
-bundled or system executables are used.
+`src-tauri/tauri.windows.lite.conf.json`, contains BBDown only, and sets
+WebView2's `skip` mode so it does not show a setup dialog or carry the offline
+runtime payload. Lite therefore requires the system WebView2 Runtime. Full and
+Lite share the same application code; runtime tool-source settings decide
+whether bundled or system executables are used.

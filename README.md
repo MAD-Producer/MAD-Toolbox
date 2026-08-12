@@ -25,7 +25,7 @@ Silicon 设备。暂不提供 Windows 32 位和 ARM64 安装包。
   字幕等简易模式，同时尽量覆盖 BBDown 高级参数。支持扫码登录并使用当前
   账号可用的下载规格。
 - 网络视频下载：使用 yt-dlp，自动测试 YouTube 连通性，提示开启全局代理或
-  填写 HTTP、HTTPS、SOCKS 代理，并提供格式、字幕、Cookie 等高级设置。
+  填写 HTTP、HTTPS、SOCKS 代理，并提供格式、字幕、浏览器 Cookie 失败兜底等高级设置。
 - 媒体处理：支持文件和目录拖拽、中文 MediaInfo 信息、转换、重新封装、
   视频/音频/字幕抽流、ASS/SRT、GIF、序列帧以及码率、帧率、尺寸、裁切、
   旋转、速度、像素格式和音频参数。
@@ -56,6 +56,10 @@ winget install --id yt-dlp.yt-dlp -e
 winget install --id MediaArea.MediaInfo.CLI -e
 winget install --id DenoLand.Deno -e
 ```
+
+Windows Lite 不会内置或启动 WebView2 安装器，而是使用系统已有的 WebView2
+Runtime；Windows 10 22H2 和 Windows 11 通常已经提供该 Runtime。若系统确实缺少
+Runtime，Lite 需要先单独安装它，或者改用内置 WebView2 离线安装器的 Full 版。
 
 macOS 可使用 Homebrew：
 
@@ -102,8 +106,9 @@ npm run tauri:build:full
 ```
 
 Windows 构建脚本会校验随仓库分发的 BBDown，并在 Full 构建时下载、校验其余
-Windows sidecar 及 WebView2 离线安装包，随后生成中英双语 NSIS 安装包；这些
-网络访问发生在构建阶段，不是用户安装和启动阶段。未签名安装包可能触发
+Windows sidecar 及 Full 版的 WebView2 离线安装包，随后生成中英双语 NSIS 安装包；这些
+网络访问发生在构建阶段，不是用户安装和启动阶段。Lite 构建不会下载或打包 WebView2
+安装包。未签名安装包可能触发
 SmartScreen 的“未知发布者”提示。
 
 GitHub Actions 可手动运行 Windows 和 Apple Silicon macOS 的 Full/Lite 构建；

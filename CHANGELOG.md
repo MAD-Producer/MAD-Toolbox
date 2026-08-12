@@ -2,14 +2,18 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 0.5.12 - Pre-release (2026-08-12)
+
+- 移除设置中的自定义 Logo 功能，应用界面统一使用正式图标，避免只修改局部界面而造成误解。
+- 增加 yt-dlp 的浏览器 Cookie 失败兜底：先执行无 Cookie 请求，只有检测到需要登录或人机验证时，才在同一任务中使用所选浏览器 Cookie 自动重试。
+- 修复 Windows Lite 安装包的 WebView2 setup 流程：Lite 不再内置或启动 WebView2 安装器，使用系统已有 Runtime；Full 继续保留离线安装能力。
+
 ## 0.5.11 - Pre-release (2026-08-11)
 
 - Added an explicit browser Cookie selector for YouTube downloads, including
   Windows Edge/Chrome presets and custom browser profiles. This makes the
   `Sign in to confirm you're not a bot` recovery path visible in the normal
   download workflow without storing Cookie values in MAD Toolbox.
-- Added a local, restart-persistent interface Logo selector for third-party
-  PNG/JPEG/WebP designs while keeping the signed application icon unchanged.
 - Made YouTube connectivity checks resolve `curl` through the application PATH
   on every supported platform instead of relying on a fixed Unix path.
 - Tightened tag-build validation: Windows and macOS release builds now run the
