@@ -145,7 +145,9 @@ export function MediaPage({
   useEffect(() => {
     if (defaultOutputDirectory) {
       setOptions((current) =>
-        current.outputDirectory ? current : { ...current, outputDirectory: defaultOutputDirectory }
+        current.outputDirectory.trim()
+          ? current
+          : { ...current, outputDirectory: defaultOutputDirectory }
       );
     }
   }, [defaultOutputDirectory]);

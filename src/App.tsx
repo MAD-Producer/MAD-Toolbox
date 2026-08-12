@@ -178,6 +178,7 @@ export default function App() {
           bbdownAvailable={backend.dependencyMap.get("bbdown")?.available ?? false}
           bbdownAuthStatus={backend.bbdownAuthStatus}
           loginQr={backend.loginQr}
+          defaultOutputDirectory={backend.settings.defaultOutputDirectory}
           onRun={run}
         />
       );

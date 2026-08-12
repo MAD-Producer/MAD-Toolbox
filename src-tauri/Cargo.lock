@@ -2137,6 +2137,7 @@ version = "0.5.12"
 dependencies = [
  "base64 0.22.1",
  "chrono",
+ "encoding_rs",
  "qrcode",
  "reqwest",
  "serde",

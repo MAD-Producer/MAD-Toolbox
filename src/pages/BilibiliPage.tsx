@@ -1,5 +1,5 @@
 import { CircleHelp, LogIn, QrCode, ShieldCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildBilibiliArgs, commandPreview, type BilibiliOptions } from "../lib/commands";
 import type { BbdownAuthStatus, LoginQr, RunRequest, RunResult } from "../lib/types";
 import { CommandBar } from "../components/CommandBar";
@@ -12,6 +12,7 @@ interface BilibiliPageProps {
   bbdownAvailable: boolean;
   bbdownAuthStatus: BbdownAuthStatus;
   loginQr: LoginQr | null;
+  defaultOutputDirectory: string | null;
   onRun: (request: RunRequest) => Promise<RunResult>;
 }
 
@@ -62,12 +63,20 @@ export function BilibiliPage({
   bbdownAvailable,
   bbdownAuthStatus,
   loginQr,
+  defaultOutputDirectory,
   onRun
 }: BilibiliPageProps) {
   const [options, setOptions] = useState(initialOptions);
   const [advanced, setAdvanced] = useState(false);
   const [showLinks, setShowLinks] = useState(false);
-  const args = useMemo(() => buildBilibiliArgs(options), [options]);
+  const effectiveOptions = useMemo(
+    () =>
+      options.outputDirectory.trim() || !defaultOutputDirectory
+        ? options
+        : { ...options, outputDirectory: defaultOutputDirectory },
+    [defaultOutputDirectory, options]
+  );
+  const args = useMemo(() => buildBilibiliArgs(effectiveOptions), [effectiveOptions]);
   const preview = commandPreview("bbdown", args);
   const templateOptions = useMemo(() => {
     const { url: _url, ...settings } = options;
@@ -76,6 +85,16 @@ export function BilibiliPage({
   const update = <K extends keyof BilibiliOptions>(key: K, value: BilibiliOptions[K]) => {
     setOptions((current) => ({ ...current, [key]: value }));
   };
+
+  useEffect(() => {
+    if (defaultOutputDirectory) {
+      setOptions((current) =>
+        current.outputDirectory.trim()
+          ? current
+          : { ...current, outputDirectory: defaultOutputDirectory }
+      );
+    }
+  }, [defaultOutputDirectory]);
 
   const beginLogin = () =>
     onRun({

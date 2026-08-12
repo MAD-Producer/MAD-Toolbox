@@ -588,7 +588,7 @@ fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
             .output()
         {
             if output.status.success() {
-                let root = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                let root = decode_process_output(&output.stdout).trim().to_string();
                 if !root.is_empty() {
                     candidates.push(
                         PathBuf::from(root)
@@ -653,8 +653,8 @@ async fn tool_version(path: &Path, tool: &ToolName) -> Option<String> {
         .await
         .ok()?
         .ok()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = decode_process_output(&output.stdout);
+    let stderr = decode_process_output(&output.stderr);
     let text = if stdout.trim().is_empty() {
         stderr
     } else {
@@ -706,6 +706,17 @@ fn load_app_settings(app: &AppHandle) -> AppSettings {
         .unwrap_or_default()
 }
 
+fn configured_output_directory(app: &AppHandle) -> Option<PathBuf> {
+    load_app_settings(app)
+        .default_output_directory
+        .map(PathBuf::from)
+        .filter(|directory| directory.is_dir())
+}
+
+fn app_default_output_directory(app: &AppHandle) -> Option<PathBuf> {
+    configured_output_directory(app).or_else(|| app.path().download_dir().ok())
+}
+
 #[tauri::command]
 fn save_app_settings(app: AppHandle, mut settings: AppSettings) -> Result<AppSettings, String> {
     settings.default_output_directory = settings
@@ -739,6 +750,36 @@ fn bbdown_directory(executable: &Path) -> Result<PathBuf, String> {
         .parent()
         .map(Path::to_path_buf)
         .ok_or_else(|| "无法确定 BBDown 所在目录".to_string())
+}
+
+fn ensure_bbdown_output_directory(args: &mut Vec<String>, directory: Option<&Path>) {
+    if args
+        .iter()
+        .any(|argument| argument == "--work-dir" || argument.starts_with("--work-dir="))
+    {
+        return;
+    }
+    let Some(directory) = directory else {
+        return;
+    };
+    args.push("--work-dir".into());
+    args.push(directory.to_string_lossy().into_owned());
+}
+
+fn ensure_yt_dlp_output_directory(args: &mut Vec<String>, directory: Option<&Path>) {
+    if args.iter().any(|argument| {
+        argument == "-P"
+            || argument == "--paths"
+            || argument.starts_with("--paths=")
+            || argument.starts_with("-P=")
+    }) {
+        return;
+    }
+    let Some(directory) = directory else {
+        return;
+    };
+    args.push("-P".into());
+    args.push(directory.to_string_lossy().into_owned());
 }
 
 const BBDOWN_QR_GENERATE_URL: &str =
@@ -1249,6 +1290,20 @@ fn sanitize_diagnostic_text(line: &str, redact_personal_data: bool, home: Option
     sanitized
 }
 
+fn decode_process_output(bytes: &[u8]) -> String {
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        return text.to_string();
+    }
+    #[cfg(target_os = "windows")]
+    {
+        return encoding_rs::GBK.decode(bytes).0.into_owned();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        String::from_utf8_lossy(bytes).into_owned()
+    }
+}
+
 fn system_command_text(program: &str, args: &[&str]) -> Option<String> {
     let mut command = std::process::Command::new(program);
     hide_std_command_window(&mut command);
@@ -1256,7 +1311,7 @@ fn system_command_text(program: &str, args: &[&str]) -> Option<String> {
     output
         .status
         .success()
-        .then(|| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .then(|| decode_process_output(&output.stdout).trim().to_string())
         .filter(|value| !value.is_empty())
 }
 
@@ -1412,7 +1467,7 @@ where
         while matches!(bytes.last(), Some(b'\n' | b'\r')) {
             bytes.pop();
         }
-        let line = String::from_utf8_lossy(&bytes);
+        let line = decode_process_output(&bytes);
         if matches!(tool, ToolName::YtDlp) && yt_dlp_browser_cookie_fallback_requested(&line) {
             browser_cookie_fallback_requested = true;
         }
@@ -1731,13 +1786,16 @@ fn export_job_log(request: LogExportRequest) -> Result<DiagnosticExportResult, S
         .parent()
         .filter(|path| path.is_dir())
         .ok_or_else(|| "日志导出目录不存在".to_string())?;
-    let mut text = format!(
+    let mut text = String::new();
+    #[cfg(target_os = "windows")]
+    text.push('\u{feff}');
+    text.push_str(&format!(
         "MAD Toolbox task log\njob: {}\ntool: {}\nstate: {}\nmessage: {}\n\n",
         request.job.job_id,
         request.job.tool.label(),
         request.job.state,
         redact_output_line(&request.job.message)
-    );
+    ));
     for log in request.logs {
         let _ = writeln!(
             text,
@@ -1996,7 +2054,7 @@ async fn export_job_diagnostics(
     let archive = archive_result?;
     if !archive.status.success() {
         let _ = std::fs::remove_file(&temporary_output);
-        let reason = String::from_utf8_lossy(&archive.stderr).trim().to_string();
+        let reason = decode_process_output(&archive.stderr).trim().to_string();
         return Err(format!("无法生成诊断 ZIP：{reason}"));
     }
     if cleanup_result.is_err() {
@@ -2043,7 +2101,7 @@ async fn ffmpeg_encoders(app: AppHandle) -> Result<Vec<String>, String> {
     if !output.status.success() {
         return Err("无法读取 FFmpeg 编码器列表".into());
     }
-    let text = String::from_utf8_lossy(&output.stdout);
+    let text = decode_process_output(&output.stdout);
     let mut encoders = text
         .lines()
         .filter_map(|line| {
@@ -2088,6 +2146,17 @@ async fn run_tool(
     let executable = resolved_executable;
     let is_login = matches!(request.tool, ToolName::Bbdown)
         && request.args.first().map(String::as_str) == Some("login");
+    if !is_login {
+        let default_output_directory = app_default_output_directory(&app);
+        if matches!(request.tool, ToolName::Bbdown) {
+            ensure_bbdown_output_directory(&mut request.args, default_output_directory.as_deref());
+        } else if matches!(request.tool, ToolName::YtDlp) {
+            ensure_yt_dlp_output_directory(&mut request.args, default_output_directory.as_deref());
+            if let Some(fallback_args) = request.fallback_args.as_mut() {
+                ensure_yt_dlp_output_directory(fallback_args, default_output_directory.as_deref());
+            }
+        }
+    }
     if matches!(request.tool, ToolName::YtDlp)
         && !request.args.iter().any(|arg| arg == "--ffmpeg-location")
     {
@@ -2160,13 +2229,14 @@ async fn musicdl_search(
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
     if request.output_directory.is_none() {
-        request.output_directory = app.path().download_dir().ok().map(|directory| {
-            directory
-                .join("MAD Toolbox")
-                .join("Music")
-                .to_string_lossy()
-                .into_owned()
-        });
+        request.output_directory = configured_output_directory(&app)
+            .or_else(|| {
+                app.path()
+                    .download_dir()
+                    .ok()
+                    .map(|directory| directory.join("MAD Toolbox").join("Music"))
+            })
+            .map(|directory| directory.to_string_lossy().into_owned());
     }
     if let Some(directory) = &request.output_directory {
         std::fs::create_dir_all(directory)
@@ -2437,13 +2507,14 @@ async fn musicdl_playlist(
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .or_else(|| {
-            app.path().download_dir().ok().map(|directory| {
-                directory
-                    .join("MAD Toolbox")
-                    .join("Music")
-                    .to_string_lossy()
-                    .into_owned()
-            })
+            configured_output_directory(&app)
+                .or_else(|| {
+                    app.path()
+                        .download_dir()
+                        .ok()
+                        .map(|directory| directory.join("MAD Toolbox").join("Music"))
+                })
+                .map(|directory| directory.to_string_lossy().into_owned())
         });
     let output_directory = request
         .output_directory
@@ -2531,7 +2602,7 @@ async fn check_youtube_access(proxy: Option<String>) -> Result<bool, String> {
         .await
         .map_err(|_| "YouTube 网络检测超时".to_string())?
         .map_err(|error| error.to_string())?;
-    let code = String::from_utf8_lossy(&output.stdout);
+    let code = decode_process_output(&output.stdout);
     Ok(output.status.success() && (code.trim() == "204" || code.trim() == "200"))
 }
 
@@ -2707,12 +2778,12 @@ async fn inspect_media(app: AppHandle, path: String) -> Result<MediaInspection, 
         .await
         .map_err(|error| error.to_string())?;
     if !output.status.success() {
-        let reason = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let reason = decode_process_output(&output.stderr).trim().to_string();
         return Err(format!("媒体信息读取失败：{reason}"));
     }
-    let mut summary = String::from_utf8_lossy(&output.stdout).into_owned();
+    let mut summary = decode_process_output(&output.stdout);
     if summary.trim().is_empty() {
-        summary = String::from_utf8_lossy(&output.stderr).into_owned();
+        summary = decode_process_output(&output.stderr);
     } else if use_media_info_json {
         let document: serde_json::Value =
             serde_json::from_slice(&output.stdout).map_err(|error| error.to_string())?;
@@ -2836,7 +2907,7 @@ async fn probe_streams(
         return Err(format!(
             "无法识别媒体文件 {}：{}",
             input.to_string_lossy(),
-            String::from_utf8_lossy(&output.stderr).trim()
+            decode_process_output(&output.stderr).trim()
         ));
     }
     let value: serde_json::Value =
@@ -2939,6 +3010,13 @@ async fn run_pr_compatible(
     input: String,
     output_directory: Option<String>,
 ) -> Result<Vec<RunResult>, String> {
+    let output_directory = output_directory
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            configured_output_directory(&app)
+                .map(|directory| directory.to_string_lossy().into_owned())
+        });
     let (ffmpeg, _) =
         resolve_tool(&app, &ToolName::Ffmpeg).ok_or_else(|| "未找到 FFmpeg".to_string())?;
     let (ffprobe, _) =
@@ -3105,7 +3183,8 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        bbdown_qr_data_url, codecs_from_probe, cookie_header, has_required_bbdown_cookie,
+        bbdown_qr_data_url, codecs_from_probe, cookie_header, decode_process_output,
+        ensure_bbdown_output_directory, ensure_yt_dlp_output_directory, has_required_bbdown_cookie,
         is_text_subtitle_file, media_info_summary, musicdl_launcher_python, parse_query_fields,
         poll_bbdown_qr_at, pr_audio_container, pr_container, redact_output_line,
         sanitize_diagnostic_text, streams_from_probe, strip_ansi_codes,
@@ -3125,6 +3204,79 @@ mod tests {
             redact_output_line("SESSDATA=secret; bili_jct=csrf access_token=another-secret");
         assert_eq!(output, "SESSDATA=***; bili_jct=*** access_token=***");
         assert!(!output.contains("secret"));
+    }
+
+    #[test]
+    fn applies_default_bbdown_output_directory_without_overriding_explicit_path() {
+        let mut args = vec!["https://www.bilibili.com/video/BV1test".into()];
+        ensure_bbdown_output_directory(
+            &mut args,
+            Some(Path::new(r"C:\Users\Administrator\Downloads")),
+        );
+        assert_eq!(
+            args,
+            vec![
+                "https://www.bilibili.com/video/BV1test",
+                "--work-dir",
+                r"C:\Users\Administrator\Downloads"
+            ]
+        );
+
+        let mut explicit = vec![
+            "https://www.bilibili.com/video/BV1test".into(),
+            "--work-dir".into(),
+            r"D:\Videos".into(),
+        ];
+        ensure_bbdown_output_directory(
+            &mut explicit,
+            Some(Path::new(r"C:\Users\Administrator\Downloads")),
+        );
+        assert_eq!(explicit[2], r"D:\Videos");
+
+        let mut equals = vec![
+            "https://www.bilibili.com/video/BV1test".into(),
+            "--work-dir=D:\\Videos".into(),
+        ];
+        ensure_bbdown_output_directory(
+            &mut equals,
+            Some(Path::new(r"C:\Users\Administrator\Downloads")),
+        );
+        assert_eq!(equals.len(), 2);
+    }
+
+    #[test]
+    fn applies_default_yt_dlp_output_directory_without_overriding_explicit_path() {
+        let mut args = vec!["https://example.com/video".into()];
+        ensure_yt_dlp_output_directory(
+            &mut args,
+            Some(Path::new(r"C:\Users\Administrator\Downloads")),
+        );
+        assert_eq!(args[0], "https://example.com/video");
+        assert_eq!(args[1], "-P");
+        assert_eq!(args[2], r"C:\Users\Administrator\Downloads");
+
+        let mut explicit = vec![
+            "https://example.com/video".into(),
+            "-P".into(),
+            r"D:\Videos".into(),
+        ];
+        ensure_yt_dlp_output_directory(
+            &mut explicit,
+            Some(Path::new(r"C:\Users\Administrator\Downloads")),
+        );
+        assert_eq!(explicit.len(), 3);
+        assert_eq!(explicit[2], r"D:\Videos");
+    }
+
+    #[test]
+    fn keeps_utf8_process_output_readable() {
+        assert_eq!(decode_process_output("下载完成".as_bytes()), "下载完成");
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn decodes_windows_gbk_process_output() {
+        assert_eq!(decode_process_output(&[0xc7, 0xeb, 0xd7, 0xa2]), "请注");
     }
 
     #[test]

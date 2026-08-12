@@ -270,7 +270,7 @@ export function MusicPage({
 
   useEffect(() => {
     if (defaultOutputDirectory) {
-      setOutputDirectory((current) => current || defaultOutputDirectory);
+      setOutputDirectory((current) => current.trim() || defaultOutputDirectory);
     }
   }, [defaultOutputDirectory]);
 
