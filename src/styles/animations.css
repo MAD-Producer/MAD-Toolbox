@@ -1,129 +1,9 @@
-/* 顶栏 L1 导航布局：宽度由 header 网格的 50% 列决定，五个区域均分。
-   整格即按钮（高亮区 = 可点击区），图标颜色沿袭 ActionIcon transparent
-   变体的取色（gray/green-light-color）由格子的 color 承担。
-   图标随视口宽度缩放（900px 最小窗口 → 22px，1920px → 接近 30px）。 */
-.top-nav-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  height: 44px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--mantine-color-gray-light-color);
-  cursor: pointer;
-  border-radius: var(--mantine-radius-md);
-  transition:
-    background-color 150ms ease,
-    box-shadow 150ms ease;
-}
+/* 动效集中地：keyframes、入场/退场、加载与旋转循环。 */
 
-.top-nav .tabler-icon {
-  display: block;
-  width: clamp(22px, calc(0.7vw + 15px), 30px);
-  height: clamp(22px, calc(0.7vw + 15px), 30px);
-}
+/* 刻意不跟随 prefers-reduced-motion：WebView2 会把 Windows 性能设置映射为
+   reduce，曾致本文件动效静默失效；均为轻量微动效，保持常开 */
 
-.top-nav-item-active {
-  background: var(--app-nav-active-bg);
-  box-shadow: var(--app-nav-active-shadow);
-  color: var(--app-nav-active-icon);
-}
-
-点击切换时两者衔接自然；激活格已有高亮底，不再叠加。
-  */
-  .top-nav
-  .top-nav-item:not(.top-nav-item-active):hover,
-.app-header-icon:hover {
-  background: var(--app-nav-hover-bg);
-}
-
-/* 全局 SegmentedControl：隐藏随选中项平移的指示条，改为激活段自身
-   淡入淡出（与顶栏导航同一语言）；横排/竖排通用。 */
-.mantine-SegmentedControl-indicator {
-  display: none;
-}
-
-.mantine-SegmentedControl-control {
-  transition: background-color 150ms ease;
-}
-
-.mantine-SegmentedControl-control[data-active] {
-  background: var(--app-seg-active-bg);
-  border-radius: var(--sc-radius, var(--mantine-radius-sm));
-}
-
-/* 二级页签导航（设置分区 / 媒体工作流，L2TabNav）：外层带边框的大圆角容器、
-   页签等宽、激活段核心蓝填充白字；显式覆盖上面的通用白底激活样式。 */
-.l2-tabnav {
-  background: transparent;
-  border: 1px solid var(--mantine-color-default-border);
-  padding: 4px;
-  gap: 2px;
-}
-
-.l2-tabnav .mantine-SegmentedControl-control {
-  flex: 1 1 0;
-  border-radius: calc(var(--mantine-radius-lg) - 6px);
-}
-
-.l2-tabnav .mantine-SegmentedControl-label {
-  white-space: nowrap;
-}
-
-.l2-tabnav .mantine-SegmentedControl-control:not([data-active]):hover {
-  background: var(--app-seg-hover-bg);
-}
-
-.l2-tabnav .mantine-SegmentedControl-control[data-active] {
-  background: var(--mantine-color-blue-filled);
-}
-
-.l2-tabnav .mantine-SegmentedControl-control[data-active] .mantine-SegmentedControl-label {
-  color: var(--mantine-color-white);
-  font-weight: 500;
-}
-
-/* 页签上的警示计数（纯数字）：非激活取黄色语义色（浅色主题为深黄阶、深色主题为浅黄阶），
-   激活段为蓝底，改用亮黄保证可读 */
-.l2-tabnav .l2-tabnav-count {
-  color: var(--mantine-color-yellow-light-color);
-  font-weight: 500;
-}
-
-.l2-tabnav .mantine-SegmentedControl-control[data-active] .l2-tabnav-count {
-  color: var(--app-tab-count-active);
-}
-
-/* 全局 chrome 画布：顶栏与工作区四周的底色。工作区面板向中间缩进后以此形成
-   层级（亮浅灰一档 / 暗 dark-8，见 tokens.css）。 */
-.app-chrome {
-  background: var(--app-surface-chrome);
-}
-
-/* 顶栏应用标题：Sinter 暂缺字体文件，先由 Arial 承接；
-   深蓝墨色与蓝色主题同调（暗色取值见 tokens.css）。 */
-.app-title {
-  font-family: "Sinter", Arial, sans-serif;
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--app-title-color);
-}
-
-/* 工作区画布：亮色取 default 底色，暗色取 body 底色（dark 色阶第 7 级），
-   保持与顶栏 chrome（dark-8）的层次 */
-.workspace-surface {
-  background: var(--app-surface-workspace);
-}
-
-/* 任务运行中的分区取绿色（沿袭 green-light-color），置于激活规则之后使其优先 */
-.top-nav-task-running {
-  color: var(--mantine-color-green-light-color);
-}
-
+/* 顶栏运行中图标的描边循环（颜色规则 .top-nav-task-running 在 shell.css） */
 .top-nav-task-running .tabler-icon path {
   stroke-dasharray: 64;
   animation: top-nav-icon-draw 2.4s cubic-bezier(0.45, 0, 0.2, 1) infinite;
@@ -142,7 +22,7 @@
   }
 }
 
-/* 首屏五点加载器：波浪式起伏，逐点延迟 100ms 形成接力节奏 */
+/* 首屏加载器：波浪式起伏，逐点延迟 100ms 形成接力节奏 */
 .dots-loader {
   display: inline-flex;
   gap: 8px;
@@ -169,8 +49,7 @@
   }
 }
 
-/* 工作区/普通页面切换时的入场动画。
-   <Activity> 与 [hidden] 隐藏均为 display:none，重新可见时动画会重放。 */
+/* 工作区切换入场；display:none 重新可见时动画重放 */
 @keyframes workspace-enter {
   from {
     opacity: 0;
@@ -186,9 +65,8 @@
   animation: workspace-enter 180ms ease-out;
 }
 
-/* 任务卡删除：右移滑走 + 高度折叠。
-   槽位用 grid 行高 1fr→0fr 实现未知高度下的平滑收拢（Chromium 107+）；
-   时长须与 TasksPage 的 DELETE_ANIMATION_MS 一致。 */
+/* 任务卡删除：右移滑走 + 高度折叠，grid 1fr→0fr 实现未知高度收拢；
+   时长须与 TasksPage 的 DELETE_ANIMATION_MS 一致 */
 .task-card-slot {
   display: grid;
   grid-template-rows: 1fr;
@@ -209,7 +87,6 @@
     transform 280ms ease-in;
 }
 
-/* 任务卡「运行中/取消中」状态图标旋转 */
 .task-status-spinning {
   animation: task-status-spin 0.8s linear infinite;
 }
@@ -218,61 +95,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* 任务卡右侧操作按钮：图标默认暗灰，悬浮统一深灰底（不取主题色）；
-   打开输出位置/删除在悬浮时图标分别变蓝/变红以提示动作性质 */
-.task-action {
-  color: var(--mantine-color-dimmed);
-}
-
-.task-action:hover {
-  background: var(--app-nav-hover-bg);
-}
-
-.task-action-open:hover {
-  color: var(--mantine-color-blue-filled);
-}
-
-.task-action-danger:hover {
-  color: var(--mantine-color-red-light-color);
-}
-
-.history-clear-all:hover {
-  background: var(--app-nav-hover-bg);
-}
-
-/* 注：刻意不跟随 prefers-reduced-motion——WebView2 会把 Windows
-   「关闭动画效果 / 调整为最佳性能 / RDP 会话」映射为 reduce，
-   曾导致本文件全部动效在部分环境下静默失效；
-   这些均为轻量微动效，保持常开。 */
-
-/* 关于页 slogan 中的「MADer」：蓝青渐变文字（暗色主题的更浅色阶取值见
-   tokens.css）。注意两处都必须用 background-image 而非 background 简写——
-   简写会重置 background-clip，使 clip:text 失效（文字透明、渐变铺满整盒）。 */
-.quote-hero-mark {
-  font-weight: 700;
-  background-image: linear-gradient(
-    90deg,
-    var(--app-quote-gradient-from),
-    var(--app-quote-gradient-to)
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* slogan 的装饰性引号与署名短线：引号放大且不随斜体倾斜，短线为细横线。 */
-.quote-hero-quote {
-  font-size: 1.5em;
-  font-style: normal;
-  line-height: 0;
-  vertical-align: middle;
-}
-
-.quote-hero-rule {
-  display: inline-block;
-  width: 28px;
-  height: 1px;
-  background: var(--mantine-color-border);
 }

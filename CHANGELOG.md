@@ -2,6 +2,10 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 0.11.0
+
+- feat: A new appearance in "Settings->About" page
+
 ## 0.10.1
 
 - refactor: 颜色方案集中到语义 token 层（src/styles/tokens.css），亮暗取值成对管理

@@ -1,15 +1,27 @@
-import { ActionIcon, Card, Divider, Group, Image, Stack, Text, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Button,
+  Card,
+  Divider,
+  Group,
+  Image,
+  Stack,
+  Text,
+  type CardProps
+} from "@mantine/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { IconExternalLink } from "@tabler/icons-react";
+import { IconBrandGithub, IconExternalLink, IconRefresh, IconWorld } from "@tabler/icons-react";
 import { Fragment, type ReactNode } from "react";
+import { notifications } from "../../lib/notifications";
 import organizationLogo from "../../assets/organization_logo.png";
 import appIcon from "../../../src-tauri/icons/icon.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 
+const GITHUB_URL = "https://github.com/MAD-Producer/MAD-Toolbox";
+
 const TEAM_LINKS = [
   { name: "开发者名单", url: "https://github.com/MAD-Producer/MAD-Toolbox/graphs/contributors" },
-  { name: "在 GitHub 查看源码", url: "https://github.com/MAD-Producer/MAD-Toolbox" },
   { name: "关于 MAD Producer Studio", url: "https://madproducer.cn/about#module-2339" }
 ] as const;
 
@@ -48,23 +60,19 @@ interface AboutListRowProps {
 function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) {
   return (
     <FieldWithActions
+      px="md"
       py="sm"
       actions={
         href && (
-          <Tooltip
-            label={href}
-            position="top"
-            openDelay={200}
-            events={{ hover: true, focus: true, touch: false }}
+          <ActionIcon
+            variant="transparent"
+            color="gray"
+            className="about-action"
+            aria-label={`打开 ${primary}`}
+            onClick={() => void openUrl(href)}
           >
-            <ActionIcon
-              variant="default"
-              aria-label={`打开 ${primary}`}
-              onClick={() => void openUrl(href)}
-            >
-              <IconExternalLink size={16} stroke={1.7} />
-            </ActionIcon>
-          </Tooltip>
+            <IconExternalLink size={16} stroke={1.7} />
+          </ActionIcon>
         )
       }
     >
@@ -85,54 +93,89 @@ function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) 
   );
 }
 
-function AboutSection({ title, children }: { title: string; children: ReactNode }) {
+function AboutSection({
+  title,
+  cardProps,
+  children
+}: {
+  title: string;
+  cardProps?: CardProps;
+  children: ReactNode;
+}) {
   return (
     <Stack gap="xs">
       <Text size="sm" fw={600}>
         {title}
       </Text>
-      <Card withBorder>{children}</Card>
+      <Card withBorder {...(cardProps ?? { p: 0, py: "sm" })}>
+        {children}
+      </Card>
     </Stack>
   );
 }
 
 export function AboutSettingsPage() {
   return (
-    <Stack gap="lg" maw={760}>
-      <AboutSection title="关于">
-        <Group justify="center" align="center" wrap="nowrap" gap="md" py="xs">
-          <Image src={appIcon} alt="MAD Toolbox" w={48} h={48} radius="sm" flex="0 0 auto" />
-          <Text fz="xl" fw={600}>
-            MAD Toolbox
-          </Text>
-        </Group>
-        <Divider />
-        <Group justify="space-between" wrap="nowrap" py="sm">
-          <Text size="sm" fw={500}>
-            版本
-          </Text>
-          <Text size="sm" c="dimmed">
-            v{packageInfo.version}
-          </Text>
+    <Stack gap="lg">
+      <AboutSection title="关于" cardProps={{ p: 24 }}>
+        <Group justify="space-between" align="center" wrap="nowrap">
+          <Stack align="center" gap="xs">
+            <Group gap="sm" wrap="nowrap" align="center">
+              <Image src={appIcon} alt="MAD Toolbox" w={24} h={24} radius="sm" flex="0 0 auto" />
+              <Text className="app-title" fz="xl">
+                MAD Toolbox
+              </Text>
+            </Group>
+            <Text size="sm" c="dimmed">
+              Version:{" "}
+              <Text span fw={700} inherit>
+                v{packageInfo.version}
+              </Text>
+            </Text>
+          </Stack>
+          <Group gap="sm" wrap="nowrap">
+            <Button
+              variant="transparent"
+              color="gray"
+              className="about-action"
+              leftSection={<IconWorld size={16} />}
+              onClick={() => void openUrl(GITHUB_URL)}
+            >
+              Website
+            </Button>
+            <Button
+              variant="transparent"
+              color="gray"
+              className="about-action"
+              leftSection={<IconBrandGithub size={16} />}
+              onClick={() => void openUrl(GITHUB_URL)}
+            >
+              GitHub
+            </Button>
+            <Button
+              leftSection={<IconRefresh size={16} />}
+              onClick={() => notifications.show({ message: "已是最新版本", color: "green" })}
+            >
+              Check for update
+            </Button>
+          </Group>
         </Group>
       </AboutSection>
 
       <AboutSection title="开发团队">
-        <Image
-          src={organizationLogo}
-          alt="MAD Producer Studio"
-          w="80%"
-          h="auto"
-          mx="auto"
-          my="2rem"
-        />
-        <Divider />
-        {TEAM_LINKS.map((link, index) => (
-          <Fragment key={link.url}>
-            {index > 0 && <Divider />}
-            <AboutListRow primary={link.name} href={link.url} />
-          </Fragment>
-        ))}
+        <Image src={organizationLogo} alt="MAD Producer Studio" h={96} w="auto" mx="auto" my="sm" />
+        <Group grow px="md" gap="sm">
+          {TEAM_LINKS.map((link) => (
+            <Button
+              key={link.url}
+              variant="default"
+              leftSection={<IconExternalLink size={16} stroke={1.7} />}
+              onClick={() => void openUrl(link.url)}
+            >
+              {link.name}
+            </Button>
+          ))}
+        </Group>
       </AboutSection>
 
       <AboutSection title="致谢">
@@ -151,20 +194,15 @@ export function AboutSettingsPage() {
       </AboutSection>
 
       <Stack align="center" gap="xs" mt="xl">
-        <Text fs="italic" ta="center" fz="lg" lh={1.8} c="dimmed">
-          <span className="quote-hero-quote">“</span>
+        <Text fs="italic" ta="center" fz={22} lh={1.8} c="dimmed">
           There are many toolboxes
           <br />
-          {"\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"}but this one is for you,{" "}
-          <span className="quote-hero-mark">MADer</span>
-          <span className="quote-hero-quote">”</span>
+          but this one is for you, <span className="quote-hero-mark">MADer</span>
         </Text>
-        <Group gap="xs" wrap="nowrap">
-          <span className="quote-hero-rule" />
-          <Text size="sm" c="dimmed">
-            -- MAD Producer Studio --
-          </Text>
-        </Group>
+        <span className="quote-hero-taper" />
+        <Text size="sm" c="dimmed" fw={700}>
+          MAD Producer Studio
+        </Text>
       </Stack>
     </Stack>
   );

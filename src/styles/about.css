@@ -1,0 +1,25 @@
+/* 关于页底部 slogan hero 的装饰样式。 */
+
+/* 渐变文字：须用 background-image，background 简写会重置 background-clip
+   使 clip:text 失效 */
+.quote-hero-mark {
+  font-weight: 700;
+  background-image: linear-gradient(
+    90deg,
+    var(--app-quote-gradient-from),
+    var(--app-quote-gradient-to)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 锥形细线：椭圆腰线两端薄中段厚；Mantine 无 --mantine-color-border 变体，
+   写错变量名会静默透明 */
+.quote-hero-taper {
+  display: inline-block;
+  width: 240px;
+  height: 1px;
+  border-radius: 50%;
+  background: var(--mantine-color-default-border);
+}

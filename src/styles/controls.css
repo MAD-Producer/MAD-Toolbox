@@ -1,0 +1,79 @@
+/* 控件皮肤：SegmentedControl 全局、L2TabNav、任务卡操作按钮。 */
+
+/* 统一悬浮灰底（不取主题色）：透明底图标/按钮的悬浮语言，
+   新增同类入口往选择器列表里加，不另写规则 */
+.top-nav .top-nav-item:not(.top-nav-item-active):hover,
+.app-header-icon:hover,
+.task-action:hover,
+.history-clear-all:hover,
+.about-action:hover {
+  background: var(--app-nav-hover-bg);
+}
+
+/* 全局 SegmentedControl：隐藏平移指示条，改为激活段自身淡入淡出 */
+.mantine-SegmentedControl-indicator {
+  display: none;
+}
+
+.mantine-SegmentedControl-control {
+  transition: background-color 150ms ease;
+}
+
+.mantine-SegmentedControl-control[data-active] {
+  background: var(--app-seg-active-bg);
+  border-radius: var(--sc-radius, var(--mantine-radius-sm));
+}
+
+/* 二级页签：带边框大圆角容器、等宽页签、激活段蓝底白字（覆盖上方通用样式） */
+.l2-tabnav {
+  background: transparent;
+  border: 1px solid var(--mantine-color-default-border);
+  padding: 4px;
+  gap: 2px;
+}
+
+.l2-tabnav .mantine-SegmentedControl-control {
+  flex: 1 1 0;
+  border-radius: calc(var(--mantine-radius-lg) - 6px);
+}
+
+.l2-tabnav .mantine-SegmentedControl-label {
+  white-space: nowrap;
+}
+
+.l2-tabnav .mantine-SegmentedControl-control:not([data-active]):hover {
+  background: var(--app-seg-hover-bg);
+}
+
+.l2-tabnav .mantine-SegmentedControl-control[data-active] {
+  background: var(--mantine-color-blue-filled);
+}
+
+.l2-tabnav .mantine-SegmentedControl-control[data-active] .mantine-SegmentedControl-label {
+  color: var(--mantine-color-white);
+  font-weight: 500;
+}
+
+/* 警示计数：非激活取黄色；激活段蓝底改亮黄保证可读 */
+.l2-tabnav .l2-tabnav-count {
+  color: var(--mantine-color-yellow-light-color);
+  font-weight: 500;
+}
+
+.l2-tabnav .mantine-SegmentedControl-control[data-active] .l2-tabnav-count {
+  color: var(--app-tab-count-active);
+}
+
+/* 任务卡操作按钮：图标默认暗灰（悬浮底色见顶部统一规则）；
+   悬浮分色提示动作性质——打开输出位置变蓝、删除变红 */
+.task-action {
+  color: var(--mantine-color-dimmed);
+}
+
+.task-action-open:hover {
+  color: var(--mantine-color-blue-filled);
+}
+
+.task-action-danger:hover {
+  color: var(--mantine-color-red-light-color);
+}
