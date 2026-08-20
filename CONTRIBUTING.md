@@ -49,9 +49,8 @@ npm run tauri:build:full -- mac --ci
 
 Any arguments after the target are passed through to `tauri build`. Both
 commands first run the TypeScript and `cargo check` preflights, then verify the
-pinned sidecar binaries (downloading missing Windows ones) and produce the
-platform installer. CI tag builds use the same commands with an explicit
-target.
+pinned sidecar binaries (downloading missing ones) and produce the platform
+installer. CI tag builds use the same commands with an explicit target.
 
 The automation lives in `scripts/`, split by responsibility:
 

@@ -119,6 +119,10 @@ jobs:
         if: matrix.platform == 'windows-2022'
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build/windows-tools.ps1 -Edition Lite
 
+      - name: Verify bundled macOS sidecar (Lite)
+        if: matrix.platform == 'macos-14'
+        run: sh scripts/build/macos-tools.sh lite
+
       - run: npm run build
 
       # Platform-specific cargo check invocation (kept explicit for readability)

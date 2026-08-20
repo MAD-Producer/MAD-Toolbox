@@ -35,8 +35,11 @@ configure flags and configure output. Never package an `--enable-nonfree`
 build.
 
 The macOS tool pack and reproducible arm64 build procedure are pinned in
-`third_party/sources.json` and `third_party/build/`. The bundled macOS BBDown
-binary is the official, unmodified release. For GUI QR login, MAD Toolbox
+`third_party/sources.json` and `third_party/build/`. `scripts/build/macos-tools.sh`
+fetches missing or outdated upstream sidecars (BBDown, MediaInfo, yt-dlp, Deno)
+from the pinned releases and verifies every SHA-256; only the self-built
+FFmpeg/ffprobe pair is committed under `src-tauri/binaries/`. The bundled macOS
+BBDown binary is the official, unmodified release. For GUI QR login, MAD Toolbox
 follows BBDown's official web endpoints, reads the complete Cookie fields from
 the poll response, validates the account, and writes the same native
 `BBDown.data` format. Normal downloads invoke BBDown unchanged.
