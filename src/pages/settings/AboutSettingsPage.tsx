@@ -14,7 +14,7 @@ import { IconBrandGithub, IconExternalLink, IconRefresh, IconWorld } from "@tabl
 import { Fragment, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import organizationLogo from "../../assets/organization_logo.png";
-import appIcon from "../../../src-tauri/icons/icon.png";
+import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 
@@ -107,7 +107,7 @@ function AboutSection({
       <Text size="sm" fw={600}>
         {title}
       </Text>
-      <Card withBorder {...(cardProps ?? { p: 0, py: "sm" })}>
+      <Card withBorder {...(cardProps ?? { p: 0 })}>
         {children}
       </Card>
     </Stack>
@@ -121,12 +121,12 @@ export function AboutSettingsPage() {
         <Group justify="space-between" align="center" wrap="nowrap">
           <Stack align="center" gap="xs">
             <Group gap="sm" wrap="nowrap" align="center">
-              <Image src={appIcon} alt="MAD Toolbox" w={24} h={24} radius="sm" flex="0 0 auto" />
+              <Image src={appIcon} alt="MAD Toolbox" w={20} h={20} radius="sm" flex="0 0 auto" />
               <Text className="app-title" fz="xl">
                 MAD Toolbox
               </Text>
             </Group>
-            <Text size="sm" c="dimmed">
+            <Text size="sm">
               Version:{" "}
               <Text span fw={700} inherit>
                 v{packageInfo.version}
@@ -163,18 +163,30 @@ export function AboutSettingsPage() {
       </AboutSection>
 
       <AboutSection title="开发团队">
-        <Image src={organizationLogo} alt="MAD Producer Studio" h={96} w="auto" mx="auto" my="sm" />
-        <Group grow px="md" gap="sm">
-          {TEAM_LINKS.map((link) => (
-            <Button
-              key={link.url}
-              variant="default"
-              leftSection={<IconExternalLink size={16} stroke={1.7} />}
-              onClick={() => void openUrl(link.url)}
-            >
-              {link.name}
-            </Button>
-          ))}
+        <Group justify="space-between" align="center" wrap="nowrap" px="xl" py="xl" gap="lg">
+          <Image
+            src={organizationLogo}
+            alt="MAD Producer Studio"
+            w={480}
+            h="auto"
+            mx="lg"
+            my="xl"
+            flex="0 0 auto"
+          />
+          <Stack gap="xl">
+            {TEAM_LINKS.map((link) => (
+              <Button
+                key={link.url}
+                variant="transparent"
+                color="gray"
+                className="about-action"
+                leftSection={<IconExternalLink size={16} stroke={1.7} />}
+                onClick={() => void openUrl(link.url)}
+              >
+                {link.name}
+              </Button>
+            ))}
+          </Stack>
         </Group>
       </AboutSection>
 
