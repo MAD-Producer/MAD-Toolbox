@@ -32,22 +32,32 @@ checksum_of() {
   shasum -a 256 "$1" | awk '{print $1}'
 }
 
+# Helpers below use prefixed variables: POSIX sh has no local scope, so plain
+# names would clobber the ensure_* functions' globals (a binary hash silently
+# compared against an archive hash made CI exit 1 with no message).
 verify_checksum() {
-  binary="$1"
-  expected="$2"
-  test -x "$binary"
-  test "$(checksum_of "$binary")" = "$expected"
+  vc_binary="$1"
+  vc_expected="$2"
+  if ! test -x "$vc_binary"; then
+    echo "$vc_binary is missing or not executable" >&2
+    exit 1
+  fi
+  vc_actual="$(checksum_of "$vc_binary")"
+  if test "$vc_actual" != "$vc_expected"; then
+    echo "SHA256 mismatch for $vc_binary. Expected $vc_expected, got $vc_actual" >&2
+    exit 1
+  fi
 }
 
-# Downloads url to output and verifies the pinned archive SHA-256.
+# Downloads dl_url to dl_output and verifies the pinned archive SHA-256.
 download_file() {
-  url="$1"
-  output="$2"
-  expected="$3"
-  curl --fail --location --retry 3 --output "$output" "$url"
-  actual="$(checksum_of "$output")"
-  if test "$actual" != "$expected"; then
-    echo "SHA256 mismatch for $output. Expected $expected, got $actual" >&2
+  dl_url="$1"
+  dl_output="$2"
+  dl_expected="$3"
+  curl --fail --location --retry 3 --output "$dl_output" "$dl_url"
+  dl_actual="$(checksum_of "$dl_output")"
+  if test "$dl_actual" != "$dl_expected"; then
+    echo "SHA256 mismatch for $dl_output. Expected $dl_expected, got $dl_actual" >&2
     exit 1
   fi
 }
