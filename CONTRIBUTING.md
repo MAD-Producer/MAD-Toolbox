@@ -20,7 +20,18 @@ Build Tools with the **Desktop development with C++** workload; the Windows
 packaging flow runs on Windows PowerShell 5.1, which ships with Windows, so
 PowerShell 7 is not required.
 
-run:
+Fetch the pinned sidecars once; tauri's build script validates
+`bundle.externalBin` paths on every cargo invocation, so this must happen
+before `cargo check`:
+
+```bash
+# macOS (Apple Silicon)
+sh scripts/build/macos-tools.sh lite
+# Windows x64 (PowerShell)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build/windows-tools.ps1 -Edition Lite
+```
+
+then:
 
 ```bash
 npm ci

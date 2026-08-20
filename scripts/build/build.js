@@ -115,6 +115,24 @@ console.log(`Packaging the ${edition} edition for ${target}...`);
 
 runNpm(["run", "check"]);
 
+// Fetch the sidecars before the cargo preflight: tauri's build script
+// validates bundle.externalBin paths on every cargo invocation. The
+// packaging scripts below re-run the same tools script, which then only
+// re-verifies the SHA-256 checksums.
+if (target === "windows") {
+  run("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    path.join(buildDirectory, "windows-tools.ps1"),
+    "-Edition",
+    edition === "full" ? "Full" : "Lite"
+  ]);
+} else {
+  run("/bin/sh", [path.join(buildDirectory, "macos-tools.sh"), edition]);
+}
+
 const rustTarget = target === "windows" ? "x86_64-pc-windows-msvc" : "aarch64-apple-darwin";
 run("cargo", ["check", "--manifest-path", "src-tauri/Cargo.toml", "--target", rustTarget]);
 
