@@ -1,3 +1,5 @@
+import { BASE_PATH } from "@/lib/site";
+
 const LINK_GROUPS = [
   {
     title: "资源",
@@ -27,7 +29,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon.svg" alt="MAD Toolbox 图标" className="size-9 rounded-[10px]" />
+              <img src={`${BASE_PATH}/icon.svg`} alt="MAD Toolbox 图标" className="size-9 rounded-[10px]" />
               <span className="text-[16px] font-semibold tracking-tight">MAD Toolbox</span>
             </div>
             <p className="mt-4 max-w-sm text-[13px] leading-6 text-mist-500">

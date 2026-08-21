@@ -1,23 +1,7 @@
 @import "tailwindcss";
 
-/* ---------- 品牌字体：从 MAD Toolbox 应用内自托管的 Sinter ---------- */
-@font-face {
-  font-family: "Sinter";
-  src: url("/fonts/Sinter-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Sinter";
-  src: url("/fonts/Sinter-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
 @theme {
-  --font-sans: "Sinter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+  --font-sans: var(--font-sinter, "Sinter"), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI",
     "Microsoft YaHei", sans-serif;
 

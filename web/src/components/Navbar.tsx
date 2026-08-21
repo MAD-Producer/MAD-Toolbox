@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { GitHubIcon, DownloadIcon } from "@/components/ui/Icons";
+import { BASE_PATH } from "@/lib/site";
 
 const NAV_LINKS = [
   { href: "#features", label: "功能" },
@@ -35,7 +36,7 @@ export function Navbar() {
       >
         <a href="#" className="flex items-center gap-2.5" aria-label="MAD Toolbox 首页">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon.svg" alt="MAD Toolbox 图标" className="size-8 rounded-[9px]" />
+          <img src={`${BASE_PATH}/icon.svg`} alt="MAD Toolbox 图标" className="size-8 rounded-[9px]" />
           <span className="text-[15px] font-semibold tracking-tight">MAD Toolbox</span>
           <span className="hidden rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary-soft sm:inline-block">
             v0.10.1

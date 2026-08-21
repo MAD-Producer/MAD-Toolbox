@@ -19,7 +19,7 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-## 构建与部署（Cloudflare Pages）
+## 构建与部署（GitHub Pages）
 
 ```bash
 npm run build      # 产物输出到 web/out/
@@ -27,11 +27,11 @@ npm run build      # 产物输出到 web/out/
 
 部署方式任选其一：
 
-1. **仪表盘直传**：Cloudflare Pages → Create project → Direct Upload，把 `out/` 目录拖进去。
-2. **Git 集成**：仓库连 Pages，构建配置填：
-   - Build command: `cd web && npm install && npm run build`
-   - Build output directory: `web/out`
-3. **Wrangler CLI**：`npx wrangler pages deploy out`
+1. **自动部署（推荐）**：`.github/workflows/deploy-web.yml` 会在 `web` 分支有 commit（且改动涉及 `web/`）时自动构建并部署到 GitHub Pages。首次使用前需在仓库 Settings → Pages 将 Source 设为 **GitHub Actions**（无需配置任何密钥）。
+2. **Wrangler CLI / Cloudflare Pages**（备用）：`npx wrangler pages deploy out`，需要先在 `next.config.mjs` 中把 `basePath` 改为 `""`（Cloudflare Pages 部署在根路径）。
+
+> 站点地址为 `https://mad-producer.github.io/MAD-Toolbox/`（子路径部署，已通过 `basePath` 适配）。
+> 若绑定自定义域名改为根路径部署，同样需要把 `basePath` 与 `src/lib/site.ts` 中的 `BASE_PATH` 置空。
 
 ## 目录结构
 
