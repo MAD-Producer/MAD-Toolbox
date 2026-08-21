@@ -40,6 +40,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             core::settings::app_settings,
             core::settings::save_app_settings,
+            core::update::check_for_update,
             core::deps::dependency_status,
             core::deps::dependency_install,
             core::task::commands::task_export_diagnostics,

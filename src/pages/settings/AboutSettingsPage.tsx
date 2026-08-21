@@ -10,13 +10,20 @@ import {
   type CardProps
 } from "@mantine/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { IconBrandGithub, IconExternalLink, IconRefresh, IconWorld } from "@tabler/icons-react";
-import { Fragment, type ReactNode } from "react";
+import {
+  IconBrandGithub,
+  IconDownload,
+  IconExternalLink,
+  IconRefresh,
+  IconWorld
+} from "@tabler/icons-react";
+import { Fragment, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import organizationLogo from "../../assets/organization_logo.png";
 import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
+import { checkForUpdate, type UpdateCheck } from "./api";
 
 const GITHUB_URL = "https://github.com/MAD-Producer/MAD-Toolbox";
 
@@ -115,6 +122,26 @@ function AboutSection({
 }
 
 export function AboutSettingsPage() {
+  const [checking, setChecking] = useState(false);
+  const [update, setUpdate] = useState<UpdateCheck | null>(null);
+
+  async function handleCheckUpdate() {
+    setChecking(true);
+    try {
+      const result = await checkForUpdate();
+      if (result.updateAvailable) {
+        setUpdate(result);
+        notifications.show({ message: `发现新版本 v${result.latestVersion}`, color: "green" });
+      } else {
+        notifications.show({ message: "已是最新版本", color: "green" });
+      }
+    } catch (error) {
+      notifications.show({ message: String(error), color: "red" });
+    } finally {
+      setChecking(false);
+    }
+  }
+
   return (
     <Stack gap="lg">
       <AboutSection title="关于" cardProps={{ p: 24 }}>
@@ -149,12 +176,25 @@ export function AboutSettingsPage() {
             >
               GitHub
             </Button>
-            <Button
-              leftSection={<IconRefresh size={16} />}
-              onClick={() => notifications.show({ message: "已是最新版本", color: "green" })}
-            >
-              Check for update
-            </Button>
+            {update ? (
+              <Button
+                color="green"
+                leftSection={<IconDownload size={16} />}
+                onClick={() => {
+                  void openUrl(update.releaseUrl);
+                }}
+              >
+                下载最新版本
+              </Button>
+            ) : (
+              <Button
+                leftSection={<IconRefresh size={16} />}
+                loading={checking}
+                onClick={() => void handleCheckUpdate()}
+              >
+                检查软件更新
+              </Button>
+            )}
           </Group>
         </Group>
       </AboutSection>
