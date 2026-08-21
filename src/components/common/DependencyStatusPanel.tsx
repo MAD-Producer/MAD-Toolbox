@@ -32,11 +32,11 @@ export function DependencyStatusPanel({
       onToggle={() => setOpened((value) => !value)}
       title={
         missing.length > 0 ? (
-          <Badge variant="light" color="yellow">
+          <Badge variant="transparent" color="yellow">
             {missing.length} 个必要工具未就绪
           </Badge>
         ) : (
-          <Badge variant="light" color="teal" leftSection={<IconCircleCheck size={12} />}>
+          <Badge variant="transparent" color="teal" leftSection={<IconCircleCheck size={12} />}>
             必要工具均已就绪
           </Badge>
         )
@@ -45,6 +45,7 @@ export function DependencyStatusPanel({
         <Button
           size="compact-sm"
           variant="subtle"
+          className="dep-refresh"
           leftSection={<IconRefresh size={14} />}
           loading={loading}
           onClick={onRefresh}
@@ -91,14 +92,19 @@ export function DependencyStatusPanel({
                         {dependency.label}
                       </Text>
                       {!dependency.required && (
-                        <Badge size="xs" variant="light" color="gray" style={{ flexShrink: 0 }}>
+                        <Badge
+                          size="xs"
+                          variant="transparent"
+                          color="gray"
+                          style={{ flexShrink: 0 }}
+                        >
                           可选
                         </Badge>
                       )}
                     </Group>
                     <Badge
                       color={dependency.available ? "teal" : "yellow"}
-                      variant="light"
+                      variant="transparent"
                       style={{ flexShrink: 0 }}
                     >
                       {dependency.available

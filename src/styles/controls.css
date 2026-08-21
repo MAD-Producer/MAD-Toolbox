@@ -6,7 +6,8 @@
 .app-header-icon:hover,
 .task-action:hover,
 .history-clear-all:hover,
-.about-action:hover {
+.about-action:hover,
+.dep-refresh:hover {
   background: var(--app-nav-hover-bg);
 }
 

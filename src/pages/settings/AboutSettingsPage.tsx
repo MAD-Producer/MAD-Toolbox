@@ -119,20 +119,17 @@ export function AboutSettingsPage() {
     <Stack gap="lg">
       <AboutSection title="关于" cardProps={{ p: 24 }}>
         <Group justify="space-between" align="center" wrap="nowrap">
-          <Stack align="center" gap="xs">
-            <Group gap="sm" wrap="nowrap" align="center">
-              <Image src={appIcon} alt="MAD Toolbox" w={20} h={20} radius="sm" flex="0 0 auto" />
+          <Group gap="lg" wrap="nowrap" align="center">
+            <Image src={appIcon} alt="MAD Toolbox" h={64} w="auto" radius="sm" flex="0 0 auto" />
+            <Stack gap={8}>
               <Text className="app-title" fz="xl">
                 MAD Toolbox
               </Text>
-            </Group>
-            <Text size="sm">
-              Version:{" "}
-              <Text span fw={700} inherit>
+              <Text size="sm" fw={700}>
                 v{packageInfo.version}
               </Text>
-            </Text>
-          </Stack>
+            </Stack>
+          </Group>
           <Group gap="sm" wrap="nowrap">
             <Button
               variant="transparent"
