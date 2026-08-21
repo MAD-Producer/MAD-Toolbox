@@ -1,0 +1,55 @@
+/* 应用框架静态皮肤：顶栏导航、应用标题、全局表面底色。动效见 animations.css。 */
+
+.app-chrome {
+  background: var(--app-surface-chrome);
+}
+
+.workspace-surface {
+  background: var(--app-surface-workspace);
+}
+
+/* Sinter 字体文件暂缺，先由 Arial 承接 */
+.app-title {
+  font-family: "Sinter", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--app-title-color);
+}
+
+/* 顶栏 L1 导航：整格即按钮（高亮区 = 可点击区），宽度由 header 网格均分，
+   图标随视口 900–1920px 缩放 */
+.top-nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--mantine-color-gray-light-color);
+  cursor: pointer;
+  border-radius: var(--mantine-radius-md);
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.top-nav .tabler-icon {
+  display: block;
+  width: clamp(22px, calc(0.7vw + 15px), 30px);
+  height: clamp(22px, calc(0.7vw + 15px), 30px);
+}
+
+.top-nav-item-active {
+  background: var(--app-nav-active-bg);
+  box-shadow: var(--app-nav-active-shadow);
+  color: var(--app-nav-active-icon);
+}
+
+/* 与 .top-nav-item-active 同特异性，靠先后顺序覆盖，勿挪到它前面 */
+.top-nav-task-running {
+  color: var(--mantine-color-green-light-color);
+}

@@ -47,7 +47,7 @@ export function DependenciesSettingsPage({
   };
 
   return (
-    <Stack gap="md" maw={900}>
+    <Stack gap="md">
       <div>
         <Text fw={500}>工具版本来源</Text>
         <Text size="xs" c="dimmed">

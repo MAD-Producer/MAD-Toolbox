@@ -23,6 +23,13 @@ export const theme = createTheme({
       defaultProps: {
         radius: "md"
       }
+    },
+    Switch: {
+      vars: () => ({
+        root: {
+          "--label-offset-start": "calc(var(--mantine-spacing-md) / 3)"
+        }
+      })
     }
   }
 });
