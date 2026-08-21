@@ -8,3 +8,4 @@ pub mod redaction;
 pub mod registry;
 pub mod settings;
 pub mod task;
+pub mod update;
