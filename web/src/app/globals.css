@@ -1,0 +1,329 @@
+@import "tailwindcss";
+
+/* ---------- 品牌字体：从 MAD Toolbox 应用内自托管的 Sinter ---------- */
+@font-face {
+  font-family: "Sinter";
+  src: url("/fonts/Sinter-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Sinter";
+  src: url("/fonts/Sinter-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Sinter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI",
+    "Microsoft YaHei", sans-serif;
+
+  /* 品牌主色（取自应用 src/theme/colors.ts 的 blue 刻度） */
+  --color-primary: #0a84ff;
+  --color-primary-bright: #2f94ff;
+  --color-primary-soft: #5ca9ff;
+
+  /* 应用图标中的强调色（紫渐变 + 粉徽章） */
+  --color-accent-cyan: #64d2ff;
+  --color-accent-violet: #8177ff;
+  --color-accent-violet-deep: #6155f5;
+  --color-accent-pink: #ff5c91;
+
+  /* 深色刻度（取自应用 dark 刻度） */
+  --color-ink-950: #0a0a0d;
+  --color-ink-900: #101013;
+  --color-ink-850: #151518;
+  --color-ink-800: #1d1d20;
+  --color-ink-700: #242429;
+  --color-ink-600: #2e2e33;
+
+  /* 浅灰文字刻度 */
+  --color-mist-100: #f4f4f6;
+  --color-mist-300: #c6c6cc;
+  --color-mist-400: #98989f;
+  --color-mist-500: #6e6e76;
+  --color-mist-600: #5c5c64;
+
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-marquee-slow: marquee 64s linear infinite;
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-float-delay: float 7s ease-in-out 2.3s infinite;
+  --animate-gradient-x: gradient-x 6s ease infinite;
+  --animate-shimmer: shimmer 2.4s linear infinite;
+  --animate-aurora-a: aurora-a 22s ease-in-out infinite alternate;
+  --animate-aurora-b: aurora-b 27s ease-in-out infinite alternate;
+  --animate-aurora-c: aurora-c 31s ease-in-out infinite alternate;
+  --animate-pulse-dot: pulse-dot 2.2s ease-in-out infinite;
+  --animate-spin-slow: spin 16s linear infinite;
+  --animate-caret: caret 1.1s step-end infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+  @keyframes gradient-x {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+  @keyframes aurora-a {
+    from {
+      transform: translate(-8%, -4%) scale(1);
+    }
+    to {
+      transform: translate(10%, 8%) scale(1.15);
+    }
+  }
+  @keyframes aurora-b {
+    from {
+      transform: translate(6%, 10%) scale(1.08);
+    }
+    to {
+      transform: translate(-10%, -6%) scale(0.94);
+    }
+  }
+  @keyframes aurora-c {
+    from {
+      transform: translate(-4%, 8%) rotate(0deg) scale(1);
+    }
+    to {
+      transform: translate(8%, -10%) rotate(22deg) scale(1.12);
+    }
+  }
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45);
+    }
+    50% {
+      opacity: 0.7;
+      box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
+    }
+  }
+  @keyframes caret {
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
+/* ---------- 基础 ---------- */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  color: var(--color-mist-100);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(10, 132, 255, 0.35);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ink-950);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-600);
+  border-radius: 8px;
+  border: 2px solid var(--color-ink-950);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3c3c41;
+}
+
+/* ---------- 渐变文字 ---------- */
+.text-gradient-brand {
+  background: linear-gradient(94deg, #5ca9ff 0%, #0a84ff 42%, #64d2ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-vivid {
+  background: linear-gradient(
+    92deg,
+    #8177ff 0%,
+    #0a84ff 34%,
+    #64d2ff 62%,
+    #ff5c91 100%
+  );
+  background-size: 220% 100%;
+  animation: var(--animate-gradient-x);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- 玻璃拟态 ---------- */
+.glass {
+  background: rgba(21, 21, 24, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ---------- 聚光灯卡片（鼠标跟随光晕） ---------- */
+.spotlight {
+  position: relative;
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(10, 132, 255, 0.13),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: none;
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+/* ---------- 网格与背景 ---------- */
+.grid-bg {
+  background-image: linear-gradient(
+      rgba(255, 255, 255, 0.045) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.mask-radial-fade {
+  -webkit-mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 32%,
+    black 35%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 75% 65% at 50% 32%,
+    black 35%,
+    transparent 78%
+  );
+}
+
+.mask-fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 12%,
+    black 88%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 12%,
+    black 88%,
+    transparent
+  );
+}
+
+.noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- 进度条扫光 ---------- */
+.progress-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.progress-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  animation: var(--animate-shimmer);
+}
+
+/* ---------- 描边渐变环（下载 CTA） ---------- */
+.conic-ring {
+  position: relative;
+}
+.conic-ring::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--ring-angle, 0deg),
+    transparent 0deg,
+    #0a84ff 60deg,
+    #64d2ff 110deg,
+    #8177ff 180deg,
+    #ff5c91 240deg,
+    transparent 300deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: ring-rotate 6s linear infinite;
+  pointer-events: none;
+}
+
+@property --ring-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ring-rotate {
+  to {
+    --ring-angle: 360deg;
+  }
+}

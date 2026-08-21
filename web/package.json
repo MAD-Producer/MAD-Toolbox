@@ -1,0 +1,25 @@
+{
+  "name": "mad-toolbox-web",
+  "version": "0.10.1",
+  "private": true,
+  "description": "MAD Toolbox promotional website — static export for Cloudflare Pages",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "npx serve out"
+  },
+  "dependencies": {
+    "framer-motion": "^13.1.1",
+    "next": "^16.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}
