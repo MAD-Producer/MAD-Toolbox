@@ -4,7 +4,6 @@
 
 <h1 align="center">MAD Toolbox</h1>
 <center>
-
 [![Test Build](https://img.shields.io/github/actions/workflow/status/MAD-Producer/MAD-Toolbox/check.yml?label=test%20build&logo=github&style=for-the-badge)](https://github.com/MAD-Producer/MAD-Toolbox/blob/main/.github/workflows/check.yml)
 ![Downloads](https://img.shields.io/github/downloads/MAD-Producer/MAD-Toolbox/total?logo=github&style=for-the-badge)
 ![Stars](https://img.shields.io/github/stars/MAD-Producer/MAD-Toolbox?style=for-the-badge)
@@ -17,7 +16,7 @@
 
 ---
 
-[ENGLISH](README.en.md) · 简体中文
+[ENGLISH](README.md) · 简体中文
 
 ## 功能特性
 
