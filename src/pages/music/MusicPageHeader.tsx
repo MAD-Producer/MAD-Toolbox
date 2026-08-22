@@ -1,4 +1,4 @@
-import { Button, Group, Menu, Paper, Switch, Title } from "@mantine/core";
+import { Button, Group, Menu, Paper, Switch, Title, Tooltip } from "@mantine/core";
 import {
   IconChevronDown,
   IconBookDownload,
@@ -59,17 +59,19 @@ export function MusicPageHeader({
       <Group gap="xs" wrap="nowrap">
         <Title order={3}>音乐下载</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-        <Paper radius="md" withBorder px="xs" py={6}>
-          {/*恰好不会引起标题位移*/}
-          <Group gap="xs" wrap="nowrap">
-            <IconMistOff size={18} />
-            <Switch
-              size="xs"
-              checked={denoise}
-              onChange={(event) => onDenoiseChange(event.currentTarget.checked)}
-            />
-          </Group>
-        </Paper>
+        <Tooltip label="自动去杂">
+          <Paper radius="md" withBorder px="xs" py={6}>
+            {/*恰好不会引起标题位移*/}
+            <Group gap="xs" wrap="nowrap">
+              <IconMistOff size={18} />
+              <Switch
+                size="xs"
+                checked={denoise}
+                onChange={(event) => onDenoiseChange(event.currentTarget.checked)}
+              />
+            </Group>
+          </Paper>
+        </Tooltip>
       </Group>
       <Group gap="xs" wrap="nowrap">
         {searching ? (
