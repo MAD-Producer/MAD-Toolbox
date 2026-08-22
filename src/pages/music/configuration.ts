@@ -1,3 +1,4 @@
+import { t, type TranslationKey } from "../../locale";
 import type { MusicdlPlaylistRequest, MusicdlSearchRequest } from "./api";
 
 export type MusicMode = "search" | "playlist";
@@ -38,86 +39,87 @@ export const DEFAULT_MUSIC_SOURCES = [
   "QianqianMusicClient"
 ] as const;
 
+/** [客户端值, 名称键]：品牌名两语言同值入键，保持元组类型统一（渲染处 t()） */
 export const MUSIC_SOURCE_GROUPS: ReadonlyArray<
-  readonly [string, ReadonlyArray<readonly [string, string]>]
+  readonly [TranslationKey, ReadonlyArray<readonly [string, TranslationKey]>]
 > = [
   [
-    "中国大陆及华语平台",
+    "music.sourceGroup.mainland",
     [
-      ["MiguMusicClient", "咪咕音乐"],
-      ["NeteaseMusicClient", "网易云音乐"],
-      ["QQMusicClient", "QQ 音乐"],
-      ["KuwoMusicClient", "酷我音乐"],
-      ["QianqianMusicClient", "千千音乐"],
-      ["KugouMusicClient", "酷狗音乐"],
-      ["BilibiliMusicClient", "哔哩哔哩音乐"],
-      ["BodianMusicClient", "波点音乐"],
-      ["FiveSingMusicClient", "5SING"],
-      ["SodaMusicClient", "汽水音乐"],
-      ["StreetVoiceMusicClient", "街声"],
-      ["MOOVMusicClient", "MOOV"]
+      ["MiguMusicClient", "music.source.migu"],
+      ["NeteaseMusicClient", "music.source.netease"],
+      ["QQMusicClient", "music.source.qq"],
+      ["KuwoMusicClient", "music.source.kuwo"],
+      ["QianqianMusicClient", "music.source.qianqian"],
+      ["KugouMusicClient", "music.source.kugou"],
+      ["BilibiliMusicClient", "music.source.bilibili"],
+      ["BodianMusicClient", "music.source.bodian"],
+      ["FiveSingMusicClient", "music.source.fivesing"],
+      ["SodaMusicClient", "music.source.soda"],
+      ["StreetVoiceMusicClient", "music.source.streetvoice"],
+      ["MOOVMusicClient", "music.source.moov"]
     ]
   ],
   [
-    "海外流媒体与独立音乐",
+    "music.sourceGroup.overseas",
     [
-      ["AppleMusicClient", "Apple Music"],
-      ["DeezerMusicClient", "Deezer"],
-      ["FMAMusicClient", "Free Music Archive"],
-      ["JamendoMusicClient", "Jamendo"],
-      ["JooxMusicClient", "JOOX"],
-      ["JioSaavnMusicClient", "JioSaavn"],
-      ["OpenGameArtMusicClient", "OpenGameArt"],
-      ["QobuzMusicClient", "Qobuz"],
-      ["SoundCloudMusicClient", "SoundCloud"],
-      ["SpotifyMusicClient", "Spotify"],
-      ["SunoMusicClient", "Suno"],
-      ["TIDALMusicClient", "TIDAL"],
-      ["YouTubeMusicClient", "YouTube Music"]
+      ["AppleMusicClient", "music.source.apple"],
+      ["DeezerMusicClient", "music.source.deezer"],
+      ["FMAMusicClient", "music.source.fma"],
+      ["JamendoMusicClient", "music.source.jamendo"],
+      ["JooxMusicClient", "music.source.joox"],
+      ["JioSaavnMusicClient", "music.source.jiosaavn"],
+      ["OpenGameArtMusicClient", "music.source.opengameart"],
+      ["QobuzMusicClient", "music.source.qobuz"],
+      ["SoundCloudMusicClient", "music.source.soundcloud"],
+      ["SpotifyMusicClient", "music.source.spotify"],
+      ["SunoMusicClient", "music.source.suno"],
+      ["TIDALMusicClient", "music.source.tidal"],
+      ["YouTubeMusicClient", "music.source.ytmusic"]
     ]
   ],
   [
-    "播客、有声与电台",
+    "music.sourceGroup.podcast",
     [
-      ["ITunesMusicClient", "Apple Podcasts"],
-      ["LizhiMusicClient", "荔枝 FM"],
-      ["LRTSMusicClient", "懒人听书"],
-      ["QingtingMusicClient", "蜻蜓 FM"],
-      ["XimalayaMusicClient", "喜马拉雅"]
+      ["ITunesMusicClient", "music.source.applePodcasts"],
+      ["LizhiMusicClient", "music.source.lizhi"],
+      ["LRTSMusicClient", "music.source.lrts"],
+      ["QingtingMusicClient", "music.source.qingting"],
+      ["XimalayaMusicClient", "music.source.ximalaya"]
     ]
   ],
   [
-    "聚合音乐源",
+    "music.sourceGroup.aggregator",
     [
-      ["GDStudioMusicClient", "GD 音乐台"],
-      ["JBSouMusicClient", "煎饼搜"],
-      ["MP3JuiceMusicClient", "MP3 Juice"],
-      ["MyFreeMP3MusicClient", "MyFreeMP3"],
-      ["TuneHubMusicClient", "TuneHub"],
-      ["XiaoBaiMusicClient", "小白音乐"]
+      ["GDStudioMusicClient", "music.source.gdstudio"],
+      ["JBSouMusicClient", "music.source.jbsou"],
+      ["MP3JuiceMusicClient", "music.source.mp3juice"],
+      ["MyFreeMP3MusicClient", "music.source.myfreemp3"],
+      ["TuneHubMusicClient", "music.source.tunehub"],
+      ["XiaoBaiMusicClient", "music.source.xiaobai"]
     ]
   ],
   [
-    "其他第三方音乐站",
+    "music.sourceGroup.thirdParty",
     [
-      ["BuguyyMusicClient", "布谷音乐"],
-      ["FangpiMusicClient", "放屁音乐"],
-      ["FiveSongMusicClient", "5Song"],
-      ["FLMP3MusicClient", "凤梨音乐"],
-      ["GequbaoMusicClient", "歌曲宝"],
-      ["GequhaiMusicClient", "歌曲海"],
-      ["HTQYYMusicClient", "好听轻音乐网"],
-      ["ITingWaMusicClient", "听蛙"],
-      ["KKWSMusicClient", "开开无损"],
-      ["LivePOOMusicClient", "力音"],
-      ["LiziYYMusicClient", "梨子音乐"],
-      ["MituMusicClient", "米兔音乐"],
-      ["MGMP3MusicClient", "木瓜音乐"],
-      ["SgogoMusicClient", "搜歌网"],
-      ["TwoT58MusicClient", "爱听音乐网"],
-      ["XiagebaMusicClient", "下歌吧"],
-      ["YinyuedaoMusicClient", "音乐岛"],
-      ["ZhuolinMusicClient", "卓林音乐"]
+      ["BuguyyMusicClient", "music.source.buguyy"],
+      ["FangpiMusicClient", "music.source.fangpi"],
+      ["FiveSongMusicClient", "music.source.fivesong"],
+      ["FLMP3MusicClient", "music.source.flmp3"],
+      ["GequbaoMusicClient", "music.source.gequbao"],
+      ["GequhaiMusicClient", "music.source.gequhai"],
+      ["HTQYYMusicClient", "music.source.htqyy"],
+      ["ITingWaMusicClient", "music.source.itingwa"],
+      ["KKWSMusicClient", "music.source.kkws"],
+      ["LivePOOMusicClient", "music.source.livepoo"],
+      ["LiziYYMusicClient", "music.source.liziyy"],
+      ["MituMusicClient", "music.source.mitu"],
+      ["MGMP3MusicClient", "music.source.mgmp3"],
+      ["SgogoMusicClient", "music.source.sgogo"],
+      ["TwoT58MusicClient", "music.source.twot58"],
+      ["XiagebaMusicClient", "music.source.xiageba"],
+      ["YinyuedaoMusicClient", "music.source.yinyuedao"],
+      ["ZhuolinMusicClient", "music.source.zhuolin"]
     ]
   ]
 ];
@@ -143,7 +145,7 @@ export function createInitialMusicForm(): MusicFormState {
 function parseObject(text: string, label: string): Record<string, unknown> {
   const value = JSON.parse(text.trim() || "{}");
   if (!value || Array.isArray(value) || typeof value !== "object") {
-    throw new Error(`${label}必须是 JSON 对象`);
+    throw new Error(t("music.json.objectError", { label }));
   }
   return value as Record<string, unknown>;
 }
@@ -190,9 +192,9 @@ export function prepareMusicConfiguration(form: MusicFormState): PreparedMusicCo
   try {
     const configs = buildConfigs(
       form,
-      parseObject(form.rawInit, "客户端设置"),
-      parseObject(form.rawRequests, "请求设置"),
-      parseObject(form.rawThreadings, "线程设置")
+      parseObject(form.rawInit, t("music.json.init")),
+      parseObject(form.rawRequests, t("music.json.requests")),
+      parseObject(form.rawThreadings, t("music.json.threadings"))
     );
     return {
       error: null,
@@ -203,7 +205,7 @@ export function prepareMusicConfiguration(form: MusicFormState): PreparedMusicCo
         initMusicClientsCfg: configs.init,
         requestsOverrides: configs.requests,
         clientsThreadings: configs.threadings,
-        searchRules: parseObject(form.rawSearchRules, "搜索规则")
+        searchRules: parseObject(form.rawSearchRules, t("music.json.searchRules"))
       }
     };
   } catch (error) {
@@ -247,7 +249,7 @@ export function createMusicPlaylistRequest(
 export function musicSourceLabel(source: string): string {
   for (const [, entries] of MUSIC_SOURCE_GROUPS) {
     const match = entries.find(([value]) => value === source);
-    if (match) return match[1];
+    if (match) return t(match[1]);
   }
   return source.replace(/MusicClient$/, "");
 }

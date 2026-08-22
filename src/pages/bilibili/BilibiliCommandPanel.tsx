@@ -1,5 +1,6 @@
 import { Button, Divider, Group, Stack, Text, Textarea } from "@mantine/core";
 import { IconPencil, IconRotate } from "@tabler/icons-react";
+import { t } from "../../locale";
 import type { PreviewResult } from "./api";
 import { CommandPreview } from "../../components/common/CommandPreview";
 
@@ -28,7 +29,7 @@ export function BilibiliCommandPanel({
     <Stack gap="xs">
       <Group justify="space-between">
         <Text size="sm" fw={500}>
-          {expertMode ? "命令（可编辑，每行一个参数）" : "命令预览"}
+          {expertMode ? t("bilibili.command.expertTitle") : t("bilibili.command.previewTitle")}
         </Text>
         {expertMode ? (
           <Button
@@ -37,7 +38,7 @@ export function BilibiliCommandPanel({
             leftSection={<IconRotate size={14} />}
             onClick={onExitExpert}
           >
-            还原为表单
+            {t("bilibili.command.restoreForm")}
           </Button>
         ) : (
           <Button
@@ -47,14 +48,14 @@ export function BilibiliCommandPanel({
             onClick={onEnterExpert}
             disabled={!preview}
           >
-            编辑命令
+            {t("bilibili.command.editCommand")}
           </Button>
         )}
       </Group>
       {expertMode ? (
         <>
           <Text size="xs" c="yellow">
-            专家模式：表单已锁定，提交将按下方命令原文执行（bbdown 本体不可更换）
+            {t("bilibili.command.expertWarning")}
           </Text>
           <Textarea
             autosize

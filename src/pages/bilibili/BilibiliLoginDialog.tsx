@@ -1,4 +1,5 @@
 import { Modal, Stack, Text } from "@mantine/core";
+import { t } from "../../locale";
 
 interface BilibiliLoginDialogProps {
   active: boolean;
@@ -11,13 +12,15 @@ export function BilibiliLoginDialog({ active, qrDataUrl, onClose }: BilibiliLogi
     <Modal
       opened={active && qrDataUrl !== null}
       onClose={onClose}
-      title="扫码登录哔哩哔哩"
+      title={t("bilibili.login.title")}
       centered
     >
       <Stack align="center" gap="sm">
-        {qrDataUrl && <img src={qrDataUrl} alt="登录二维码" width={280} height={280} />}
+        {qrDataUrl && (
+          <img src={qrDataUrl} alt={t("bilibili.login.qrAlt")} width={280} height={280} />
+        )}
         <Text size="sm" c="dimmed">
-          使用哔哩哔哩手机客户端扫码并确认
+          {t("bilibili.login.hint")}
         </Text>
       </Stack>
     </Modal>

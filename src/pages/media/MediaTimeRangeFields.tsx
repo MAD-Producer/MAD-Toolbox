@@ -1,4 +1,5 @@
 import { Group, TextInput } from "@mantine/core";
+import { t } from "../../locale";
 import type { MediaFormState } from "./form";
 
 interface MediaTimeRangeFieldsProps {
@@ -11,15 +12,15 @@ export function MediaTimeRangeFields({ form, disabled, onUpdate }: MediaTimeRang
   return (
     <Group grow>
       <TextInput
-        label="起始时间"
-        placeholder="如 00:01:30"
+        label={t("media.fields.startTime")}
+        placeholder={t("media.fields.startTimeHint")}
         value={form.startTime}
         onChange={(event) => onUpdate({ startTime: event.currentTarget.value })}
         disabled={disabled}
       />
       <TextInput
-        label="持续时长"
-        placeholder="如 00:00:10"
+        label={t("media.fields.duration")}
+        placeholder={t("media.fields.durationHint")}
         value={form.duration}
         onChange={(event) => onUpdate({ duration: event.currentTarget.value })}
         disabled={disabled}

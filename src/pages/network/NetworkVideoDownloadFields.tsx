@@ -1,13 +1,14 @@
 import { Group, SegmentedControl, Select, Switch, Text, TextInput } from "@mantine/core";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
 import { browserCookieOptions } from "../../lib/platform";
+import { t, type TranslationKey } from "../../locale";
 import type { NetworkFormState } from "./form";
 
-const MODE_OPTIONS = [
-  { value: "video", label: "视频" },
-  { value: "audio", label: "仅音频" },
-  { value: "thumbnail", label: "仅封面" },
-  { value: "subtitles", label: "仅字幕" }
+const MODE_OPTIONS: ReadonlyArray<{ value: NetworkFormState["mode"]; labelKey: TranslationKey }> = [
+  { value: "video", labelKey: "network.mode.video" },
+  { value: "audio", labelKey: "network.mode.audio" },
+  { value: "thumbnail", labelKey: "network.mode.thumbnail" },
+  { value: "subtitles", labelKey: "network.mode.subtitles" }
 ];
 
 interface NetworkVideoDownloadFieldsProps {
@@ -29,8 +30,8 @@ export function NetworkVideoDownloadFields({
   return (
     <>
       <TextInput
-        label="视频地址"
-        placeholder="https://…（YouTube 及 yt-dlp 支持的站点）"
+        label={t("network.fields.url")}
+        placeholder={t("network.fields.urlPlaceholder")}
         value={form.url}
         onChange={(event) => onUpdate({ url: event.currentTarget.value })}
         disabled={disabled}
@@ -38,10 +39,10 @@ export function NetworkVideoDownloadFields({
       <Group grow align="end">
         <div>
           <Text size="sm" fw={500} mb={4}>
-            下载内容
+            {t("network.fields.content")}
           </Text>
           <SegmentedControl
-            data={MODE_OPTIONS}
+            data={MODE_OPTIONS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
             value={form.mode}
             onChange={(value) => onUpdate({ mode: value as NetworkFormState["mode"] })}
             disabled={disabled}
@@ -49,8 +50,8 @@ export function NetworkVideoDownloadFields({
           />
         </div>
         <Select
-          label="浏览器 Cookie（站点要求登录时自动兜底）"
-          data={browserCookieOptions}
+          label={t("network.fields.cookiesBrowser")}
+          data={browserCookieOptions()}
           value={form.cookiesBrowser}
           onChange={(value) => onUpdate({ cookiesBrowser: value ?? "" })}
           disabled={disabled}
@@ -59,7 +60,7 @@ export function NetworkVideoDownloadFields({
       </Group>
       {form.mode === "audio" && (
         <TextInput
-          label="音频格式"
+          label={t("network.fields.audioFormat")}
           placeholder="best / mp3 / m4a / flac …"
           value={form.audioFormat}
           onChange={(event) => onUpdate({ audioFormat: event.currentTarget.value })}
@@ -68,8 +69,8 @@ export function NetworkVideoDownloadFields({
       )}
       {form.mode === "subtitles" && (
         <TextInput
-          label="字幕语言"
-          placeholder="如 zh.*,en.*"
+          label={t("network.fields.subtitleLanguages")}
+          placeholder={t("network.fields.subtitleLanguagesPlaceholder")}
           value={form.subtitleLanguages}
           onChange={(event) => onUpdate({ subtitleLanguages: event.currentTarget.value })}
           disabled={disabled}
@@ -83,15 +84,15 @@ export function NetworkVideoDownloadFields({
       />
       <Group grow>
         <TextInput
-          label="代理"
-          placeholder={globalProxy ?? "留空使用系统代理"}
+          label={t("network.fields.proxy")}
+          placeholder={globalProxy ?? t("network.fields.proxyPlaceholder")}
           value={form.proxy}
           onChange={(event) => onUpdate({ proxy: event.currentTarget.value })}
           disabled={disabled}
         />
         <TextInput
-          label="播放列表选集"
-          placeholder="如 1,3-5"
+          label={t("network.fields.playlistItems")}
+          placeholder={t("network.fields.playlistItemsPlaceholder")}
           value={form.playlistItems}
           onChange={(event) => onUpdate({ playlistItems: event.currentTarget.value })}
           disabled={disabled}
@@ -99,25 +100,25 @@ export function NetworkVideoDownloadFields({
       </Group>
       <Group gap="lg">
         <Switch
-          label="仅下载单个视频"
+          label={t("network.fields.noPlaylist")}
           checked={form.noPlaylist}
           onChange={(event) => onUpdate({ noPlaylist: event.currentTarget.checked })}
           disabled={disabled}
         />
         <Switch
-          label="内嵌元数据"
+          label={t("network.fields.embedMetadata")}
           checked={form.embedMetadata}
           onChange={(event) => onUpdate({ embedMetadata: event.currentTarget.checked })}
           disabled={disabled}
         />
         <Switch
-          label="内嵌封面"
+          label={t("network.fields.embedThumbnail")}
           checked={form.embedThumbnail}
           onChange={(event) => onUpdate({ embedThumbnail: event.currentTarget.checked })}
           disabled={disabled}
         />
         <Switch
-          label="内嵌字幕"
+          label={t("network.fields.embedSubtitles")}
           checked={form.embedSubtitles}
           onChange={(event) => onUpdate({ embedSubtitles: event.currentTarget.checked })}
           disabled={disabled}

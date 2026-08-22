@@ -4,6 +4,7 @@ import { DependencyInstallCards } from "../../components/common/DependencyInstal
 import { DependencyStatusPanel } from "../../components/common/DependencyStatusPanel";
 import type { DependencyStatus } from "../../contracts/dependency";
 import { isWindows } from "../../lib/platform";
+import { t } from "../../locale";
 import { installDependency, type AppSettings } from "./api";
 
 interface DependenciesSettingsPageProps {
@@ -30,7 +31,10 @@ export function DependenciesSettingsPage({
       await onSave({ ...settings, dependencyPreference: preference });
       onRefresh();
     } catch (error) {
-      notifications.show({ message: `保存失败：${String(error)}`, color: "red" });
+      notifications.show({
+        message: t("settings.saveFailed", { error: String(error) }),
+        color: "red"
+      });
     }
   };
 
@@ -38,20 +42,23 @@ export function DependenciesSettingsPage({
     try {
       await installDependency(dependency.tool);
       notifications.show({
-        message: "已打开终端窗口执行安装，完成后将自动重新检测。",
+        message: t("settings.deps.installStarted"),
         color: "blue"
       });
     } catch (error) {
-      notifications.show({ message: `无法启动安装：${String(error)}`, color: "red" });
+      notifications.show({
+        message: t("settings.deps.installFailed", { error: String(error) }),
+        color: "red"
+      });
     }
   };
 
   return (
     <Stack gap="md">
       <div>
-        <Text fw={500}>工具版本来源</Text>
+        <Text fw={500}>{t("settings.deps.sourceTitle")}</Text>
         <Text size="xs" c="dimmed">
-          找不到首选来源时自动回退到另一来源，切换后立即重新检测。
+          {t("settings.deps.sourceHint")}
         </Text>
         <SegmentedControl
           mt="sm"
@@ -60,8 +67,13 @@ export function DependenciesSettingsPage({
           value={settings.dependencyPreference}
           onChange={(value) => void changePreference(value)}
           data={[
-            { value: "bundled", label: "内置版本优先" },
-            { value: "system", label: isWindows ? "系统版本优先" : "系统 / Homebrew 优先" }
+            { value: "bundled", label: t("settings.deps.preferBundled") },
+            {
+              value: "system",
+              label: isWindows
+                ? t("settings.deps.preferSystemWindows")
+                : t("settings.deps.preferSystemOther")
+            }
           ]}
         />
       </div>

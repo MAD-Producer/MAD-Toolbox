@@ -3,31 +3,31 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { IconExternalLink, IconWorld } from "@tabler/icons-react";
 import type { DependencyStatus, ToolName } from "../../contracts/dependency";
 import { isWindows, pipCommand, toolInstallCommands } from "../../lib/platform";
+import { t } from "../../locale";
 import { CopyIconButton } from "./CopyIconButton";
 
 const PIP_MIRRORS = [
   {
     id: "ustc",
-    name: "USTC 中国科学技术大学",
+    name: () => t("deps.pipMirrorUstc"),
     url: "https://mirrors.ustc.edu.cn/pypi/simple",
     help: "https://mirrors.ustc.edu.cn/help/pypi.html"
   },
   {
     id: "tuna",
-    name: "TUNA 清华大学",
+    name: () => t("deps.pipMirrorTuna"),
     url: "https://pypi.tuna.tsinghua.edu.cn/simple",
     help: "https://mirrors.tuna.tsinghua.edu.cn/help/pypi/"
   }
 ] as const;
 
-const INSTALL_DESCRIPTIONS: Partial<Record<ToolName, string>> = {
-  ffmpeg: "转码、剪辑、GIF 等媒体处理任务的必需工具。",
-  "yt-dlp": "网络视频下载的必需工具。",
-  mediainfo: "媒体检视（读取编码与容器信息）使用，缺失时回落到 ffprobe。",
-  deno: "部分站点的解析脚本依赖 Deno。",
-  python: "运行 musicdl 所需的 Python 3 解释器。",
-  musicdl:
-    "音乐下载的核心工具，需要 Python 3；两者不随 MAD Toolbox 分发（musicdl 为 PolyForm Noncommercial 许可，禁止捆绑）。"
+const INSTALL_DESCRIPTIONS: Partial<Record<ToolName, () => string>> = {
+  ffmpeg: () => t("deps.desc.ffmpeg"),
+  "yt-dlp": () => t("deps.desc.ytDlp"),
+  mediainfo: () => t("deps.desc.mediainfo"),
+  deno: () => t("deps.desc.deno"),
+  python: () => t("deps.desc.python"),
+  musicdl: () => t("deps.desc.musicdl")
 };
 
 interface DependencyInstallCardsProps {
@@ -55,17 +55,16 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
                 <Text fw={500}>{dependency.label}</Text>
                 {dependency.tool === "musicdl" && (
                   <Text span size="xs" c="dimmed">
-                    （可选）
+                    {t("deps.optionalSuffix")}
                   </Text>
                 )}
               </Group>
               <Text size="sm" c="dimmed">
-                {INSTALL_DESCRIPTIONS[dependency.tool]}
+                {INSTALL_DESCRIPTIONS[dependency.tool]?.()}
               </Text>
               {dependency.tool === "musicdl" && (
                 <Text size="sm" c="dimmed">
-                  推荐通过{isWindows ? " winget " : " Homebrew "}安装 Python，并使用 pipx
-                  创建隔离环境。
+                  {t("deps.musicdlPipxNote", { manager: isWindows ? "winget" : "Homebrew" })}
                 </Text>
               )}
               <Group gap={6} wrap="nowrap" align="flex-start">
@@ -75,7 +74,7 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
                 >
                   {command}
                 </Code>
-                <CopyIconButton value={command} label="复制安装命令" />
+                <CopyIconButton value={command} label={t("deps.copyInstallCommand")} />
               </Group>
               {dependency.tool === "musicdl" && (
                 <>
@@ -84,32 +83,36 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
                     label={
                       <Group gap={4} wrap="nowrap">
                         <IconWorld size={14} />
-                        <Text size="sm">中国大陆网络：配置 pip 镜像（可选）</Text>
+                        <Text size="sm">{t("deps.pipMirrorTitle")}</Text>
                       </Group>
                     }
                     labelPosition="left"
                   />
                   <Text size="sm" c="dimmed">
-                    如果 PyPI 下载缓慢，先执行其一，再运行上面的安装命令。
+                    {t("deps.pipMirrorHint")}
                   </Text>
                   {PIP_MIRRORS.map((mirror) => {
                     const mirrorCommand = `${pipCommand} config set global.index-url ${mirror.url}`;
                     return (
                       <Group key={mirror.id} justify="space-between" wrap="nowrap">
                         <div style={{ minWidth: 0 }}>
-                          <Text size="sm">{mirror.name}</Text>
+                          <Text size="sm">{mirror.name()}</Text>
                           <Code block style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
                             {mirrorCommand}
                           </Code>
                         </div>
                         <Group gap={4} wrap="nowrap">
-                          <CopyIconButton value={mirrorCommand} label="复制命令" />
-                          <Tooltip label="镜像站官方帮助" position="top" events={tooltipEvents}>
+                          <CopyIconButton value={mirrorCommand} label={t("deps.copyCommand")} />
+                          <Tooltip
+                            label={t("deps.mirrorHelpTooltip")}
+                            position="top"
+                            events={tooltipEvents}
+                          >
                             <ActionIcon
                               variant="subtle"
                               color="gray"
                               size="lg"
-                              aria-label={`${mirror.name}官方帮助`}
+                              aria-label={t("deps.mirrorHelpAria", { name: mirror.name() })}
                               onClick={() => void openUrl(mirror.help)}
                             >
                               <IconExternalLink size={16} />
@@ -120,7 +123,7 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
                     );
                   })}
                   <Text size="xs">
-                    恢复官方源：
+                    {t("deps.restoreOfficialSource")}
                     <Code style={{ overflowWrap: "anywhere" }}>
                       {`${pipCommand} config unset global.index-url`}
                     </Code>

@@ -1,5 +1,6 @@
 import { Badge, Stack, Text } from "@mantine/core";
 import { CollapsibleSection } from "../../components/common/CollapsibleSection";
+import { t } from "../../locale";
 import { NetworkVideoAdvancedFields } from "./NetworkVideoAdvancedFields";
 import { NetworkVideoCommandPanel } from "./NetworkVideoCommandPanel";
 import { NetworkVideoDownloadFields } from "./NetworkVideoDownloadFields";
@@ -37,11 +38,11 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
         title={
           <>
             <Text size="sm" fw={500}>
-              高级参数
+              {t("network.advanced")}
             </Text>
             {workspace.expertMode && (
               <Badge size="xs" variant="light" color="orange">
-                专家模式
+                {t("network.expertBadge")}
               </Badge>
             )}
           </>

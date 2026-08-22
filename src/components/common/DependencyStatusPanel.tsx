@@ -3,6 +3,7 @@ import { ActionIcon, Badge, Button, Card, Group, Stack, Text, Tooltip } from "@m
 import { IconCircleCheck, IconDownload, IconRefresh } from "@tabler/icons-react";
 import { isWindows, toolInstallCommands } from "../../lib/platform";
 import type { DependencyStatus } from "../../contracts/dependency";
+import { t } from "../../locale";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { FieldWithActions } from "./FieldWithActions";
 
@@ -33,11 +34,11 @@ export function DependencyStatusPanel({
       title={
         missing.length > 0 ? (
           <Badge variant="transparent" color="yellow">
-            {missing.length} 个必要工具未就绪
+            {t("deps.requiredMissingCount", { count: missing.length })}
           </Badge>
         ) : (
           <Badge variant="transparent" color="teal" leftSection={<IconCircleCheck size={12} />}>
-            必要工具均已就绪
+            {t("deps.allReady")}
           </Badge>
         )
       }
@@ -50,7 +51,7 @@ export function DependencyStatusPanel({
           loading={loading}
           onClick={onRefresh}
         >
-          重新检测
+          {t("deps.recheck")}
         </Button>
       }
     >
@@ -66,7 +67,9 @@ export function DependencyStatusPanel({
               actions={
                 installable && (
                   <Tooltip
-                    label={`一键安装（${isWindows ? "winget" : "Homebrew"}）`}
+                    label={t("deps.installTooltip", {
+                      manager: isWindows ? "winget" : "Homebrew"
+                    })}
                     position="top"
                   >
                     <ActionIcon
@@ -75,7 +78,7 @@ export function DependencyStatusPanel({
                       radius="md"
                       size="xl"
                       style={{ height: "auto" }}
-                      aria-label={`一键安装 ${dependency.label}`}
+                      aria-label={t("deps.installAria", { name: dependency.label })}
                       onClick={() => onInstall(dependency)}
                     >
                       <IconDownload size={18} />
@@ -98,7 +101,7 @@ export function DependencyStatusPanel({
                           color="gray"
                           style={{ flexShrink: 0 }}
                         >
-                          可选
+                          {t("deps.optionalBadge")}
                         </Badge>
                       )}
                     </Group>
@@ -109,18 +112,20 @@ export function DependencyStatusPanel({
                     >
                       {dependency.available
                         ? dependency.source === "bundled"
-                          ? "应用内置"
-                          : "系统"
-                        : "未就绪"}
+                          ? t("deps.bundled")
+                          : t("deps.system")
+                        : t("deps.notReady")}
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed" truncate>
-                    {dependency.available ? (dependency.version ?? "版本未知") : "未安装"}
+                    {dependency.available
+                      ? (dependency.version ?? t("deps.versionUnknown"))
+                      : t("deps.notInstalled")}
                   </Text>
                   <Text size="xs" c="dimmed" truncate>
                     {dependency.available
-                      ? (dependency.path ?? "路径未知")
-                      : (dependency.installHint ?? "未找到可用版本")}
+                      ? (dependency.path ?? t("deps.pathUnknown"))
+                      : (dependency.installHint ?? t("deps.noVersionFound"))}
                   </Text>
                 </Stack>
               </Card>

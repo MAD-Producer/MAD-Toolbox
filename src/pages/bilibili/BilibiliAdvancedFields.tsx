@@ -1,36 +1,37 @@
 import { Group, PasswordInput, Stack, Switch, Textarea, TextInput } from "@mantine/core";
+import { t, type TranslationKey } from "../../locale";
 import type { BilibiliFormState } from "./form";
 
-const ADVANCED_SWITCHES: Array<[keyof BilibiliFormState, string]> = [
-  ["useMp4box", "使用 MP4Box 混流"],
-  ["useAria2c", "使用 aria2c 下载"],
-  ["showAll", "展示所有分 P"],
-  ["hideStreams", "不显示流信息"],
-  ["skipMux", "跳过混流"],
-  ["multiThread", "多线程下载"],
-  ["forceHttp", "强制 HTTP"],
-  ["videoAscending", "视频流升序"],
-  ["audioAscending", "音频流升序"],
-  ["allowPcdn", "允许 PCDN"],
-  ["forceReplaceHost", "强制替换 host"],
-  ["saveArchive", "记录下载存档"],
-  ["debug", "调试日志"]
+const ADVANCED_SWITCHES: Array<[keyof BilibiliFormState, TranslationKey]> = [
+  ["useMp4box", "bilibili.advanced.useMp4box"],
+  ["useAria2c", "bilibili.advanced.useAria2c"],
+  ["showAll", "bilibili.advanced.showAll"],
+  ["hideStreams", "bilibili.advanced.hideStreams"],
+  ["skipMux", "bilibili.advanced.skipMux"],
+  ["multiThread", "bilibili.advanced.multiThread"],
+  ["forceHttp", "bilibili.advanced.forceHttp"],
+  ["videoAscending", "bilibili.advanced.videoAscending"],
+  ["audioAscending", "bilibili.advanced.audioAscending"],
+  ["allowPcdn", "bilibili.advanced.allowPcdn"],
+  ["forceReplaceHost", "bilibili.advanced.forceReplaceHost"],
+  ["saveArchive", "bilibili.advanced.saveArchive"],
+  ["debug", "bilibili.advanced.debug"]
 ];
 
-const ADVANCED_VALUES: Array<[keyof BilibiliFormState, string, string]> = [
-  ["filePattern", "单集文件名模板", ""],
-  ["multiFilePattern", "多集文件名模板", ""],
-  ["language", "语言偏好", ""],
-  ["userAgent", "User-Agent", ""],
-  ["aria2cArgs", "aria2c 参数", ""],
-  ["mp4boxPath", "MP4Box 路径", ""],
-  ["aria2cPath", "aria2c 路径", ""],
-  ["uposHost", "upos 服务器", ""],
-  ["delayPerPage", "分 P 间隔秒数", ""],
-  ["host", "API host", ""],
-  ["epHost", "番剧 API host", ""],
-  ["area", "番剧地区", "hk / tw / th"],
-  ["configFile", "配置文件路径", ""]
+const ADVANCED_VALUES: Array<[keyof BilibiliFormState, TranslationKey, string]> = [
+  ["filePattern", "bilibili.advanced.filePattern", ""],
+  ["multiFilePattern", "bilibili.advanced.multiFilePattern", ""],
+  ["language", "bilibili.advanced.language", ""],
+  ["userAgent", "bilibili.advanced.userAgent", ""],
+  ["aria2cArgs", "bilibili.advanced.aria2cArgs", ""],
+  ["mp4boxPath", "bilibili.advanced.mp4boxPath", ""],
+  ["aria2cPath", "bilibili.advanced.aria2cPath", ""],
+  ["uposHost", "bilibili.advanced.uposHost", ""],
+  ["delayPerPage", "bilibili.advanced.delayPerPage", ""],
+  ["host", "bilibili.advanced.host", ""],
+  ["epHost", "bilibili.advanced.epHost", ""],
+  ["area", "bilibili.advanced.area", "hk / tw / th"],
+  ["configFile", "bilibili.advanced.configFile", ""]
 ];
 
 interface BilibiliAdvancedFieldsProps {
@@ -43,10 +44,10 @@ export function BilibiliAdvancedFields({ form, disabled, onUpdate }: BilibiliAdv
   return (
     <Stack gap="sm">
       <Group gap="lg">
-        {ADVANCED_SWITCHES.map(([key, label]) => (
+        {ADVANCED_SWITCHES.map(([key, labelKey]) => (
           <Switch
             key={key}
-            label={label}
+            label={t(labelKey)}
             checked={form[key] as boolean}
             onChange={(event) => onUpdate({ [key]: event.currentTarget.checked })}
             disabled={disabled}
@@ -56,14 +57,14 @@ export function BilibiliAdvancedFields({ form, disabled, onUpdate }: BilibiliAdv
       <Group grow>
         <PasswordInput
           label="Cookie"
-          description="扫码登录后通常无需手填"
+          description={t("bilibili.advanced.cookieHint")}
           value={form.cookie}
           onChange={(event) => onUpdate({ cookie: event.currentTarget.value })}
           disabled={disabled}
         />
         <PasswordInput
           label="Access Token"
-          description="仅 TV/APP/国际版接口需要"
+          description={t("bilibili.advanced.accessTokenHint")}
           value={form.accessToken}
           onChange={(event) => onUpdate({ accessToken: event.currentTarget.value })}
           disabled={disabled}
@@ -71,10 +72,10 @@ export function BilibiliAdvancedFields({ form, disabled, onUpdate }: BilibiliAdv
       </Group>
       {chunk(ADVANCED_VALUES, 3).map((row, index) => (
         <Group grow key={index}>
-          {row.map(([key, label, placeholder]) => (
+          {row.map(([key, labelKey, placeholder]) => (
             <TextInput
               key={key}
-              label={label}
+              label={t(labelKey)}
               placeholder={placeholder}
               value={form[key] as string}
               onChange={(event) => onUpdate({ [key]: event.currentTarget.value })}
@@ -84,8 +85,8 @@ export function BilibiliAdvancedFields({ form, disabled, onUpdate }: BilibiliAdv
         </Group>
       ))}
       <Textarea
-        label="附加参数"
-        description="每行一条，原样传给 BBDown"
+        label={t("bilibili.advanced.extraArgs")}
+        description={t("bilibili.advanced.extraArgsHint")}
         autosize
         minRows={2}
         value={form.extraArgs}

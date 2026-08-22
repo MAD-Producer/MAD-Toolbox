@@ -1,4 +1,5 @@
 import { Badge, Stack, Text } from "@mantine/core";
+import { t } from "../../locale";
 import { BilibiliAdvancedFields } from "./BilibiliAdvancedFields";
 import { BilibiliCommandPanel } from "./BilibiliCommandPanel";
 import { BilibiliDownloadFields } from "./BilibiliDownloadFields";
@@ -36,11 +37,11 @@ export function BilibiliPage(props: BilibiliPageProps) {
         title={
           <>
             <Text size="sm" fw={500}>
-              高级参数
+              {t("bilibili.advanced.title")}
             </Text>
             {workspace.expertMode && (
               <Badge size="xs" variant="light" color="orange">
-                专家模式
+                {t("bilibili.command.expertBadge")}
               </Badge>
             )}
           </>

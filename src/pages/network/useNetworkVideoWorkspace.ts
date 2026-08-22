@@ -12,6 +12,7 @@ import {
 } from "./api";
 import { defaultNetworkForm, type NetworkFormState } from "./form";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
+import { t } from "../../locale";
 
 export interface NetworkVideoPageProps {
   active: boolean;
@@ -103,7 +104,7 @@ export function useNetworkVideoWorkspace({
       if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
         notifications.show({
           color: "yellow",
-          message: "手改命令中的敏感值（***）未被保存，请重新填写后再运行"
+          message: t("network.expertRedactedWarning")
         });
       }
     }
@@ -157,7 +158,7 @@ export function useNetworkVideoWorkspace({
     setSubmitting(true);
     try {
       await networkSubmit(intent);
-      notifications.show({ color: "green", message: "任务已加入队列" });
+      notifications.show({ color: "green", message: t("network.submitted") });
       if (draftRevisionRef.current === submittedRevision) onSubmitted?.();
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });
@@ -172,7 +173,11 @@ export function useNetworkVideoWorkspace({
     try {
       const text = await networkProbe({ type: "form", data: { ...form } }, kind);
       if (draftRevisionRef.current === requestedRevision) {
-        setProbeResult({ title: kind === "formats" ? "可用格式" : "元数据", text });
+        setProbeResult({
+          title:
+            kind === "formats" ? t("network.probe.formatsTitle") : t("network.probe.metadataTitle"),
+          text
+        });
       }
     } catch (error) {
       if (draftRevisionRef.current === requestedRevision) {

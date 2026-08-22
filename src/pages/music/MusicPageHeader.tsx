@@ -1,7 +1,8 @@
 import { Button, Group, Paper, Switch, Title, Tooltip } from "@mantine/core";
 import { IconMistOff, IconPlayerPlay, IconPlayerStop } from "@tabler/icons-react";
-import type { MusicMode } from "./configuration";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
+import { t } from "../../locale";
+import type { MusicMode } from "./configuration";
 
 interface MusicPageHeaderProps {
   mode: MusicMode;
@@ -33,9 +34,9 @@ export function MusicPageHeader({
   return (
     <Group justify="space-between" wrap="nowrap">
       <Group gap="xs" wrap="nowrap">
-        <Title order={3}>音乐下载</Title>
+        <Title order={3}>{t("nav.music")}</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-        <Tooltip label="自动去杂">
+        <Tooltip label={t("music.denoise.label")}>
           <Paper radius="md" withBorder px="xs" py={6}>
             {/*恰好不会引起标题位移*/}
             <Group gap="xs" wrap="nowrap">
@@ -58,7 +59,7 @@ export function MusicPageHeader({
             loading={stopping}
             onClick={onStopSearch}
           >
-            停止搜索
+            {t("music.stopSearch")}
           </Button>
         ) : (
           <Button
@@ -67,7 +68,7 @@ export function MusicPageHeader({
             disabled={runDisabled}
             onClick={onRun}
           >
-            {mode === "search" ? "开始搜索" : "下载歌单"}
+            {mode === "search" ? t("music.run.search") : t("music.mode.playlist")}
           </Button>
         )}
       </Group>

@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Box, Indicator, Tooltip } from "@mantine/core";
 import type { AppRoute } from "../../app/route";
 import type { L1NavigationItem } from "../../app/navigation";
+import { t } from "../../locale";
 
 type AppSection = AppRoute["section"];
 
@@ -47,7 +48,7 @@ export function TopNavigation({ items, active, onNavigate, statuses }: TopNaviga
     <Tooltip.Group openDelay={300} closeDelay={100}>
       <Box
         component="nav"
-        aria-label="主要功能"
+        aria-label={t("shell.primaryNav")}
         className="top-nav"
         style={{
           display: "flex",
@@ -57,10 +58,11 @@ export function TopNavigation({ items, active, onNavigate, statuses }: TopNaviga
           borderRadius: "calc(var(--mantine-radius-md) + 3px)"
         }}
       >
-        {items.map(({ section, label, icon: Icon }, index) => {
+        {items.map(({ section, labelKey, icon: Icon }, index) => {
           const isActive = active === section;
           const status = statuses?.[section];
           const running = section === "tasks" && (status?.count ?? 0) > 0;
+          const label = t(labelKey);
           return (
             <Tooltip
               key={section}

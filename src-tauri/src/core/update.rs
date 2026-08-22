@@ -51,27 +51,29 @@ pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, Stri
     // GitHub 直连在部分地区不可达：沿用设置页全局代理（下载器同款语义）
     if let Some(proxy) = load_app_settings(&app).proxy {
         let proxy = reqwest::Proxy::all(proxy.as_str())
-            .map_err(|_| "代理地址无效，请检查设置中的代理配置".to_string())?;
+            .map_err(|_| rust_i18n::t!("backend.update.invalidProxy").to_string())?;
         builder = builder.proxy(proxy);
     }
-    let client = builder
-        .build()
-        .map_err(|error| format!("初始化更新检查请求失败：{error}"))?;
+    let client = builder.build().map_err(|error| {
+        rust_i18n::t!("backend.update.requestInitFailed", error = error).to_string()
+    })?;
     let response = client
         .get(RELEASES_LATEST_URL)
         .header(ACCEPT, "application/vnd.github+json")
         .send()
         .await
-        .map_err(|_| "GitHub 无法连通，请检查网络或代理设置".to_string())?;
+        .map_err(|_| rust_i18n::t!("backend.update.githubUnreachable").to_string())?;
     let release: GithubRelease = response
         .error_for_status()
         .map_err(|error| match error.status() {
-            Some(status) => format!("GitHub 拒绝了更新检查请求（HTTP {status}），请稍后再试"),
-            None => "GitHub 无法连通，请检查网络或代理设置".to_string(),
+            Some(status) => {
+                rust_i18n::t!("backend.update.githubRejected", status = status).to_string()
+            }
+            None => rust_i18n::t!("backend.update.githubUnreachable").to_string(),
         })?
         .json()
         .await
-        .map_err(|_| "解析 GitHub Release 信息失败".to_string())?;
+        .map_err(|_| rust_i18n::t!("backend.update.releaseParseFailed").to_string())?;
     let update_available = parse_version(&release.tag_name)
         .zip(parse_version(&current))
         .is_some_and(|(latest, current)| latest > current);

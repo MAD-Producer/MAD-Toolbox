@@ -1,5 +1,6 @@
 import { ActionIcon, CopyButton, Tooltip } from "@mantine/core";
 import { IconCheck, IconCopy } from "@tabler/icons-react";
+import { t } from "../../locale";
 
 interface CopyIconButtonProps {
   value: string;
@@ -11,7 +12,7 @@ export function CopyIconButton({ value, label }: CopyIconButtonProps) {
     <CopyButton value={value} timeout={2000}>
       {({ copied, copy }) => (
         <Tooltip
-          label={copied ? "已复制" : label}
+          label={copied ? t("common.copied") : label}
           position="top"
           events={{ hover: true, focus: true, touch: false }}
         >

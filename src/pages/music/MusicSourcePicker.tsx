@@ -1,7 +1,8 @@
 import { Button, Chip, Divider, Group, Stack, Text } from "@mantine/core";
 import { useState } from "react";
-import { DEFAULT_MUSIC_SOURCES, MUSIC_SOURCE_GROUPS } from "./configuration";
 import { CollapsibleSection } from "../../components/common/CollapsibleSection";
+import { t } from "../../locale";
+import { DEFAULT_MUSIC_SOURCES, MUSIC_SOURCE_GROUPS } from "./configuration";
 
 interface MusicSourcePickerProps {
   sources: string[];
@@ -16,10 +17,10 @@ export function MusicSourcePicker({ sources, onChange }: MusicSourcePickerProps)
       title={
         <>
           <Text size="sm" fw={500}>
-            音乐源
+            {t("music.sources.title")}
           </Text>
           <Text size="xs" c="blue">
-            已选 {sources.length}
+            {t("music.sources.selected", { count: sources.length })}
           </Text>
         </>
       }
@@ -31,23 +32,23 @@ export function MusicSourcePicker({ sources, onChange }: MusicSourcePickerProps)
           variant="filled"
           onClick={() => onChange([...DEFAULT_MUSIC_SOURCES])}
         >
-          恢复默认
+          {t("music.sources.reset")}
         </Button>
       }
     >
       <Chip.Group multiple value={sources} onChange={onChange}>
         <Stack gap="xs">
           <Text size="xs" c="dimmed">
-            同时搜索过多音乐源会明显变慢并产生重复结果
+            {t("music.sources.hint")}
           </Text>
-          {MUSIC_SOURCE_GROUPS.map(([group, entries]) => (
-            <div key={group}>
+          {MUSIC_SOURCE_GROUPS.map(([groupKey, entries]) => (
+            <div key={groupKey}>
               {/* 与依赖安装引导一致的「文字 + 横线延展右边界」分组头，替代弱化的浅色小字 */}
-              <Divider mb="sm" label={<Text size="sm">{group}</Text>} labelPosition="left" />
+              <Divider mb="sm" label={<Text size="sm">{t(groupKey)}</Text>} labelPosition="left" />
               <Group gap={6}>
-                {entries.map(([source, label]) => (
+                {entries.map(([source, labelKey]) => (
                   <Chip key={source} value={source} size="xs" variant="light">
-                    {label}
+                    {t(labelKey)}
                   </Chip>
                 ))}
               </Group>

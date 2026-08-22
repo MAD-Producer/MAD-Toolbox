@@ -2,6 +2,7 @@ import { ActionIcon, Badge, Group, List, ScrollArea, Text } from "@mantine/core"
 import { IconFile, IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import { CollapsibleSection } from "../../components/common/CollapsibleSection";
+import { t } from "../../locale";
 
 interface MediaFileListProps {
   inputs: readonly string[];
@@ -25,7 +26,7 @@ export function MediaFileList({ inputs, onRemove }: MediaFileListProps) {
     <CollapsibleSection
       title={
         <Badge variant="light" color="gray">
-          {inputs.length} 个文件
+          {t("media.fileCount", { count: inputs.length })}
         </Badge>
       }
       opened={open}
@@ -52,7 +53,7 @@ export function MediaFileList({ inputs, onRemove }: MediaFileListProps) {
                   variant="subtle"
                   color="gray"
                   size="sm"
-                  aria-label={`移除 ${fileName(path)}`}
+                  aria-label={t("media.removeFileAria", { name: fileName(path) })}
                   onClick={() => onRemove(path)}
                 >
                   <IconX size={13} />

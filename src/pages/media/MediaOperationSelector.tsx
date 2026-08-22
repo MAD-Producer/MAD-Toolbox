@@ -1,5 +1,6 @@
 import { Select } from "@mantine/core";
 import { MEDIA_OPERATION_OPTIONS, type MediaPageOperation } from "./workflow";
+import { t } from "../../locale";
 
 interface MediaOperationSelectorProps {
   operations: readonly MediaPageOperation[];
@@ -18,8 +19,10 @@ export function MediaOperationSelector({
 
   return (
     <Select
-      label="操作"
-      data={MEDIA_OPERATION_OPTIONS.filter((option) => operations.includes(option.value))}
+      label={t("media.operationLabel")}
+      data={MEDIA_OPERATION_OPTIONS.filter((option) => operations.includes(option.value)).map(
+        ({ value, labelKey }) => ({ value, label: t(labelKey) })
+      )}
       value={value}
       onChange={(nextValue) => nextValue && onChange(nextValue as MediaPageOperation)}
       disabled={disabled}

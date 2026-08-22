@@ -1,4 +1,5 @@
 import { TextInput } from "@mantine/core";
+import { t } from "../../locale";
 import type { MediaFormState } from "./form";
 import type { MediaPageOperation } from "./workflow";
 
@@ -34,8 +35,8 @@ export function MediaExtractFields({
 
   return (
     <TextInput
-      label="流序号"
-      description="同类型流的序号，从 0 开始"
+      label={t("media.fields.streamIndex")}
+      description={t("media.fields.streamIndexHint")}
       value={value}
       onChange={(event) => update(event.currentTarget.value)}
       disabled={disabled}

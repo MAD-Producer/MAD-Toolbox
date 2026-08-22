@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Text } from "@mantine/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { IconUpload } from "@tabler/icons-react";
+import { t } from "../../locale";
 
 interface MediaDropzoneProps {
   onPickFiles: () => Promise<void>;
@@ -52,7 +53,7 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
       component="button"
       type="button"
       onClick={() => void onPickFiles()}
-      aria-label="添加媒体文件，或拖拽文件与文件夹到此处"
+      aria-label={t("media.dropzone.ariaLabel")}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -78,10 +79,10 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
     >
       <IconUpload size={30} stroke={1.4} />
       <Text size="sm" fw={500} c="inherit">
-        拖拽文件或文件夹到此处
+        {t("media.dropzone.hint")}
       </Text>
       <Text size="xs" c="inherit" style={{ opacity: 0.75 }}>
-        或点击选择文件
+        {t("media.dropzone.clickHint")}
       </Text>
     </Box>
   );

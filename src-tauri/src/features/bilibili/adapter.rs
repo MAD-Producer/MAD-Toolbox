@@ -21,9 +21,15 @@ pub enum AdapterError {
 impl std::fmt::Display for AdapterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AdapterError::MissingUrl => write!(f, "请填写视频地址"),
-            AdapterError::InvalidIntent(e) => write!(f, "表单数据无效: {e}"),
-            AdapterError::EmptyArgv => write!(f, "命令不能为空"),
+            AdapterError::MissingUrl => {
+                write!(f, "{}", rust_i18n::t!("backend.bilibili.adapter.missing_url"))
+            }
+            AdapterError::InvalidIntent(e) => {
+                write!(f, "{}", rust_i18n::t!("backend.bilibili.adapter.invalid_intent", e = e))
+            }
+            AdapterError::EmptyArgv => {
+                write!(f, "{}", rust_i18n::t!("backend.bilibili.adapter.empty_argv"))
+            }
         }
     }
 }
@@ -152,10 +158,11 @@ fn plan_manual(argv: &[String]) -> Result<AdapterPlan, AdapterError> {
     let argv_redacted = redact_argv(&argv);
     Ok(AdapterPlan {
         tool: "bbdown",
-        title: format!(
-            "BBDown 手动命令 {}",
-            argv.first().map(String::as_str).unwrap_or("")
-        ),
+        title: rust_i18n::t!(
+            "backend.bilibili.adapter.manual_title",
+            command = argv.first().map(String::as_str).unwrap_or("")
+        )
+        .to_string(),
         argv,
         argv_redacted,
         pool: Pool::Download,
@@ -176,13 +183,13 @@ fn known_output_dir(directory: &str) -> Vec<String> {
 
 fn title_for(mode: Mode, url: &str) -> String {
     let verb = match mode {
-        Mode::Video => "下载",
-        Mode::VideoOnly => "下载视频轨",
-        Mode::Audio => "下载音频",
-        Mode::Cover => "下载封面",
-        Mode::Subtitle => "下载字幕",
-        Mode::Danmaku => "下载弹幕",
-        Mode::Info => "解析信息",
+        Mode::Video => rust_i18n::t!("backend.bilibili.adapter.title_video"),
+        Mode::VideoOnly => rust_i18n::t!("backend.bilibili.adapter.title_video_track"),
+        Mode::Audio => rust_i18n::t!("backend.bilibili.adapter.title_audio"),
+        Mode::Cover => rust_i18n::t!("backend.bilibili.adapter.title_cover"),
+        Mode::Subtitle => rust_i18n::t!("backend.bilibili.adapter.title_subtitle"),
+        Mode::Danmaku => rust_i18n::t!("backend.bilibili.adapter.title_danmaku"),
+        Mode::Info => rust_i18n::t!("backend.bilibili.adapter.title_info"),
     };
     format!("{verb} {url}")
 }

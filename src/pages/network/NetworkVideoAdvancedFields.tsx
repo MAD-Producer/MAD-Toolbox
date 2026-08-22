@@ -1,4 +1,5 @@
 import { Group, NumberInput, Stack, Switch, TextInput } from "@mantine/core";
+import { t } from "../../locale";
 import type { NetworkFormState } from "./form";
 
 interface NetworkVideoAdvancedFieldsProps {
@@ -16,14 +17,14 @@ export function NetworkVideoAdvancedFields({
     <Stack gap="sm">
       <Group grow>
         <TextInput
-          label="输出文件名模板"
+          label={t("network.fields.outputTemplate")}
           value={form.outputTemplate}
           onChange={(event) => onUpdate({ outputTemplate: event.currentTarget.value })}
           disabled={disabled}
         />
         <TextInput
-          label="格式选择表达式"
-          placeholder="如 bv*+ba/b"
+          label={t("network.fields.format")}
+          placeholder={t("network.fields.formatPlaceholder")}
           value={form.format}
           onChange={(event) => onUpdate({ format: event.currentTarget.value })}
           disabled={disabled}
@@ -31,14 +32,14 @@ export function NetworkVideoAdvancedFields({
       </Group>
       <Group grow>
         <NumberInput
-          label="重试次数"
+          label={t("network.fields.retries")}
           min={0}
           value={form.retries}
           onChange={(value) => onUpdate({ retries: typeof value === "number" ? value : 10 })}
           disabled={disabled}
         />
         <NumberInput
-          label="并行分片数"
+          label={t("network.fields.concurrentFragments")}
           min={1}
           value={form.concurrentFragments}
           onChange={(value) =>
@@ -49,13 +50,13 @@ export function NetworkVideoAdvancedFields({
       </Group>
       <Group gap="lg">
         <Switch
-          label="输出 info.json"
+          label={t("network.fields.writeInfoJson")}
           checked={form.writeInfoJson}
           onChange={(event) => onUpdate({ writeInfoJson: event.currentTarget.checked })}
           disabled={disabled}
         />
         <Switch
-          label="详细日志"
+          label={t("network.fields.verbose")}
           checked={form.verbose}
           onChange={(event) => onUpdate({ verbose: event.currentTarget.checked })}
           disabled={disabled}

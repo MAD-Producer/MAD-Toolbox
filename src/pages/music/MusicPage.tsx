@@ -10,6 +10,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CollapsibleSection } from "../../components/common/CollapsibleSection";
+import { t } from "../../locale";
 import { MusicAdvancedSettings } from "./MusicAdvancedSettings";
 import { MusicCommandPanel } from "./MusicCommandPanel";
 import { MusicConfigurationPanel } from "./MusicConfigurationPanel";
@@ -219,7 +220,7 @@ export function MusicPage({
       setConfigurationError(null);
       try {
         await onPlaylist(createMusicPlaylistRequest(form, prepared.cli, denoise), form);
-        notifications.show({ color: "green", message: "歌单下载任务已加入队列" });
+        notifications.show({ color: "green", message: t("music.playlistQueued") });
         if (
           draftRevisionRef.current === submittedRevision &&
           useMusicSessionStore.getState().phase === "idle"
@@ -256,7 +257,7 @@ export function MusicPage({
       if (markQueued(sessionId, indices)) {
         setSelected((current) => current.filter((value) => !submittedSet.has(value)));
       }
-      notifications.show({ color: "green", message: "所选音乐已加入任务队列" });
+      notifications.show({ color: "green", message: t("music.downloadQueued") });
     } catch (error) {
       setConfigurationError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -325,7 +326,7 @@ export function MusicPage({
       <CollapsibleSection
         title={
           <Text size="sm" fw={500}>
-            高级参数
+            {t("music.advanced.title")}
           </Text>
         }
         opened={advancedOpen}
@@ -343,7 +344,7 @@ export function MusicPage({
         </Stack>
       </CollapsibleSection>
       {displayedError ? (
-        <Alert color="red" icon={<IconAlertTriangle size={16} />} title="参数或执行错误">
+        <Alert color="red" icon={<IconAlertTriangle size={16} />} title={t("music.errorTitle")}>
           {displayedError}
         </Alert>
       ) : null}
@@ -351,10 +352,10 @@ export function MusicPage({
       <CollapsibleSection
         title={
           <Text size="sm" fw={500}>
-            搜索结果
+            {t("music.results.title")}
             {searchResponse && (
               <Text span size="xs" c="dimmed" ml={8}>
-                {searchResponse.results.length} 项
+                {t("music.results.count", { count: searchResponse.results.length })}
               </Text>
             )}
           </Text>
@@ -380,12 +381,12 @@ export function MusicPage({
           <Group gap="sm" justify="center" py="lg">
             <Loader size="xs" />
             <Text size="sm" c="dimmed">
-              正在搜索，请稍候…
+              {t("music.searchingHint")}
             </Text>
           </Group>
         ) : (
           <Text size="sm" c="dimmed" ta="center" py="lg">
-            还没有搜索结果——在上方选择音乐源、输入关键词并点击「开始搜索」后，结果会展示在这里。
+            {t("music.emptyResultsHint")}
           </Text>
         )}
       </CollapsibleSection>

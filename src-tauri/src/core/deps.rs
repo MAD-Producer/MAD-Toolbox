@@ -440,23 +440,24 @@ fn musicdl_launcher_python(script: &str) -> Option<PathBuf> {
 
 #[cfg(not(target_os = "windows"))]
 pub(crate) fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
-    let script = std::fs::read_to_string(executable)
-        .map_err(|error| format!("无法读取 musicdl 启动脚本：{error}"))?;
+    let script = std::fs::read_to_string(executable).map_err(|error| {
+        rust_i18n::t!("backend.deps.musicdlScriptReadFailed", error = error).to_string()
+    })?;
     let hint = musicdl_launcher_python(&script)
-        .ok_or_else(|| "无法识别 musicdl 使用的 Python 环境，请使用 pipx 重新安装".to_string())?;
-    let interpreter = if hint.is_absolute() {
-        hint
-    } else {
-        find_system_binary(
-            hint.to_str()
-                .ok_or_else(|| "musicdl 的 Python 启动信息无效".to_string())?,
-        )
-        .ok_or_else(|| "找不到 musicdl 使用的 Python 解释器".to_string())?
-    };
+        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlPythonUnrecognized").to_string())?;
+    let interpreter =
+        if hint.is_absolute() {
+            hint
+        } else {
+            find_system_binary(hint.to_str().ok_or_else(|| {
+                rust_i18n::t!("backend.deps.musicdlLauncherInfoInvalid").to_string()
+            })?)
+            .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlInterpreterNotFound").to_string())?
+        };
     interpreter
         .is_file()
         .then_some(interpreter)
-        .ok_or_else(|| "musicdl 使用的 Python 解释器不存在，请使用 pipx 重新安装".to_string())
+        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlInterpreterMissing").to_string())
 }
 
 #[cfg(target_os = "windows")]
@@ -531,7 +532,7 @@ pub(crate) fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
     candidates
         .into_iter()
         .find(|candidate| candidate.is_file())
-        .ok_or_else(|| "找不到 musicdl 使用的 Python 环境，请使用 pipx 重新安装".into())
+        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlEnvNotFound").to_string())
 }
 
 async fn tool_version(path: &Path, tool: &ToolName) -> Option<String> {
@@ -643,8 +644,7 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
                     }),
                     ToolName::Bbdown => None,
                     _ => Some(if cfg!(target_os = "windows") {
-                        "请在 PowerShell 中分别使用 winget 安装 FFmpeg、yt-dlp、MediaInfo CLI 和 Deno"
-                            .into()
+                        rust_i18n::t!("backend.deps.wingetHint").to_string()
                     } else {
                         "brew install ffmpeg yt-dlp media-info deno".into()
                     }),
@@ -663,14 +663,16 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
 fn launch_install(command: &str) -> Result<tokio::process::Child, String> {
     use std::os::windows::process::CommandExt;
     const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
-    let script =
-        format!("{command} & echo. & echo 安装命令执行完毕，按任意键关闭本窗口 & pause >nul");
+    let script = format!(
+        "{command} & echo. & echo {} & pause >nul",
+        rust_i18n::t!("backend.deps.installDone")
+    );
     let mut builder = Command::new("cmd.exe");
     builder.arg("/C").arg(script);
     builder.as_std_mut().creation_flags(CREATE_NEW_CONSOLE);
-    builder
-        .spawn()
-        .map_err(|error| format!("无法打开终端窗口：{error}"))
+    builder.spawn().map_err(|error| {
+        rust_i18n::t!("backend.deps.terminalOpenFailed", error = error).to_string()
+    })
 }
 
 /// 在 Terminal 新窗口执行安装命令，命令结束后标签页自动关闭。
@@ -681,11 +683,13 @@ fn launch_install(command: &str) -> Result<(), String> {
     let status = std::process::Command::new("osascript")
         .args(["-e", &script])
         .status()
-        .map_err(|error| format!("无法打开终端窗口：{error}"))?;
+        .map_err(|error| {
+            rust_i18n::t!("backend.deps.terminalOpenFailed", error = error).to_string()
+        })?;
     if status.success() {
         Ok(())
     } else {
-        Err("Terminal 执行安装脚本失败".into())
+        Err(rust_i18n::t!("backend.deps.terminalScriptFailed").to_string())
     }
 }
 
@@ -695,7 +699,7 @@ fn launch_install(command: &str) -> Result<(), String> {
 pub(crate) async fn dependency_install(app: AppHandle, tool: ToolName) -> Result<(), String> {
     let command = tool
         .install_command()
-        .ok_or_else(|| "该工具不支持一键安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.deps.installNotSupported").to_string())?;
     let handle = app.clone();
     #[cfg(target_os = "windows")]
     {
@@ -726,15 +730,15 @@ pub(crate) async fn dependency_install(app: AppHandle, tool: ToolName) -> Result
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         let _ = (handle, command);
-        return Err("当前平台不支持一键安装".into());
+        return Err(rust_i18n::t!("backend.deps.installUnsupportedPlatform").to_string());
     }
     Ok(())
 }
 
 #[tauri::command]
 pub(crate) async fn ffmpeg_encoders(app: AppHandle) -> Result<Vec<String>, String> {
-    let (ffmpeg, _) =
-        resolve_tool(&app, &ToolName::Ffmpeg).ok_or_else(|| "未找到 FFmpeg".to_string())?;
+    let (ffmpeg, _) = resolve_tool(&app, &ToolName::Ffmpeg)
+        .ok_or_else(|| rust_i18n::t!("backend.deps.ffmpegNotFound").to_string())?;
     let output = background_command(ffmpeg)
         .args(["-hide_banner", "-encoders"])
         .env("PATH", command_path())
@@ -743,7 +747,7 @@ pub(crate) async fn ffmpeg_encoders(app: AppHandle) -> Result<Vec<String>, Strin
         .await
         .map_err(|error| error.to_string())?;
     if !output.status.success() {
-        return Err("无法读取 FFmpeg 编码器列表".into());
+        return Err(rust_i18n::t!("backend.deps.ffmpegEncodersReadFailed").to_string());
     }
     let text = String::from_utf8_lossy(&output.stdout);
     let mut encoders = text

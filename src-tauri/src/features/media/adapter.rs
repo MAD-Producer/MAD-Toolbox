@@ -20,9 +20,17 @@ pub enum AdapterError {
 impl std::fmt::Display for AdapterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AdapterError::MissingInput => write!(f, "请选择输入文件"),
-            AdapterError::InvalidIntent(e) => write!(f, "表单数据无效: {e}"),
-            AdapterError::EmptyArgv => write!(f, "命令不能为空"),
+            AdapterError::MissingInput => {
+                write!(f, "{}", rust_i18n::t!("backend.media.adapter.missingInput"))
+            }
+            AdapterError::InvalidIntent(e) => write!(
+                f,
+                "{}",
+                rust_i18n::t!("backend.media.adapter.invalidIntent", error = e)
+            ),
+            AdapterError::EmptyArgv => {
+                write!(f, "{}", rust_i18n::t!("backend.media.adapter.emptyArgv"))
+            }
         }
     }
 }
@@ -48,7 +56,7 @@ pub fn plan(intent: &TaskIntent, ctx: &MediaCtx) -> Result<AdapterPlan, AdapterE
             let argv = argv.to_vec();
             Ok(AdapterPlan {
                 tool: "ffmpeg",
-                title: "FFmpeg 手动命令".into(),
+                title: rust_i18n::t!("backend.media.adapter.manualCommandTitle").to_string(),
                 argv_redacted: argv.clone(),
                 argv,
                 pool: Pool::Local,
@@ -90,16 +98,20 @@ fn plan_form(form: &MediaIntent, ctx: &MediaCtx) -> Result<AdapterPlan, AdapterE
     })
 }
 
-fn operation_verb(operation: Operation) -> &'static str {
+fn operation_verb(operation: Operation) -> String {
     match operation {
-        Operation::Remux => "重新封装",
-        Operation::Transcode => "转码",
-        Operation::VideoExtract => "抽取视频流",
-        Operation::Audio => "提取音频",
-        Operation::SubtitleExtract => "抽取字幕",
-        Operation::Thumbnail => "截取封面",
-        Operation::Gif => "生成 GIF",
-        Operation::Frames => "抽帧",
+        Operation::Remux => rust_i18n::t!("backend.media.operation.remux").to_string(),
+        Operation::Transcode => rust_i18n::t!("backend.media.operation.transcode").to_string(),
+        Operation::VideoExtract => {
+            rust_i18n::t!("backend.media.operation.videoExtract").to_string()
+        }
+        Operation::Audio => rust_i18n::t!("backend.media.operation.audio").to_string(),
+        Operation::SubtitleExtract => {
+            rust_i18n::t!("backend.media.operation.subtitleExtract").to_string()
+        }
+        Operation::Thumbnail => rust_i18n::t!("backend.media.operation.thumbnail").to_string(),
+        Operation::Gif => rust_i18n::t!("backend.media.operation.gif").to_string(),
+        Operation::Frames => rust_i18n::t!("backend.media.operation.frames").to_string(),
     }
 }
 
@@ -454,20 +466,22 @@ pub fn pr_plan(
     let subtitle_only =
         probe.video.is_empty() && probe.audio.is_empty() && !probe.subtitles.is_empty();
     if probe.video.is_empty() && probe.audio.is_empty() && probe.subtitles.is_empty() {
-        return Err(format!(
-            "文件中没有可转换的媒体流：{}",
-            input.to_string_lossy()
-        ));
+        return Err(rust_i18n::t!(
+            "backend.media.adapter.prNoStreams",
+            path = input.to_string_lossy()
+        )
+        .to_string());
     }
     if subtitle_only
         && probe.subtitles.iter().any(|codec| {
             ["hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle", "xsub"].contains(&codec.as_str())
         })
     {
-        return Err(format!(
-            "{} 是图片字幕，需要 OCR 后才能转为 SRT",
-            input.to_string_lossy()
-        ));
+        return Err(rust_i18n::t!(
+            "backend.media.adapter.prImageSubtitle",
+            path = input.to_string_lossy()
+        )
+        .to_string());
     }
 
     let lossless_audio = audio_only && policy::is_lossless_audio(&probe.audio);
@@ -571,7 +585,7 @@ pub fn pr_plan(
         .unwrap_or_else(|| input.to_string_lossy().into_owned());
     let plan = AdapterPlan {
         tool: "ffmpeg",
-        title: format!("PR 兼容转码 {file_name}"),
+        title: rust_i18n::t!("backend.media.adapter.prTitle", file = file_name).to_string(),
         argv_redacted: args.clone(),
         argv: args,
         pool: Pool::Local,

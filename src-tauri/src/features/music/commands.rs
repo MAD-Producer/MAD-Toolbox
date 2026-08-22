@@ -45,7 +45,10 @@ fn download_progress_parser() -> LineParser {
         }
         vec![ParsedSignal::Progress(TaskProgress {
             percent: Some(done as f64 / total as f64 * 100.0),
-            detail: Some(format!("{done}/{total} 首")),
+            detail: Some(
+                rust_i18n::t!("backend.music.progressCount", done = done, total = total)
+                    .to_string(),
+            ),
         })]
     })
 }
@@ -92,23 +95,35 @@ pub(crate) async fn musicdl_search(
         .filter(|source| !source.is_empty())
         .collect();
     if request.keyword.is_empty() {
-        return Err("请填写歌曲、歌手或专辑关键词".into());
+        return Err(rust_i18n::t!("backend.music.keywordRequired").to_string());
     }
     if request.music_sources.is_empty() {
-        return Err("请至少选择一个音乐源".into());
+        return Err(rust_i18n::t!("backend.music.sourceRequired").to_string());
     }
     if request.music_sources.len() > 60 {
-        return Err("音乐源数量超过安全限制".into());
+        return Err(rust_i18n::t!("backend.music.sourceLimitExceeded").to_string());
     }
     request.search_size_per_source = request.search_size_per_source.clamp(1, 100);
     for (label, value) in [
-        ("客户端设置", &request.init_music_clients_cfg),
-        ("请求设置", &request.requests_overrides),
-        ("线程设置", &request.clients_threadings),
-        ("搜索规则", &request.search_rules),
+        (
+            rust_i18n::t!("backend.music.labelClientConfig"),
+            &request.init_music_clients_cfg,
+        ),
+        (
+            rust_i18n::t!("backend.music.labelRequests"),
+            &request.requests_overrides,
+        ),
+        (
+            rust_i18n::t!("backend.music.labelThreading"),
+            &request.clients_threadings,
+        ),
+        (
+            rust_i18n::t!("backend.music.labelSearchRules"),
+            &request.search_rules,
+        ),
     ] {
         if !value.is_object() {
-            return Err(format!("{label}必须是 JSON 对象"));
+            return Err(rust_i18n::t!("backend.music.mustBeJsonObject", label = label).to_string());
         }
     }
     request.output_directory = request
@@ -119,12 +134,13 @@ pub(crate) async fn musicdl_search(
         request.output_directory = unified_output_directory(&app);
     }
     if let Some(directory) = &request.output_directory {
-        std::fs::create_dir_all(directory)
-            .map_err(|error| format!("无法创建音乐下载目录：{error}"))?;
+        std::fs::create_dir_all(directory).map_err(|error| {
+            rust_i18n::t!("backend.music.downloadDirFailed", error = error).to_string()
+        })?;
     }
 
     let (musicdl, _) = resolve_tool(&app, &ToolName::Musicdl)
-        .ok_or_else(|| "未安装 musicdl，请先按照页面提示安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.music.musicdlNotInstalledHint").to_string())?;
     let python = musicdl_python(&musicdl)?;
     let adapter = runtime::adapter_path(&app)?;
     let session_id = Uuid::new_v4().to_string();
@@ -148,8 +164,10 @@ pub(crate) async fn musicdl_search(
     ];
     let env_path = command_path();
     let proxy = load_app_settings(&app).proxy;
-    let mut child = spawn_tree(&python, &argv, None, Some(&env_path), proxy.as_deref())
-        .map_err(|error| format!("无法启动 musicdl 搜索：{error}"))?;
+    let mut child =
+        spawn_tree(&python, &argv, None, Some(&env_path), proxy.as_deref()).map_err(|error| {
+            rust_i18n::t!("backend.music.searchSpawnFailed", error = error).to_string()
+        })?;
     let stdout = child.take_stdout();
     let stderr = child.take_stderr();
     let timeout_killer = child.killer();
@@ -162,7 +180,8 @@ pub(crate) async fn musicdl_search(
             tool: ToolName::Musicdl,
             state: "running",
             exit_code: None,
-            message: format!("musicdl 正在搜索 {source_count} 个音乐源"),
+            message: rust_i18n::t!("backend.music.searchingSources", count = source_count)
+                .to_string(),
         },
     );
 
@@ -196,17 +215,17 @@ pub(crate) async fn musicdl_search(
                 Ok(status) if status.success() => (
                     "completed",
                     status.code(),
-                    "musicdl 搜索完成".to_string(),
+                    rust_i18n::t!("backend.music.searchCompleted").to_string(),
                 ),
                 Ok(status) => (
                     "failed",
                     status.code(),
-                    "musicdl 搜索失败".to_string(),
+                    rust_i18n::t!("backend.music.searchFailed").to_string(),
                 ),
                 Err(error) => (
                     "failed",
                     None,
-                    format!("无法等待 musicdl 搜索：{error}"),
+                    rust_i18n::t!("backend.music.searchWaitFailed", error = error).to_string(),
                 ),
             },
             _ = sleep(Duration::from_secs(1800)) => {
@@ -215,7 +234,7 @@ pub(crate) async fn musicdl_search(
                 (
                     "failed",
                     exit_code,
-                    "musicdl 搜索超过 30 分钟，已停止；请减少音乐源或检查网络".to_string(),
+                    rust_i18n::t!("backend.music.searchTimeout").to_string(),
                 )
             },
         };
@@ -230,7 +249,7 @@ pub(crate) async fn musicdl_search(
             task_registry.finish(&task_job_id) || cancel_requested.load(Ordering::Acquire);
         if canceled {
             state_name = "canceled";
-            message = "musicdl 搜索已取消".into();
+            message = rust_i18n::t!("backend.music.searchCanceled").to_string();
         }
 
         let mut response = None;
@@ -242,14 +261,18 @@ pub(crate) async fn musicdl_search(
                         session_id: task_job_id.clone(),
                         results: payload.results,
                     });
-                    message = format!("musicdl 搜索完成，共 {count} 项结果");
+                    message =
+                        rust_i18n::t!("backend.music.searchCompletedWithCount", count = count)
+                            .to_string();
                 }
                 Err(_) => {
-                    message = "无法解析 musicdl 搜索结果，请升级或重新安装 musicdl".into();
+                    message = rust_i18n::t!("backend.music.searchResultParseFailed").to_string();
                 }
             }
         }
-        let final_state = if state_name == "completed" && message.starts_with("无法解析") {
+        let final_state = if state_name == "completed"
+            && message == rust_i18n::t!("backend.music.searchResultParseFailed").to_string()
+        {
             "failed"
         } else {
             state_name
@@ -285,7 +308,7 @@ pub(crate) fn musicdl_search_cancel(
     if registry.cancel(&job_id) {
         Ok(())
     } else {
-        Err("musicdl 搜索不存在或已经结束".into())
+        Err(rust_i18n::t!("backend.music.searchNotFoundOrFinished").to_string())
     }
 }
 
@@ -297,7 +320,7 @@ pub(crate) fn musicdl_session_release(
 ) -> Result<(), String> {
     let session_id = sessions::canonical_session_id(&session_id)?;
     if registry.is_active(&session_id) {
-        return Err("musicdl 搜索仍在运行，请先停止搜索".into());
+        return Err(rust_i18n::t!("backend.music.searchStillRunningStopFirst").to_string());
     }
     sessions::release_search_session(&app, &session_id)
 }
@@ -314,22 +337,22 @@ pub(crate) async fn musicdl_download(
 ) -> Result<TaskSubmitResult, String> {
     let session_id = sessions::canonical_session_id(&session_id)?;
     if registry.is_active(&session_id) {
-        return Err("musicdl 搜索仍在运行，请等待搜索完成".into());
+        return Err(rust_i18n::t!("backend.music.searchStillRunningWait").to_string());
     }
     if indices.is_empty() {
-        return Err("请至少选择一首音乐".into());
+        return Err(rust_i18n::t!("backend.music.selectionRequired").to_string());
     }
     if indices.len() > 1000 {
-        return Err("一次选择的音乐数量超过限制".into());
+        return Err(rust_i18n::t!("backend.music.selectionLimitExceeded").to_string());
     }
     let (musicdl, _) = resolve_tool(&app, &ToolName::Musicdl)
-        .ok_or_else(|| "未安装 musicdl，请重新检测依赖".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.music.musicdlNotInstalledRedetect").to_string())?;
     let python = musicdl_python(&musicdl)?;
     let adapter = runtime::adapter_path(&app)?;
     let source_state_path =
         sessions::search_session_path(&app, &session_id)?.join("results.pickle");
     if !source_state_path.is_file() {
-        return Err("musicdl 搜索结果已失效，请重新搜索".into());
+        return Err(rust_i18n::t!("backend.music.searchResultExpired").to_string());
     }
     let selected = serde_json::to_string(&indices).map_err(|error| error.to_string())?;
     // 输出目录以搜索会话落盘的 request.json 为准（搜索时已解析默认值），
@@ -346,8 +369,9 @@ pub(crate) async fn musicdl_download(
             });
     let task_directory = PreparedSessionDir::task(&app)?;
     let task_state_path = task_directory.path().join("results.pickle");
-    std::fs::copy(&source_state_path, &task_state_path)
-        .map_err(|error| format!("无法准备 musicdl 下载会话：{error}"))?;
+    std::fs::copy(&source_state_path, &task_state_path).map_err(|error| {
+        rust_i18n::t!("backend.music.downloadSessionFailed", error = error).to_string()
+    })?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -367,7 +391,7 @@ pub(crate) async fn musicdl_download(
     let task_id = hub.submit(TaskSpec {
         feature: Feature::Music,
         pool: Pool::Download,
-        title: format!("音乐下载（{} 首）", indices.len()),
+        title: rust_i18n::t!("backend.music.downloadTaskTitle", count = indices.len()).to_string(),
         tool: "musicdl".into(),
         tool_path: python,
         tool_version: None,
@@ -408,19 +432,31 @@ pub(crate) async fn musicdl_playlist(
         .filter(|source| !source.is_empty())
         .collect();
     if request.playlist_url.is_empty() {
-        return Err("请填写歌单链接".into());
+        return Err(rust_i18n::t!("backend.music.playlistUrlRequired").to_string());
     }
     if request.music_sources.is_empty() || request.music_sources.len() > 60 {
-        return Err("请选择 1–60 个音乐源".into());
+        return Err(rust_i18n::t!("backend.music.playlistSourceRange").to_string());
     }
     for (label, value) in [
-        ("客户端设置", &request.init_music_clients_cfg),
-        ("请求设置", &request.requests_overrides),
-        ("线程设置", &request.clients_threadings),
-        ("搜索规则", &request.search_rules),
+        (
+            rust_i18n::t!("backend.music.labelClientConfig"),
+            &request.init_music_clients_cfg,
+        ),
+        (
+            rust_i18n::t!("backend.music.labelRequests"),
+            &request.requests_overrides,
+        ),
+        (
+            rust_i18n::t!("backend.music.labelThreading"),
+            &request.clients_threadings,
+        ),
+        (
+            rust_i18n::t!("backend.music.labelSearchRules"),
+            &request.search_rules,
+        ),
     ] {
         if !value.is_object() {
-            return Err(format!("{label}必须是 JSON 对象"));
+            return Err(rust_i18n::t!("backend.music.mustBeJsonObject", label = label).to_string());
         }
     }
     request.output_directory = request
@@ -431,12 +467,13 @@ pub(crate) async fn musicdl_playlist(
     let output_directory = request
         .output_directory
         .as_ref()
-        .ok_or_else(|| "无法确定音乐导出目录".to_string())?;
-    std::fs::create_dir_all(output_directory)
-        .map_err(|error| format!("无法创建音乐导出目录：{error}"))?;
+        .ok_or_else(|| rust_i18n::t!("backend.music.exportDirUnresolved").to_string())?;
+    std::fs::create_dir_all(output_directory).map_err(|error| {
+        rust_i18n::t!("backend.music.exportDirFailed", error = error).to_string()
+    })?;
 
     let (musicdl, _) = resolve_tool(&app, &ToolName::Musicdl)
-        .ok_or_else(|| "未安装 musicdl，请重新检测依赖".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.music.musicdlNotInstalledRedetect").to_string())?;
     let python = musicdl_python(&musicdl)?;
     let adapter = runtime::adapter_path(&app)?;
     let task_directory = PreparedSessionDir::task(&app)?;
@@ -461,7 +498,11 @@ pub(crate) async fn musicdl_playlist(
     let task_id = hub.submit(TaskSpec {
         feature: Feature::Music,
         pool: Pool::Download,
-        title: format!("歌单下载 {}", request.playlist_url),
+        title: rust_i18n::t!(
+            "backend.music.playlistTaskTitle",
+            url = request.playlist_url
+        )
+        .to_string(),
         tool: "musicdl".into(),
         tool_path: python,
         tool_version: None,

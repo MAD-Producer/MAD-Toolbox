@@ -1,3 +1,4 @@
+import type { TranslationKey } from "../../locale";
 import type { MediaPageId } from "../../app/route";
 import type { MediaOperation } from "./form";
 
@@ -18,17 +19,17 @@ export const MEDIA_PAGE_CONFIG: Record<MediaPageId, MediaPageConfig> = {
 
 export const MEDIA_OPERATION_OPTIONS: ReadonlyArray<{
   value: MediaPageOperation;
-  label: string;
+  labelKey: TranslationKey;
 }> = [
-  { value: "pr-compatible", label: "PR 兼容转码" },
-  { value: "transcode", label: "转码" },
-  { value: "remux", label: "重新封装" },
-  { value: "audio", label: "提取音频" },
-  { value: "video-extract", label: "抽取视频流" },
-  { value: "subtitle-extract", label: "抽取字幕" },
-  { value: "thumbnail", label: "截取封面" },
-  { value: "gif", label: "生成 GIF" },
-  { value: "frames", label: "逐帧导出" }
+  { value: "pr-compatible", labelKey: "media.op.prCompatible" },
+  { value: "transcode", labelKey: "nav.media.transcode" },
+  { value: "remux", labelKey: "nav.media.remux" },
+  { value: "audio", labelKey: "media.op.audio" },
+  { value: "video-extract", labelKey: "media.op.videoExtract" },
+  { value: "subtitle-extract", labelKey: "media.op.subtitleExtract" },
+  { value: "thumbnail", labelKey: "media.op.thumbnail" },
+  { value: "gif", labelKey: "media.op.gif" },
+  { value: "frames", labelKey: "media.op.frames" }
 ];
 
 export const CONTAINER_BY_OPERATION: Partial<Record<MediaPageOperation, string[]>> = {

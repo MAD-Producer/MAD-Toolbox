@@ -6,11 +6,12 @@
 
 import { Box, Group, Stack, Text } from "@mantine/core";
 import type { Pool } from "../../contracts/types";
+import { t, type TranslationKey } from "../../locale";
 import type { PoolDefinition } from "./api";
 
-const POOL_LABELS: Record<Pool, string> = {
-  download: "下载资源池",
-  local: "处理资源池"
+const POOL_LABEL_KEYS: Record<Pool, TranslationKey> = {
+  download: "tasks.pool.download",
+  local: "tasks.pool.local"
 };
 
 interface PoolIndicatorProps {
@@ -30,7 +31,7 @@ export function PoolIndicator({ definitions, occupancy }: PoolIndicatorProps) {
           <Box key={pool}>
             <Group justify="space-between" mb={5} wrap="nowrap">
               <Text size="xs" c="dimmed">
-                {POOL_LABELS[pool]}
+                {t(POOL_LABEL_KEYS[pool])}
               </Text>
               <Text size="xs" c={full ? "red" : "dimmed"}>
                 {used}/{capacity}

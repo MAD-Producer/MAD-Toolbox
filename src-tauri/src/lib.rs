@@ -1,6 +1,8 @@
 mod core;
 mod features;
 
+rust_i18n::i18n!("locales", fallback = "en");
+
 use tauri::Manager;
 
 pub fn run() {
@@ -8,11 +10,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            // 任务枢纽：库文件与日志目录在应用数据目录；启动时先做保留清理，
-            // TaskHub::new 内部随后执行遗留任务对账（§4.3/§4.5）
             let handle = app.handle().clone();
             let data_dir = core::settings::app_data_dir(&handle).map_err(std::io::Error::other)?;
-            // 统一默认输出目录：各功能页默认下载到 系统「下载」/MADToolbox，启动时确保存在
+            core::language::apply_language(core::settings::load_app_settings(&handle).language);
             let _ = core::settings::unified_output_directory(&handle);
             let _ = features::music::sessions::cleanup_orphaned_sessions(&handle);
             let store = core::task::store::TaskStore::open(&data_dir.join("tasks.db"))?;
@@ -40,6 +40,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             core::settings::app_settings,
             core::settings::save_app_settings,
+            core::settings::set_language,
             core::update::check_for_update,
             core::deps::dependency_status,
             core::deps::dependency_install,
