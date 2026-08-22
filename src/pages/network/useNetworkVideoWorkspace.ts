@@ -2,7 +2,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
-import type { TaskEnvelope, TaskIntent } from "../../contracts/types";
+import type { TaskIntent, TaskSeed } from "../../contracts/types";
 import {
   networkPreview,
   networkProbe,
@@ -15,7 +15,7 @@ import { resolveDefaultOutputDirectory } from "../../lib/platform";
 
 export interface NetworkVideoPageProps {
   active: boolean;
-  seed?: TaskEnvelope | null;
+  seed?: TaskSeed | null;
   onSeedConsumed?: () => void;
   onRetain?: () => void;
   onSubmitted?: () => void;
@@ -89,12 +89,18 @@ export function useNetworkVideoWorkspace({
   useEffect(() => {
     if (!seed) return;
     setPreviewState(null);
-    if (seed.intent.type === "form") {
+    if (seed.task.intent.type === "form") {
       setExpertTextState(null);
-      setForm({ ...defaultNetworkForm, ...(seed.intent.data as Partial<NetworkFormState>) });
+      const restored = {
+        ...defaultNetworkForm,
+        ...(seed.task.intent.data as Partial<NetworkFormState>)
+      };
+      // 复用配置只还原参数，url 是每次任务不同的输入，留空待填
+      if (seed.purpose === "reuse") restored.url = "";
+      setForm(restored);
     } else {
-      setExpertTextState(seed.intent.data.argv.join("\n"));
-      if (seed.intent.data.argv.some((argument) => argument === "***")) {
+      setExpertTextState(seed.task.intent.data.argv.join("\n"));
+      if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
         notifications.show({
           color: "yellow",
           message: "手改命令中的敏感值（***）未被保存，请重新填写后再运行"

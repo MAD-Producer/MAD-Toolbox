@@ -1,17 +1,9 @@
-import { Button, Group, Menu, Paper, Switch, Title, Tooltip } from "@mantine/core";
-import {
-  IconChevronDown,
-  IconBookDownload,
-  IconMistOff,
-  IconPlayerPlay,
-  IconPlayerStop
-} from "@tabler/icons-react";
+import { Button, Group, Paper, Switch, Title, Tooltip } from "@mantine/core";
+import { IconMistOff, IconPlayerPlay, IconPlayerStop } from "@tabler/icons-react";
 import type { MusicMode } from "./configuration";
-import type { SavedTemplate } from "./templates";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
 
 interface MusicPageHeaderProps {
-  active: boolean;
   mode: MusicMode;
   runLoading: boolean;
   runDisabled: boolean;
@@ -21,17 +13,11 @@ interface MusicPageHeaderProps {
   onStopSearch: () => void;
   denoise: boolean;
   onDenoiseChange: (value: boolean) => void;
-  templateMenuOpened: boolean;
-  templates: SavedTemplate[];
-  onTemplateMenuChange: (opened: boolean) => void;
-  onSaveTemplate: (name: string) => void;
-  onApplyTemplate: (template: SavedTemplate) => void;
   dependencyLabels?: string[];
   onOpenDependencies?: () => void;
 }
 
 export function MusicPageHeader({
-  active,
   mode,
   runLoading,
   runDisabled,
@@ -41,19 +27,9 @@ export function MusicPageHeader({
   onStopSearch,
   denoise,
   onDenoiseChange,
-  templateMenuOpened,
-  templates,
-  onTemplateMenuChange,
-  onSaveTemplate,
-  onApplyTemplate,
   dependencyLabels,
   onOpenDependencies
 }: MusicPageHeaderProps) {
-  const promptToSave = () => {
-    const name = window.prompt("模板名称");
-    if (name?.trim()) onSaveTemplate(name.trim());
-  };
-
   return (
     <Group justify="space-between" wrap="nowrap">
       <Group gap="xs" wrap="nowrap">
@@ -94,24 +70,6 @@ export function MusicPageHeader({
             {mode === "search" ? "开始搜索" : "下载歌单"}
           </Button>
         )}
-        <Menu opened={active && templateMenuOpened} onChange={onTemplateMenuChange}>
-          <Menu.Target>
-            <Button variant="default" rightSection={<IconChevronDown size={14} />}>
-              模板
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item leftSection={<IconBookDownload size={14} />} onClick={promptToSave}>
-              保存当前设置为模板
-            </Menu.Item>
-            {templates.length > 0 ? <Menu.Divider /> : null}
-            {templates.map((template) => (
-              <Menu.Item key={template.id} onClick={() => onApplyTemplate(template)}>
-                {template.name}
-              </Menu.Item>
-            ))}
-          </Menu.Dropdown>
-        </Menu>
       </Group>
     </Group>
   );

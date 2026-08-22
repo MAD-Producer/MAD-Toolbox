@@ -2,16 +2,15 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
-import type { TaskEnvelope, TaskIntent } from "../../contracts/types";
+import type { TaskIntent, TaskSeed } from "../../contracts/types";
 import { bilibiliPreview, bilibiliSubmit, type PreviewResult } from "./api";
 import { defaultBilibiliForm, type BilibiliFormState } from "./form";
-import { loadTemplates, saveTemplate, type SavedTemplate } from "./templates";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { useBilibiliLoginStore } from "../../stores/bilibili-login";
 
 export interface BilibiliPageProps {
   active: boolean;
-  seed?: TaskEnvelope | null;
+  seed?: TaskSeed | null;
   onSeedConsumed?: () => void;
   onRetain?: () => void;
   onSubmitted?: () => void;
@@ -38,8 +37,6 @@ export function useBilibiliWorkspace({
   const [draftRevision, setDraftRevision] = useState(0);
   const [previewState, setPreviewState] = useState<RevisionedPreview | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [templateMenuOpened, setTemplateMenuOpened] = useState(false);
-  const [templates, setTemplates] = useState<SavedTemplate[]>(() => loadTemplates(localStorage));
   const loginQr = useBilibiliLoginStore((state) => state.qrDataUrl);
   const loginPhase = useBilibiliLoginStore((state) => state.phase);
   const loginLoggedIn = useBilibiliLoginStore((state) => state.loggedIn);
@@ -84,12 +81,18 @@ export function useBilibiliWorkspace({
   useEffect(() => {
     if (!seed) return;
     setPreviewState(null);
-    if (seed.intent.type === "form") {
+    if (seed.task.intent.type === "form") {
       setExpertTextState(null);
-      setForm({ ...defaultBilibiliForm, ...(seed.intent.data as Partial<BilibiliFormState>) });
+      const restored = {
+        ...defaultBilibiliForm,
+        ...(seed.task.intent.data as Partial<BilibiliFormState>)
+      };
+      // 复用配置只还原参数
+      if (seed.purpose === "reuse") restored.url = "";
+      setForm(restored);
     } else {
-      setExpertTextState(seed.intent.data.argv.join("\n"));
-      if (seed.intent.data.argv.some((argument) => argument === "***")) {
+      setExpertTextState(seed.task.intent.data.argv.join("\n"));
+      if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
         notifications.show({
           color: "yellow",
           message: "手改命令中的敏感值（***）未被保存，请重新填写后再运行"
@@ -98,10 +101,6 @@ export function useBilibiliWorkspace({
     }
     onSeedConsumed?.();
   }, [seed, onSeedConsumed]);
-
-  useEffect(() => {
-    if (!active) setTemplateMenuOpened(false);
-  }, [active]);
 
   // 每次进入页面都重新读取落盘登录态：覆盖「上次会话已登录」「关窗后后台扫码完成」等场景
   useEffect(() => {
@@ -175,19 +174,6 @@ export function useBilibiliWorkspace({
     }
   };
 
-  const applyTemplate = (template: SavedTemplate) => {
-    reviseDraft();
-    setForm((current) => ({ ...current, ...template.value, url: current.url }));
-    notifications.show({ message: `已应用模板「${template.name}」` });
-  };
-
-  const saveAsTemplate = () => {
-    const name = window.prompt("模板名称");
-    if (!name?.trim()) return;
-    setTemplates(saveTemplate(localStorage, name.trim(), form));
-    notifications.show({ message: `模板「${name.trim()}」已保存（不含登录凭证）` });
-  };
-
   const preview = previewState?.revision === draftRevision ? previewState.result : null;
   const previewError = previewState?.revision === draftRevision ? previewState.error : null;
 
@@ -205,11 +191,6 @@ export function useBilibiliWorkspace({
     previewError,
     submitting,
     submit,
-    templateMenuOpened,
-    setTemplateMenuOpened,
-    templates,
-    applyTemplate,
-    saveAsTemplate,
     loginQr,
     loginPhase,
     loginLoggedIn,

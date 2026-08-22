@@ -2,7 +2,7 @@ import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
 import type { MediaPageId } from "../../app/route";
-import type { TaskEnvelope, TaskIntent } from "../../contracts/types";
+import type { TaskIntent, TaskSeed } from "../../contracts/types";
 import {
   ffmpegEncoders,
   inspectMedia,
@@ -24,7 +24,7 @@ import {
 
 export interface MediaWorkspacePageProps {
   active: boolean;
-  seed?: TaskEnvelope | null;
+  seed?: TaskSeed | null;
   onSeedConsumed?: () => void;
   onRetain?: () => void;
   onSubmitted?: () => void;
@@ -165,11 +165,12 @@ export function useMediaWorkspace({
   useEffect(() => {
     if (!seed) return;
     setPreviewState(null);
-    if (seed.intent.type === "form") {
-      const data = seed.intent.data as Record<string, unknown>;
+    const keepInputs = seed.purpose === "rerun";
+    if (seed.task.intent.type === "form") {
+      const data = seed.task.intent.data as Record<string, unknown>;
       if (data.prCompatible === true) {
         setOperationState("pr-compatible");
-        setInputsState(typeof data.input === "string" ? [data.input] : []);
+        setInputsState(keepInputs && typeof data.input === "string" ? [data.input] : []);
         setForm((current) => ({
           ...current,
           outputDirectory: typeof data.outputDirectory === "string" ? data.outputDirectory : ""
@@ -178,11 +179,11 @@ export function useMediaWorkspace({
         const restored = { ...defaultMediaForm, ...(data as Partial<MediaFormState>) };
         setOperationState(restored.operation);
         setForm(restored);
-        setInputsState(restored.input ? [restored.input] : []);
+        setInputsState(keepInputs && restored.input ? [restored.input] : []);
       }
       setExpertTextState(null);
     } else {
-      setExpertTextState(seed.intent.data.argv.join("\n"));
+      setExpertTextState(seed.task.intent.data.argv.join("\n"));
     }
     onSeedConsumed?.();
   }, [seed, onSeedConsumed]);

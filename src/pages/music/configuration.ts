@@ -1,5 +1,4 @@
 import type { MusicdlPlaylistRequest, MusicdlSearchRequest } from "./api";
-import type { MusicTemplateSource, SavedTemplate } from "./templates";
 
 export type MusicMode = "search" | "playlist";
 
@@ -13,9 +12,20 @@ export interface MusicdlCliOptions {
   searchRules: Record<string, unknown>;
 }
 
-export interface MusicFormState extends MusicTemplateSource {
+export interface MusicFormState {
+  mode: MusicMode;
   keyword: string;
   playlistUrl: string;
+  sources: string[];
+  outputDirectory: string;
+  searchSize: number;
+  threadCount: number;
+  proxy: string;
+  cookies: string;
+  rawInit: string;
+  rawRequests: string;
+  rawThreadings: string;
+  rawSearchRules: string;
 }
 
 export type MusicFormPatch = Partial<MusicFormState>;
@@ -232,15 +242,6 @@ export function createMusicPlaylistRequest(
     outputDirectory: form.outputDirectory || null,
     downsample
   };
-}
-
-export function createMusicTemplateSource(form: MusicFormState): MusicTemplateSource {
-  const { keyword: _keyword, playlistUrl: _playlistUrl, ...source } = form;
-  return source;
-}
-
-export function applyMusicTemplate(form: MusicFormState, template: SavedTemplate): MusicFormState {
-  return { ...form, ...template.value, sources: [...template.value.sources] };
 }
 
 export function musicSourceLabel(source: string): string {

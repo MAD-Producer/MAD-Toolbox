@@ -17,22 +17,20 @@ import { MusicPageHeader } from "./MusicPageHeader";
 import { MusicSearchResults } from "./MusicSearchResults";
 import { MusicSourcePicker } from "./MusicSourcePicker";
 import type { DependencyStatus } from "../../contracts/dependency";
+import type { TaskSeed } from "../../contracts/types";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { useMusicSessionStore } from "../../stores/music-session";
 import { previewMusicCommand, type MusicdlPlaylistRequest, type SubmitResult } from "./api";
 import {
-  applyMusicTemplate,
   createInitialMusicForm,
   createMusicPlaylistRequest,
   createMusicSearchRequest,
-  createMusicTemplateSource,
   MUSIC_SOURCE_GROUPS,
   prepareMusicConfiguration,
   type MusicdlCliOptions,
   type MusicFormPatch,
   type MusicFormState
 } from "./configuration";
-import { loadTemplates, saveTemplate, type SavedTemplate } from "./templates";
 
 const MUSIC_PREVIEW_DEBOUNCE_MS = 180;
 const MUSIC_SOURCES_STORAGE_KEY = "music.selectedSources";
@@ -66,16 +64,19 @@ interface MusicPreviewResult {
 
 interface MusicPageProps {
   active: boolean;
+  seed?: TaskSeed | null;
+  onSeedConsumed?: () => void;
   dependency: DependencyStatus | null;
   pythonDependency: DependencyStatus | null;
   defaultOutputDirectory: string | null;
   /** 设置页的全局代理；已设置时作为占位提示，留空提交即使用它 */
   globalProxy: string | null;
-  onPlaylist: (request: MusicdlPlaylistRequest) => Promise<SubmitResult>;
+  onPlaylist: (request: MusicdlPlaylistRequest, form: MusicFormState) => Promise<SubmitResult>;
   onDownload: (
     sessionId: string,
     indices: number[],
-    downsample: boolean
+    downsample: boolean,
+    form: MusicFormState
   ) => Promise<SubmitResult>;
   onRetain?: () => void;
   onSubmitted?: () => void;
@@ -85,6 +86,8 @@ interface MusicPageProps {
 
 export function MusicPage({
   active,
+  seed,
+  onSeedConsumed,
   dependency,
   pythonDependency,
   defaultOutputDirectory,
@@ -102,8 +105,6 @@ export function MusicPage({
   const [configurationError, setConfigurationError] = useState<string | null>(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
-  const [templateMenuOpened, setTemplateMenuOpened] = useState(false);
-  const [templates, setTemplates] = useState<SavedTemplate[]>(() => loadTemplates(localStorage));
   const [previewResult, setPreviewResult] = useState<MusicPreviewResult | null>(null);
   const [denoise, setDenoise] = useState(
     () => localStorage.getItem(MUSIC_DENOISE_STORAGE_KEY) === "1"
@@ -164,9 +165,19 @@ export function MusicPage({
     if (searchResponse) resultsHandlers.open();
   }, [searchResponse, resultsHandlers.open]);
 
+  // 任务中心「复用此配置」：按任务落库的表单快照还原参数；
+  // keyword/playlistUrl 是每次任务不同的输入，留空待填。
+  // 旧任务的 intent 无快照，退化为仅还原模式（playlist→歌单、download→搜索）。
   useEffect(() => {
-    if (!active) setTemplateMenuOpened(false);
-  }, [active]);
+    if (!seed) return;
+    const data = seed.task.intent.type === "form" ? seed.task.intent.data : {};
+    const snapshot = (data.form ?? {}) as Partial<MusicFormState>;
+    const mode: MusicFormState["mode"] =
+      snapshot.mode ?? (data.musicdl === "playlist" ? "playlist" : "search");
+    setForm({ ...createInitialMusicForm(), ...snapshot, mode, keyword: "", playlistUrl: "" });
+    if (typeof data.denoise === "boolean") setDenoise(data.denoise);
+    onSeedConsumed?.();
+  }, [seed, onSeedConsumed]);
 
   const prepared = useMemo(() => prepareMusicConfiguration(form), [form]);
   const musicdlInstalled = dependency?.available ?? false;
@@ -199,19 +210,6 @@ export function MusicPage({
     };
   }, [active, musicdlInstalled, prepared.cli, pythonInstalled]);
 
-  const saveCurrentTemplate = (name: string) => {
-    setTemplates(saveTemplate(localStorage, name, createMusicTemplateSource(form)));
-    notifications.show({ message: `模板「${name}」已保存（不含登录凭证）` });
-  };
-
-  const useTemplate = (template: SavedTemplate) => {
-    draftRevisionRef.current += 1;
-    retainWorkspace();
-    setForm((current) => applyMusicTemplate(current, template));
-    setConfigurationError(null);
-    notifications.show({ message: `已应用模板「${template.name}」（登录凭证类字段不入模板）` });
-  };
-
   const run = async () => {
     setConfigurationError(prepared.error);
     if (!prepared.cli || prepared.error) return;
@@ -222,7 +220,7 @@ export function MusicPage({
       setTaskSubmitting(true);
       setConfigurationError(null);
       try {
-        await onPlaylist(createMusicPlaylistRequest(form, prepared.cli, denoise));
+        await onPlaylist(createMusicPlaylistRequest(form, prepared.cli, denoise), form);
         notifications.show({ color: "green", message: "歌单下载任务已加入队列" });
         if (
           draftRevisionRef.current === submittedRevision &&
@@ -256,7 +254,7 @@ export function MusicPage({
     setTaskSubmitting(true);
     setConfigurationError(null);
     try {
-      await onDownload(sessionId, indices, denoise);
+      await onDownload(sessionId, indices, denoise, form);
       if (markQueued(sessionId, indices)) {
         setSelected((current) => current.filter((value) => !submittedSet.has(value)));
       }
@@ -309,7 +307,6 @@ export function MusicPage({
   return (
     <Stack gap="md" p="md">
       <MusicPageHeader
-        active={active}
         mode={form.mode}
         runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
         runDisabled={runDisabled}
@@ -319,11 +316,6 @@ export function MusicPage({
         onStopSearch={() => void stopSearch()}
         denoise={denoise}
         onDenoiseChange={setDenoise}
-        templateMenuOpened={templateMenuOpened}
-        templates={templates}
-        onTemplateMenuChange={setTemplateMenuOpened}
-        onSaveTemplate={saveCurrentTemplate}
-        onApplyTemplate={useTemplate}
         dependencyLabels={dependencyLabels}
         onOpenDependencies={onOpenDependencies}
       />

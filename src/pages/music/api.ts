@@ -4,7 +4,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import type { RunResult } from "../../contracts/job";
-import type { MusicdlCliOptions } from "./configuration";
+import type { MusicdlCliOptions, MusicFormState } from "./configuration";
 
 export interface SubmitResult {
   taskId: string;
@@ -72,14 +72,19 @@ export function musicdlSessionRelease(sessionId: string): Promise<void> {
   return invoke<void>("musicdl_session_release", { sessionId });
 }
 
+/** form 为页面表单快照，仅落库到任务 intent，供任务中心「复用此配置」还原参数。 */
 export function musicdlDownload(
   sessionId: string,
   indices: number[],
-  downsample: boolean
+  downsample: boolean,
+  form: MusicFormState
 ): Promise<SubmitResult> {
-  return invoke<SubmitResult>("musicdl_download", { sessionId, indices, downsample });
+  return invoke<SubmitResult>("musicdl_download", { sessionId, indices, downsample, form });
 }
 
-export function musicdlPlaylist(request: MusicdlPlaylistRequest): Promise<SubmitResult> {
-  return invoke<SubmitResult>("musicdl_playlist", { request });
+export function musicdlPlaylist(
+  request: MusicdlPlaylistRequest,
+  form: MusicFormState
+): Promise<SubmitResult> {
+  return invoke<SubmitResult>("musicdl_playlist", { request, form });
 }

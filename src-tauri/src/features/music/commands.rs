@@ -56,6 +56,22 @@ pub(crate) struct TaskSubmitResult {
     task_id: String,
 }
 
+/// 表单快照中可承载登录凭证的字段：落库 intent 前清空（与 bilibili sanitize_intent 同一推论）。
+const FORM_SNAPSHOT_SENSITIVE_FIELDS: &[&str] = &["cookies", "rawInit", "rawRequests"];
+
+fn sanitized_form_snapshot(form: Option<serde_json::Value>) -> serde_json::Value {
+    let mut form = form.unwrap_or_else(|| serde_json::json!({}));
+    if let Some(map) = form.as_object_mut() {
+        for field in FORM_SNAPSHOT_SENSITIVE_FIELDS {
+            map.insert(
+                (*field).to_string(),
+                serde_json::Value::String(String::new()),
+            );
+        }
+    }
+    form
+}
+
 /// 返回的是等效 musicdl CLI 展示文本，不是 Python adapter 的内部 argv。
 #[tauri::command]
 pub(crate) fn musicdl_preview(request: MusicdlPreviewRequest) -> Result<String, String> {
@@ -294,6 +310,7 @@ pub(crate) async fn musicdl_download(
     session_id: String,
     indices: Vec<usize>,
     downsample: bool,
+    form: Option<serde_json::Value>,
 ) -> Result<TaskSubmitResult, String> {
     let session_id = sessions::canonical_session_id(&session_id)?;
     if registry.is_active(&session_id) {
@@ -366,6 +383,8 @@ pub(crate) async fn musicdl_download(
             "musicdl": "download",
             "sessionId": session_id,
             "indices": indices,
+            "form": sanitized_form_snapshot(form),
+            "denoise": downsample,
         })),
         parser: Some(download_progress_parser()),
         on_failure: None,
@@ -379,6 +398,7 @@ pub(crate) async fn musicdl_playlist(
     app: AppHandle,
     hub: State<'_, TaskHub>,
     mut request: MusicdlPlaylistRequest,
+    form: Option<serde_json::Value>,
 ) -> Result<TaskSubmitResult, String> {
     request.playlist_url = request.playlist_url.trim().to_string();
     request.music_sources = request
@@ -453,6 +473,8 @@ pub(crate) async fn musicdl_playlist(
         intent: TaskIntent::Form(serde_json::json!({
             "musicdl": "playlist",
             "playlistUrl": request.playlist_url,
+            "form": sanitized_form_snapshot(form),
+            "denoise": request.downsample,
         })),
         parser: Some(download_progress_parser()),
         on_failure: None,
