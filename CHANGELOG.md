@@ -7,6 +7,7 @@ All notable changes to MAD Toolbox are documented here.
 - feat: A new appearance in "Settings->About" page
 - feat: 增加了音乐下载的“自动去杂”功能，能够对部分假无损音乐进行降频处理，减小文件体积
 - feat: 任务卡片增加“复用此配置”选项，可以快捷复用任务配置。同时移除了模板功能
+- fix: 修复了输入参数时命令预览的高度抖动问题
 
 ## 0.10.1
 

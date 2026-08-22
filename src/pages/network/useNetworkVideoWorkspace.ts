@@ -188,8 +188,9 @@ export function useNetworkVideoWorkspace({
     if (typeof directory === "string") update({ outputDirectory: directory });
   };
 
-  const preview = previewState?.revision === draftRevision ? previewState.result : null;
-  const previewError = previewState?.revision === draftRevision ? previewState.error : null;
+  // 草稿变更后沿用上一次预览直到新结果整体替换，避免「…」与命令交替导致高度抖动
+  const preview = previewState?.result ?? null;
+  const previewError = previewState?.error ?? null;
 
   return {
     active,

@@ -27,7 +27,6 @@ import {
   createMusicSearchRequest,
   MUSIC_SOURCE_GROUPS,
   prepareMusicConfiguration,
-  type MusicdlCliOptions,
   type MusicFormPatch,
   type MusicFormState
 } from "./configuration";
@@ -57,7 +56,6 @@ function createPersistedMusicForm(): MusicFormState {
 }
 
 interface MusicPreviewResult {
-  request: MusicdlCliOptions;
   display: string | null;
   error: string | null;
 }
@@ -170,6 +168,7 @@ export function MusicPage({
   // 旧任务的 intent 无快照，退化为仅还原模式（playlist→歌单、download→搜索）。
   useEffect(() => {
     if (!seed) return;
+    setPreviewResult(null);
     const data = seed.task.intent.type === "form" ? seed.task.intent.data : {};
     const snapshot = (data.form ?? {}) as Partial<MusicFormState>;
     const mode: MusicFormState["mode"] =
@@ -191,12 +190,11 @@ export function MusicPage({
     const timeoutId = window.setTimeout(() => {
       void previewMusicCommand(request)
         .then((display) => {
-          if (!canceled) setPreviewResult({ request, display, error: null });
+          if (!canceled) setPreviewResult({ display, error: null });
         })
         .catch((error) => {
           if (!canceled) {
             setPreviewResult({
-              request,
               display: null,
               error: error instanceof Error ? error.message : String(error)
             });
@@ -299,10 +297,8 @@ export function MusicPage({
     !!prepared.error ||
     (form.mode === "search" ? !form.keyword.trim() : !form.playlistUrl.trim());
   const displayedError = configurationError || sessionError || prepared.error;
-  const previewMatchesCurrentRequest =
-    prepared.cli !== null && previewResult?.request === prepared.cli;
-  const preview = previewMatchesCurrentRequest ? previewResult.display : null;
-  const previewError = previewMatchesCurrentRequest ? previewResult.error : null;
+  const preview = previewResult?.display ?? null;
+  const previewError = previewResult?.error ?? null;
 
   return (
     <Stack gap="md" p="md">
