@@ -96,7 +96,15 @@ function progressView(task: TaskEnvelope): ProgressView | null {
   }
 }
 
-export function TaskCard({ task, logs, onCancel, onPromote, onDelete, onRerun, onReuse }: TaskCardProps) {
+export function TaskCard({
+  task,
+  logs,
+  onCancel,
+  onPromote,
+  onDelete,
+  onRerun,
+  onReuse
+}: TaskCardProps) {
   const [opened, setOpened] = useState(false);
   const status = STATUS_META[task.status];
   const StatusIcon = status.icon;
