@@ -16,7 +16,6 @@ import "./styles/notifications.css";
 import App from "./app/App";
 import { theme } from "./theme";
 import { isWindows } from "./lib/platform";
-// i18next 初始化（语言选择读取 localStorage）与 <html lang> 对齐在模块内完成
 import "./locale";
 
 document.documentElement.dataset.platform = isWindows ? "windows" : "macos";
