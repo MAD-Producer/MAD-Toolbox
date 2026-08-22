@@ -19,6 +19,7 @@ import { useTasksStore } from "../../stores/tasks";
 
 interface TasksPageProps {
   onRerun: (task: TaskEnvelope) => void;
+  onReuse: (task: TaskEnvelope) => void;
 }
 
 /** 删除滑出动画时长，须与 animations.css 中 task-card-slot 的 transition 一致 */
@@ -37,7 +38,7 @@ function HeroStat({ label, value, color }: { label: string; value: number; color
   );
 }
 
-export function TasksPage({ onRerun }: TasksPageProps) {
+export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   const tasks = useTasksStore((s) => s.tasks);
   const logs = useTasksStore((s) => s.logs);
   const cancel = useTasksStore((s) => s.cancel);
@@ -106,6 +107,7 @@ export function TasksPage({ onRerun }: TasksPageProps) {
         onPromote={promote}
         onDelete={(id) => deleteTasks([id])}
         onRerun={task.feature === "music" ? undefined : onRerun}
+        onReuse={onReuse}
       />
     </div>
   );

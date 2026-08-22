@@ -28,6 +28,7 @@ import {
   IconCircleCheck,
   IconCircleX,
   IconClock,
+  IconCopyPlus,
   IconFileDownload,
   IconFileText,
   IconFolderOpen,
@@ -65,6 +66,7 @@ interface TaskCardProps {
   onPromote: (id: string) => void;
   onDelete: (id: string) => void;
   onRerun?: (task: TaskEnvelope) => void;
+  onReuse?: (task: TaskEnvelope) => void;
 }
 
 const TERMINAL_STATUSES = new Set(["success", "failed", "canceled", "interrupted"]);
@@ -94,7 +96,15 @@ function progressView(task: TaskEnvelope): ProgressView | null {
   }
 }
 
-export function TaskCard({ task, logs, onCancel, onPromote, onDelete, onRerun }: TaskCardProps) {
+export function TaskCard({
+  task,
+  logs,
+  onCancel,
+  onPromote,
+  onDelete,
+  onRerun,
+  onReuse
+}: TaskCardProps) {
   const [opened, setOpened] = useState(false);
   const status = STATUS_META[task.status];
   const StatusIcon = status.icon;
@@ -180,6 +190,18 @@ export function TaskCard({ task, logs, onCancel, onPromote, onDelete, onRerun }:
           </Group>
         </UnstyledButton>
         <Group gap={4} wrap="nowrap">
+          {task.intent.type === "form" && onReuse && (
+            <Tooltip label="复用此配置">
+              <ActionIcon
+                variant="transparent"
+                color="gray"
+                className="task-action"
+                onClick={() => onReuse(task)}
+              >
+                <IconCopyPlus size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
           {cancellable && (
             <Tooltip label="取消">
               <ActionIcon
