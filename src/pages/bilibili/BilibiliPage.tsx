@@ -13,18 +13,12 @@ export function BilibiliPage(props: BilibiliPageProps) {
   return (
     <Stack gap="md" p="md">
       <BilibiliPageHeader
-        active={workspace.active}
         loginPhase={workspace.loginPhase}
         loggedIn={workspace.loginLoggedIn}
         submitting={workspace.submitting}
         submitDisabled={!workspace.expertMode && !workspace.preview}
         onSubmit={() => void workspace.submit()}
-        templateMenuOpened={workspace.templateMenuOpened}
-        templates={workspace.templates}
-        onTemplateMenuChange={workspace.setTemplateMenuOpened}
         onBeginLogin={workspace.beginLogin}
-        onSaveTemplate={workspace.saveAsTemplate}
-        onApplyTemplate={workspace.applyTemplate}
         dependencyLabels={props.dependencyLabels}
         onOpenDependencies={props.onOpenDependencies}
       />

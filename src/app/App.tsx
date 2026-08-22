@@ -4,7 +4,7 @@ import { notifications } from "../lib/notifications";
 import { useBackend } from "../hooks/useBackend";
 import { useTasksStore } from "../stores/tasks";
 import type { ToolName } from "../contracts/dependency";
-import type { TaskEnvelope } from "../contracts/types";
+import type { TaskEnvelope, TaskSeed } from "../contracts/types";
 import { syncNativeWindowTheme } from "./api";
 import { AppShell } from "../components/layout/AppShell";
 import { SplashScreen } from "../components/layout/SplashScreen";
@@ -29,6 +29,7 @@ import { useBilibiliLoginStore } from "../stores/bilibili-login";
 import { useMusicSessionStore } from "../stores/music-session";
 import { useWorkspacesStore, type WorkspaceId } from "../stores/workspaces";
 import { musicdlDownload, musicdlPlaylist, type MusicdlPlaylistRequest } from "../pages/music/api";
+import type { MusicFormState } from "../pages/music/configuration";
 import { L1_NAVIGATION } from "./navigation";
 import {
   DEFAULT_APP_ROUTE,
@@ -60,7 +61,7 @@ export default function App() {
   const [lastMediaPage, setLastMediaPage] = useState<MediaPageId>("pr-compatible");
   const [lastSettingsPage, setLastSettingsPage] = useState<SettingsPageId>("general");
   const [lastMainSection, setLastMainSection] = useState<AppSection>("tasks");
-  const [rerunSeed, setRerunSeed] = useState<TaskEnvelope | null>(null);
+  const [taskSeed, setTaskSeed] = useState<TaskSeed | null>(null);
   const [booted, setBooted] = useState(false);
   const [tipsOpened, setTipsOpened] = useState(false);
   const backend = useBackend();
@@ -146,18 +147,23 @@ export default function App() {
     });
   };
 
-  const downloadMusic = async (sessionId: string, indices: number[]) => {
+  const downloadMusic = async (
+    sessionId: string,
+    indices: number[],
+    downsample: boolean,
+    form: MusicFormState
+  ) => {
     try {
-      return await musicdlDownload(sessionId, indices);
+      return await musicdlDownload(sessionId, indices, downsample, form);
     } catch (error) {
       showError(error);
       throw error;
     }
   };
 
-  const downloadMusicPlaylist = async (request: MusicdlPlaylistRequest) => {
+  const downloadMusicPlaylist = async (request: MusicdlPlaylistRequest, form: MusicFormState) => {
     try {
-      return await musicdlPlaylist(request);
+      return await musicdlPlaylist(request, form);
     } catch (error) {
       showError(error);
       throw error;
@@ -188,28 +194,32 @@ export default function App() {
     }
   };
 
+  // 任务中心「再次运行/复用此配置」共用：跳到任务创建页并以任务参数重置工作区草稿
+  const seedTaskIntoWorkspace = (task: TaskEnvelope, purpose: TaskSeed["purpose"]) => {
+    const target = routeForTask(task);
+    const targetWorkspace = workspaceIdForRoute(target);
+    if (targetWorkspace !== null) {
+      const session = useWorkspacesStore.getState().sessions[targetWorkspace];
+      if (
+        session.mounted &&
+        session.phase === "retained" &&
+        !window.confirm("目标页面有尚未释放的配置。放弃当前配置并载入这个任务吗？")
+      ) {
+        return;
+      }
+      useWorkspacesStore.getState().reset(targetWorkspace);
+    }
+    setTaskSeed({ task, purpose });
+    if (target.section === "media") setLastMediaPage(target.page);
+    setRoute(target);
+  };
+
   const renderNonWorkspacePage = () => {
     if (route.section === "tasks") {
       return (
         <TasksPage
-          onRerun={(task) => {
-            const target = routeForTask(task);
-            const targetWorkspace = workspaceIdForRoute(target);
-            if (targetWorkspace !== null) {
-              const session = useWorkspacesStore.getState().sessions[targetWorkspace];
-              if (
-                session.mounted &&
-                session.phase === "retained" &&
-                !window.confirm("目标页面有尚未释放的配置。放弃当前配置并载入这个任务吗？")
-              ) {
-                return;
-              }
-              useWorkspacesStore.getState().reset(targetWorkspace);
-            }
-            setRerunSeed(task);
-            if (target.section === "media") setLastMediaPage(target.page);
-            setRoute(target);
-          }}
+          onRerun={(task) => seedTaskIntoWorkspace(task, "rerun")}
+          onReuse={(task) => seedTaskIntoWorkspace(task, "reuse")}
         />
       );
     }
@@ -245,8 +255,8 @@ export default function App() {
       render: (active, generation) => (
         <BilibiliPage
           active={active}
-          seed={active && rerunSeed?.feature === "bilibili" ? rerunSeed : null}
-          onSeedConsumed={() => setRerunSeed(null)}
+          seed={active && taskSeed?.task.feature === "bilibili" ? taskSeed : null}
+          onSeedConsumed={() => setTaskSeed(null)}
           onRetain={() => markWorkspaceRetained("bilibili", generation)}
           onSubmitted={() => markWorkspaceReleasable("bilibili", generation)}
           dependencyLabels={missingLabelsFor("bilibili")}
@@ -259,8 +269,8 @@ export default function App() {
       render: (active, generation) => (
         <NetworkVideoPage
           active={active}
-          seed={active && rerunSeed?.feature === "network" ? rerunSeed : null}
-          onSeedConsumed={() => setRerunSeed(null)}
+          seed={active && taskSeed?.task.feature === "network" ? taskSeed : null}
+          onSeedConsumed={() => setTaskSeed(null)}
           onRetain={() => markWorkspaceRetained("network", generation)}
           onSubmitted={() => markWorkspaceReleasable("network", generation)}
           dependencyLabels={missingLabelsFor("network")}
@@ -274,6 +284,8 @@ export default function App() {
       render: (active, generation) => (
         <MusicPage
           active={active}
+          seed={active && taskSeed?.task.feature === "music" ? taskSeed : null}
+          onSeedConsumed={() => setTaskSeed(null)}
           dependency={backend.dependencyMap.get("musicdl") ?? null}
           pythonDependency={backend.dependencyMap.get("python") ?? null}
           defaultOutputDirectory={backend.settings.defaultOutputDirectory}
@@ -293,8 +305,8 @@ export default function App() {
         <MediaWorkspace
           active={active}
           page={route.section === "media" ? route.page : lastMediaPage}
-          seed={active && rerunSeed?.feature === "media" ? rerunSeed : null}
-          onSeedConsumed={() => setRerunSeed(null)}
+          seed={active && taskSeed?.task.feature === "media" ? taskSeed : null}
+          onSeedConsumed={() => setTaskSeed(null)}
           onNavigatePage={navigateSecondary}
           onRetain={() => markWorkspaceRetained("media", generation)}
           onSubmitted={() => markWorkspaceReleasable("media", generation)}

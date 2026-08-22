@@ -1,44 +1,25 @@
-import { Button, Group, Menu, Title } from "@mantine/core";
-import {
-  IconChevronDown,
-  IconCircleCheck,
-  IconBookDownload,
-  IconPlayerPlay,
-  IconQrcode
-} from "@tabler/icons-react";
-import type { SavedTemplate } from "./templates";
+import { Button, Group, Title } from "@mantine/core";
+import { IconCircleCheck, IconPlayerPlay, IconQrcode } from "@tabler/icons-react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
 
 interface BilibiliPageHeaderProps {
-  active: boolean;
   loginPhase: "idle" | "starting" | "running";
   loggedIn: boolean;
   submitting: boolean;
   submitDisabled: boolean;
   onSubmit: () => void;
-  templateMenuOpened: boolean;
-  templates: SavedTemplate[];
-  onTemplateMenuChange: (opened: boolean) => void;
   onBeginLogin: () => void;
-  onSaveTemplate: () => void;
-  onApplyTemplate: (template: SavedTemplate) => void;
   dependencyLabels?: string[];
   onOpenDependencies?: () => void;
 }
 
 export function BilibiliPageHeader({
-  active,
   loginPhase,
   loggedIn,
   submitting,
   submitDisabled,
   onSubmit,
-  templateMenuOpened,
-  templates,
-  onTemplateMenuChange,
   onBeginLogin,
-  onSaveTemplate,
-  onApplyTemplate,
   dependencyLabels,
   onOpenDependencies
 }: BilibiliPageHeaderProps) {
@@ -77,24 +58,6 @@ export function BilibiliPageHeader({
             {loginPhase === "running" ? "等待扫码" : "扫码登录"}
           </Button>
         )}
-        <Menu opened={active && templateMenuOpened} onChange={onTemplateMenuChange}>
-          <Menu.Target>
-            <Button variant="default" rightSection={<IconChevronDown size={14} />}>
-              模板
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item leftSection={<IconBookDownload size={14} />} onClick={onSaveTemplate}>
-              保存当前设置为模板
-            </Menu.Item>
-            {templates.length > 0 && <Menu.Divider />}
-            {templates.map((template) => (
-              <Menu.Item key={template.id} onClick={() => onApplyTemplate(template)}>
-                {template.name}
-              </Menu.Item>
-            ))}
-          </Menu.Dropdown>
-        </Menu>
       </Group>
     </Group>
   );

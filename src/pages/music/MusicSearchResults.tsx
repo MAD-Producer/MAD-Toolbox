@@ -9,12 +9,29 @@ function resultFormat(result: MusicdlSearchResult): string {
   return (result.extension || result.codec || "未知格式").toLowerCase();
 }
 
+const DOWNSAMPLE_TARGET_RATE = 48000;
+
+function denoiseEstimate(result: MusicdlSearchResult, enabled: boolean): string | null {
+  if (!enabled) return null;
+  const { sampleRate, fileSizeBytes, fileSize } = result;
+  if (!sampleRate || sampleRate <= DOWNSAMPLE_TARGET_RATE) return null;
+  let bytes = fileSizeBytes;
+  if (bytes == null) {
+    const parsed = /([\d.]+)\s*MB/i.exec(fileSize);
+    if (!parsed) return null;
+    bytes = Number.parseFloat(parsed[1]) * 1024 * 1024;
+  }
+  const megabytes = ((bytes * DOWNSAMPLE_TARGET_RATE) / sampleRate / 1024 / 1024).toFixed(1);
+  return `去杂后约${megabytes}MB`;
+}
+
 interface MusicSearchResultsProps {
   response: MusicdlSearchResponse;
   selected: number[];
   queuedIndices: number[];
   sessionPhase: MusicSessionPhase;
   taskSubmitting: boolean;
+  denoise: boolean;
   onSelectedChange: Dispatch<SetStateAction<number[]>>;
   onDownload: () => void;
   onEndSession: () => void;
@@ -26,6 +43,7 @@ export function MusicSearchResults({
   queuedIndices,
   sessionPhase,
   taskSubmitting,
+  denoise,
   onSelectedChange,
   onDownload,
   onEndSession
@@ -96,7 +114,7 @@ export function MusicSearchResults({
             disabled={sessionPhase !== "ready" || taskSubmitting}
             onClick={onEndSession}
           >
-            结束本次搜索
+            清空搜索结果
           </Button>
           <Button size="compact-sm" variant="default" onClick={toggleSelectVisible}>
             {allVisibleSelected ? "取消全选" : "全选"}
@@ -148,6 +166,7 @@ export function MusicSearchResults({
             {visibleResults.map((result) => {
               const checked = selectedSet.has(result.index);
               const queued = queuedSet.has(result.index);
+              const estimate = denoiseEstimate(result, denoise);
               return (
                 <Table.Tr
                   key={`${result.source}-${result.index}`}
@@ -173,15 +192,23 @@ export function MusicSearchResults({
                       {result.album ? ` · ${result.album}` : ""}
                     </Text>
                   </Table.Td>
-                  <Table.Td w={140}>
-                    <Badge
-                      variant="light"
-                      color={result.lossless ? "teal" : "gray"}
-                      style={{ textTransform: "none" }}
-                    >
-                      {result.extension || result.codec || "未知格式"}
-                      {result.bitrate ? ` · ${Math.round(result.bitrate / 1000)}k` : ""}
-                    </Badge>
+                  {/* 列宽从 140 加宽到 230，为开启去杂时的体积估算留位 */}
+                  <Table.Td w={230}>
+                    <Group gap="xs" wrap="nowrap">
+                      {estimate ? (
+                        <Text size="xs" c="dimmed">
+                          {estimate}
+                        </Text>
+                      ) : null}
+                      <Badge
+                        variant="light"
+                        color={result.lossless ? "teal" : "gray"}
+                        style={{ textTransform: "none" }}
+                      >
+                        {result.extension || result.codec || "未知格式"}
+                        {result.bitrate ? ` · ${Math.round(result.bitrate / 1000)}k` : ""}
+                      </Badge>
+                    </Group>
                   </Table.Td>
                   <Table.Td w={160}>
                     <Text size="xs">{musicSourceLabel(result.source)}</Text>

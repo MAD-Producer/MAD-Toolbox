@@ -41,6 +41,11 @@ export interface TaskEnvelope {
   progress?: TaskProgress;
 }
 
+export interface TaskSeed {
+  task: TaskEnvelope;
+  purpose: "rerun" | "reuse";
+}
+
 export type LogStream = "stdout" | "stderr" | "system";
 
 export type TaskEvent =
