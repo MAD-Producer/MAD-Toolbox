@@ -2,9 +2,10 @@
 
 All notable changes to MAD Toolbox are documented here.
 
-## 0.11.0
+## 1.0.0
 
 - feat: A new appearance in "Settings->About" page
+- feat: 增加了音乐下载的“自动去杂”功能，能够对部分假无损音乐进行降频处理，减小文件体积
 
 ## 0.10.1
 

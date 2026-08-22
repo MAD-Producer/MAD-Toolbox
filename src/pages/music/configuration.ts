@@ -219,7 +219,8 @@ export function createMusicSearchRequest(
 
 export function createMusicPlaylistRequest(
   form: MusicFormState,
-  cli: MusicdlCliOptions
+  cli: MusicdlCliOptions,
+  downsample: boolean
 ): MusicdlPlaylistRequest {
   return {
     playlistUrl: form.playlistUrl,
@@ -228,7 +229,8 @@ export function createMusicPlaylistRequest(
     requestsOverrides: cli.requestsOverrides,
     clientsThreadings: cli.clientsThreadings,
     searchRules: cli.searchRules,
-    outputDirectory: form.outputDirectory || null
+    outputDirectory: form.outputDirectory || null,
+    downsample
   };
 }
 

@@ -293,6 +293,7 @@ pub(crate) async fn musicdl_download(
     registry: State<'_, MusicSearchRegistry>,
     session_id: String,
     indices: Vec<usize>,
+    downsample: bool,
 ) -> Result<TaskSubmitResult, String> {
     let session_id = sessions::canonical_session_id(&session_id)?;
     if registry.is_active(&session_id) {
@@ -337,12 +338,15 @@ pub(crate) async fn musicdl_download(
             .map_err(|error| error.to_string())?;
     }
     // 音乐下载作业进任务系统（§3：musicdl 旁路取消）；搜索维持查询语义
-    let argv = vec![
+    let mut argv = vec![
         adapter.to_string_lossy().into_owned(),
         "download".into(),
         task_state_path.to_string_lossy().into_owned(),
         selected,
     ];
+    if downsample {
+        argv.push("downsample".into());
+    }
     let task_id = hub.submit(TaskSpec {
         feature: Feature::Music,
         pool: Pool::Download,

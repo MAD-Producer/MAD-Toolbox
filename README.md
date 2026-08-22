@@ -122,4 +122,4 @@ Copyright © 2026 MAD Producer Studio.
 
 MAD Toolbox source code is licensed under the MIT License. All bundled tools retain their respective licenses, copyrights and attributions; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-<img src="assets/banner_organization.png" alt="MAD Toolbox" />
+<img src="src/assets/organization_logo.png" alt="MAD Toolbox" />

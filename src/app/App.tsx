@@ -146,9 +146,9 @@ export default function App() {
     });
   };
 
-  const downloadMusic = async (sessionId: string, indices: number[]) => {
+  const downloadMusic = async (sessionId: string, indices: number[], downsample: boolean) => {
     try {
-      return await musicdlDownload(sessionId, indices);
+      return await musicdlDownload(sessionId, indices, downsample);
     } catch (error) {
       showError(error);
       throw error;

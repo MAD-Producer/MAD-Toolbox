@@ -1,7 +1,8 @@
-import { Button, Group, Menu, Title } from "@mantine/core";
+import { Button, Group, Menu, Paper, Switch, Title } from "@mantine/core";
 import {
   IconChevronDown,
   IconBookDownload,
+  IconMistOff,
   IconPlayerPlay,
   IconPlayerStop
 } from "@tabler/icons-react";
@@ -18,6 +19,8 @@ interface MusicPageHeaderProps {
   searching: boolean;
   stopping: boolean;
   onStopSearch: () => void;
+  denoise: boolean;
+  onDenoiseChange: (value: boolean) => void;
   templateMenuOpened: boolean;
   templates: SavedTemplate[];
   onTemplateMenuChange: (opened: boolean) => void;
@@ -36,6 +39,8 @@ export function MusicPageHeader({
   searching,
   stopping,
   onStopSearch,
+  denoise,
+  onDenoiseChange,
   templateMenuOpened,
   templates,
   onTemplateMenuChange,
@@ -54,9 +59,20 @@ export function MusicPageHeader({
       <Group gap="xs" wrap="nowrap">
         <Title order={3}>音乐下载</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
+        <Paper radius="md" withBorder px="xs" py={6}>
+          {/*恰好不会引起标题位移*/}
+          <Group gap="xs" wrap="nowrap">
+            <IconMistOff size={18} />
+            <Switch
+              size="xs"
+              checked={denoise}
+              onChange={(event) => onDenoiseChange(event.currentTarget.checked)}
+            />
+          </Group>
+        </Paper>
       </Group>
       <Group gap="xs" wrap="nowrap">
-        {searching && (
+        {searching ? (
           <Button
             color="red"
             variant="light"
@@ -66,15 +82,16 @@ export function MusicPageHeader({
           >
             停止搜索
           </Button>
+        ) : (
+          <Button
+            leftSection={<IconPlayerPlay size={16} />}
+            loading={runLoading}
+            disabled={runDisabled}
+            onClick={onRun}
+          >
+            {mode === "search" ? "开始搜索" : "下载歌单"}
+          </Button>
         )}
-        <Button
-          leftSection={<IconPlayerPlay size={16} />}
-          loading={runLoading}
-          disabled={runDisabled}
-          onClick={onRun}
-        >
-          {mode === "search" ? "开始搜索" : "下载歌单"}
-        </Button>
         <Menu opened={active && templateMenuOpened} onChange={onTemplateMenuChange}>
           <Menu.Target>
             <Button variant="default" rightSection={<IconChevronDown size={14} />}>

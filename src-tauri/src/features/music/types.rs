@@ -23,6 +23,8 @@ pub(crate) struct MusicdlPlaylistRequest {
     pub(crate) clients_threadings: serde_json::Value,
     pub(crate) search_rules: serde_json::Value,
     pub(crate) output_directory: Option<String>,
+    #[serde(default)]
+    pub(crate) downsample: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -34,6 +36,7 @@ pub(crate) struct MusicdlSearchResult {
     album: String,
     extension: String,
     file_size: String,
+    file_size_bytes: Option<f64>,
     duration: String,
     bitrate: Option<u64>,
     codec: String,

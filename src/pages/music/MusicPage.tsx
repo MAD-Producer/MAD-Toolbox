@@ -36,6 +36,7 @@ import { loadTemplates, saveTemplate, type SavedTemplate } from "./templates";
 
 const MUSIC_PREVIEW_DEBOUNCE_MS = 180;
 const MUSIC_SOURCES_STORAGE_KEY = "music.selectedSources";
+const MUSIC_DENOISE_STORAGE_KEY = "music.autoDenoise";
 
 const KNOWN_MUSIC_SOURCE_IDS = new Set(
   MUSIC_SOURCE_GROUPS.flatMap(([, sources]) => sources.map(([id]) => id))
@@ -71,7 +72,11 @@ interface MusicPageProps {
   /** 设置页的全局代理；已设置时作为占位提示，留空提交即使用它 */
   globalProxy: string | null;
   onPlaylist: (request: MusicdlPlaylistRequest) => Promise<SubmitResult>;
-  onDownload: (sessionId: string, indices: number[]) => Promise<SubmitResult>;
+  onDownload: (
+    sessionId: string,
+    indices: number[],
+    downsample: boolean
+  ) => Promise<SubmitResult>;
   onRetain?: () => void;
   onSubmitted?: () => void;
   dependencyLabels?: string[];
@@ -100,6 +105,9 @@ export function MusicPage({
   const [templateMenuOpened, setTemplateMenuOpened] = useState(false);
   const [templates, setTemplates] = useState<SavedTemplate[]>(() => loadTemplates(localStorage));
   const [previewResult, setPreviewResult] = useState<MusicPreviewResult | null>(null);
+  const [denoise, setDenoise] = useState(
+    () => localStorage.getItem(MUSIC_DENOISE_STORAGE_KEY) === "1"
+  );
   const sessionPhase = useMusicSessionStore((state) => state.phase);
   const searchResponse = useMusicSessionStore((state) => state.response);
   const queuedIndices = useMusicSessionStore((state) => state.queuedIndices);
@@ -146,6 +154,10 @@ export function MusicPage({
   useEffect(() => {
     localStorage.setItem(MUSIC_SOURCES_STORAGE_KEY, JSON.stringify(form.sources));
   }, [form.sources]);
+
+  useEffect(() => {
+    localStorage.setItem(MUSIC_DENOISE_STORAGE_KEY, denoise ? "1" : "0");
+  }, [denoise]);
 
   // 搜索结果到达时自动展开结果卡片
   useEffect(() => {
@@ -210,7 +222,7 @@ export function MusicPage({
       setTaskSubmitting(true);
       setConfigurationError(null);
       try {
-        await onPlaylist(createMusicPlaylistRequest(form, prepared.cli));
+        await onPlaylist(createMusicPlaylistRequest(form, prepared.cli, denoise));
         notifications.show({ color: "green", message: "歌单下载任务已加入队列" });
         if (
           draftRevisionRef.current === submittedRevision &&
@@ -244,7 +256,7 @@ export function MusicPage({
     setTaskSubmitting(true);
     setConfigurationError(null);
     try {
-      await onDownload(sessionId, indices);
+      await onDownload(sessionId, indices, denoise);
       if (markQueued(sessionId, indices)) {
         setSelected((current) => current.filter((value) => !submittedSet.has(value)));
       }
@@ -305,6 +317,8 @@ export function MusicPage({
         searching={sessionPhase === "searching" || sessionPhase === "canceling"}
         stopping={sessionPhase === "canceling"}
         onStopSearch={() => void stopSearch()}
+        denoise={denoise}
+        onDenoiseChange={setDenoise}
         templateMenuOpened={templateMenuOpened}
         templates={templates}
         onTemplateMenuChange={setTemplateMenuOpened}
@@ -367,6 +381,7 @@ export function MusicPage({
             queuedIndices={queuedIndices}
             sessionPhase={sessionPhase}
             taskSubmitting={taskSubmitting}
+            denoise={denoise}
             onSelectedChange={setSelected}
             onDownload={() => void downloadSelected()}
             onEndSession={() => void endSearchSession()}

@@ -127,6 +127,11 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
               多出的体积都是无效信息。这是音源站返回的文件本身如此，工具侧无法解决，
               请结合体积与时长自行判断是否下载。
             </Text>
+            <Text size="sm" c="dimmed">
+              也可以在「音乐下载」页标题旁开启「自动去杂」开关：下载完成后自动把高于 48kHz
+              的音频统一降至 48kHz。但受API限制，不保证所有都能探测准确，且少数官方发行版本高于
+              48kHz 的音乐音质可能有所影响，请按需取舍。
+            </Text>
           </Stack>
         </Carousel.Slide>
       </Carousel>

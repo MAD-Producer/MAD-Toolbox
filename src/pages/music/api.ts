@@ -29,6 +29,7 @@ export interface MusicdlPlaylistRequest {
   clientsThreadings: Record<string, unknown>;
   searchRules: Record<string, unknown>;
   outputDirectory: string | null;
+  downsample: boolean;
 }
 
 export interface MusicdlSearchResult {
@@ -38,6 +39,7 @@ export interface MusicdlSearchResult {
   album: string;
   extension: string;
   fileSize: string;
+  fileSizeBytes: number | null;
   duration: string;
   bitrate: number | null;
   codec: string;
@@ -70,8 +72,12 @@ export function musicdlSessionRelease(sessionId: string): Promise<void> {
   return invoke<void>("musicdl_session_release", { sessionId });
 }
 
-export function musicdlDownload(sessionId: string, indices: number[]): Promise<SubmitResult> {
-  return invoke<SubmitResult>("musicdl_download", { sessionId, indices });
+export function musicdlDownload(
+  sessionId: string,
+  indices: number[],
+  downsample: boolean
+): Promise<SubmitResult> {
+  return invoke<SubmitResult>("musicdl_download", { sessionId, indices, downsample });
 }
 
 export function musicdlPlaylist(request: MusicdlPlaylistRequest): Promise<SubmitResult> {

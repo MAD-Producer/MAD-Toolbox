@@ -53,7 +53,7 @@ MAD Toolbox 目前支持以下平台：
 | 平台    | 系统版本  | 架构      | 提供的分发类型         |
 | ------- | --------- | --------- | ---------------------- |
 | Windows | 10 及以上 | `x86_64`  | Full版 / Lite版 `.exe` |
-| macOS   | 14 及以上 | `aarch64` | Full版 / Lite版 `.exe` |     |
+| macOS   | 14 及以上 | `aarch64` | Full版 / Lite版 `.dmg` |
 
 其中 BBDown 默认内置于FULL版本和LITE版。
 
