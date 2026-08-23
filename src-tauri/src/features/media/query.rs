@@ -87,8 +87,18 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
         .and_then(|value| value.as_array())
         .ok_or_else(|| rust_i18n::t!("backend.media.query.missingTracks").to_string())?;
     let mut summary = String::new();
-    writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.fileInfo")).unwrap();
-    writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.path", path = path)).unwrap();
+    writeln!(
+        summary,
+        "{}",
+        rust_i18n::t!("backend.media.inspect.fileInfo")
+    )
+    .unwrap();
+    writeln!(
+        summary,
+        "{}",
+        rust_i18n::t!("backend.media.inspect.path", path = path)
+    )
+    .unwrap();
 
     if let Some(general) = tracks
         .iter()
@@ -112,25 +122,48 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
         }
         if let Some(size) = media_info_number(general, "FileSize") {
             let size_text = format!("{:.2} MiB", size / 1_048_576.0);
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.fileSize", size = size_text)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.fileSize", size = size_text)
+            )
+            .unwrap();
         }
         if let Some(duration) = media_info_number(general, "Duration") {
             writeln!(
                 summary,
                 "{}",
-                rust_i18n::t!("backend.media.inspect.duration", value = human_duration(duration))
+                rust_i18n::t!(
+                    "backend.media.inspect.duration",
+                    value = human_duration(duration)
+                )
             )
             .unwrap();
         }
         if let Some(bitrate) = media_info_number(general, "OverallBitRate") {
             let bitrate_text = format!("{:.0} kb/s", bitrate / 1000.0);
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.overallBitrate", value = bitrate_text)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.overallBitrate", value = bitrate_text)
+            )
+            .unwrap();
         }
         if let Some(title) = media_info_value(general, "Title") {
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.title", title = title)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.title", title = title)
+            )
+            .unwrap();
         }
         if let Some(performer) = media_info_value(general, "Performer") {
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.performer", performer = performer)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.performer", performer = performer)
+            )
+            .unwrap();
         }
     }
 
@@ -158,12 +191,21 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
             writeln!(
                 summary,
                 "{}",
-                rust_i18n::t!("backend.media.inspect.codecFormat", format = format, profile = profile)
+                rust_i18n::t!(
+                    "backend.media.inspect.codecFormat",
+                    format = format,
+                    profile = profile
+                )
             )
             .unwrap();
         }
         if let Some(codec) = media_info_value(track, "CodecID") {
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.codecId", codec = codec)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.codecId", codec = codec)
+            )
+            .unwrap();
         }
         if let (Some(width), Some(height)) = (
             media_info_number(track, "Width"),
@@ -182,11 +224,21 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
         }
         if let Some(frame_rate) = media_info_number(track, "FrameRate") {
             let frame_rate_text = format!("{:.3} fps", frame_rate);
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.frameRate", value = frame_rate_text)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.frameRate", value = frame_rate_text)
+            )
+            .unwrap();
         }
         if let Some(bitrate) = media_info_number(track, "BitRate") {
             let bitrate_text = format!("{:.0} kb/s", bitrate / 1000.0);
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.bitrate", value = bitrate_text)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.bitrate", value = bitrate_text)
+            )
+            .unwrap();
         }
         if let Some(bit_depth) = media_info_number(track, "BitDepth") {
             writeln!(
@@ -203,7 +255,11 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
             writeln!(
                 summary,
                 "{}",
-                rust_i18n::t!("backend.media.inspect.colorSpace", color = color, chroma = chroma)
+                rust_i18n::t!(
+                    "backend.media.inspect.colorSpace",
+                    color = color,
+                    chroma = chroma
+                )
             )
             .unwrap();
         }
@@ -225,7 +281,12 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
         }
         if let Some(sample_rate) = media_info_number(track, "SamplingRate") {
             let sample_rate_text = format!("{:.1} kHz", sample_rate / 1000.0);
-            writeln!(summary, "{}", rust_i18n::t!("backend.media.inspect.sampleRate", value = sample_rate_text)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.sampleRate", value = sample_rate_text)
+            )
+            .unwrap();
         }
         if let Some(language) = media_info_value(track, "Language") {
             writeln!(
@@ -254,7 +315,8 @@ pub(crate) async fn inspect_media(app: AppHandle, path: String) -> Result<MediaI
         let count = media_files_in(&input)?.len();
         return Ok(MediaInspection {
             path,
-            summary: rust_i18n::t!("backend.media.inspect.directorySummary", count = count).to_string(),
+            summary: rust_i18n::t!("backend.media.inspect.directorySummary", count = count)
+                .to_string(),
         });
     }
     if !input.is_file() {
@@ -285,7 +347,8 @@ pub(crate) async fn inspect_media(app: AppHandle, path: String) -> Result<MediaI
         };
     let mut command = background_command(executable);
     command.args(args).env("PATH", command_path());
-    let output = run_external_query(command, &rust_i18n::t!("backend.media.query.readOperation")).await?;
+    let output =
+        run_external_query(command, &rust_i18n::t!("backend.media.query.readOperation")).await?;
     if !output.status.success() {
         let reason = String::from_utf8_lossy(&output.stderr).trim().to_string();
         return Err(rust_i18n::t!("backend.media.query.readFailed", reason = reason).to_string());
@@ -294,8 +357,8 @@ pub(crate) async fn inspect_media(app: AppHandle, path: String) -> Result<MediaI
     if summary.trim().is_empty() {
         summary = String::from_utf8_lossy(&output.stderr).into_owned();
     } else if use_media_info_json {
-        let document: serde_json::Value = serde_json::from_slice(&output.stdout)
-            .map_err(|error| {
+        let document: serde_json::Value =
+            serde_json::from_slice(&output.stdout).map_err(|error| {
                 rust_i18n::t!("backend.media.query.parseMediaInfoFailed", error = error).to_string()
             })?;
         summary = media_info_summary(&document, &path)?;
@@ -396,9 +459,7 @@ pub(crate) fn expand_media_inputs(
             );
         } else if path.is_file() {
             if is_text_subtitle_file(&path) && !include_subtitles {
-                return Err(
-                    rust_i18n::t!("backend.media.query.subtitleHint").to_string(),
-                );
+                return Err(rust_i18n::t!("backend.media.query.subtitleHint").to_string());
             }
             output.push(path.to_string_lossy().into_owned());
         } else {
@@ -444,10 +505,9 @@ pub(crate) async fn probe_streams(
         )
         .to_string());
     }
-    let value: serde_json::Value = serde_json::from_slice(&output.stdout)
-        .map_err(|error| {
-            rust_i18n::t!("backend.media.query.probeParseFailed", error = error).to_string()
-        })?;
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).map_err(|error| {
+        rust_i18n::t!("backend.media.query.probeParseFailed", error = error).to_string()
+    })?;
     Ok(streams_from_probe(&value))
 }
 

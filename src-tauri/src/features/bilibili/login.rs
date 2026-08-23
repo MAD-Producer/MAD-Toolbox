@@ -79,8 +79,11 @@ async fn validate_bbdown_cookie(client: &Client, cookie: &str) -> Result<(), Str
         .send()
         .await
         .map_err(|error| {
-            rust_i18n::t!("backend.bilibili.login.validate_cookie_failed", error = error)
-                .to_string()
+            rust_i18n::t!(
+                "backend.bilibili.login.validate_cookie_failed",
+                error = error
+            )
+            .to_string()
         })?;
     if !response.status().is_success() {
         return Err(rust_i18n::t!(
@@ -89,13 +92,13 @@ async fn validate_bbdown_cookie(client: &Client, cookie: &str) -> Result<(), Str
         )
         .to_string());
     }
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|error| {
-            rust_i18n::t!("backend.bilibili.login.parse_validate_result_failed", error = error)
-                .to_string()
-        })?;
+    let body: serde_json::Value = response.json().await.map_err(|error| {
+        rust_i18n::t!(
+            "backend.bilibili.login.parse_validate_result_failed",
+            error = error
+        )
+        .to_string()
+    })?;
     if body
         .pointer("/data/isLogin")
         .and_then(serde_json::Value::as_bool)
@@ -115,11 +118,15 @@ fn save_bbdown_data(data_path: &Path, completed: &str) -> Result<(), String> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600))
-            .map_err(|error| {
-                rust_i18n::t!("backend.bilibili.login.set_permissions_failed", error = error)
-                    .to_string()
-            })?;
+        std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600)).map_err(
+            |error| {
+                rust_i18n::t!(
+                    "backend.bilibili.login.set_permissions_failed",
+                    error = error
+                )
+                .to_string()
+            },
+        )?;
     }
     std::fs::rename(&temporary, data_path).map_err(|error| {
         rust_i18n::t!("backend.bilibili.login.save_data_failed", error = error).to_string()
@@ -174,8 +181,11 @@ async fn generate_bbdown_qr(client: &Client) -> Result<(String, String), String>
         .send()
         .await
         .map_err(|error| {
-            rust_i18n::t!("backend.bilibili.login.fetch_login_url_failed", error = error)
-                .to_string()
+            rust_i18n::t!(
+                "backend.bilibili.login.fetch_login_url_failed",
+                error = error
+            )
+            .to_string()
         })?;
     if !response.status().is_success() {
         return Err(rust_i18n::t!(
@@ -184,13 +194,13 @@ async fn generate_bbdown_qr(client: &Client) -> Result<(String, String), String>
         )
         .to_string());
     }
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|error| {
-            rust_i18n::t!("backend.bilibili.login.parse_login_url_failed", error = error)
-                .to_string()
-        })?;
+    let body: serde_json::Value = response.json().await.map_err(|error| {
+        rust_i18n::t!(
+            "backend.bilibili.login.parse_login_url_failed",
+            error = error
+        )
+        .to_string()
+    })?;
     if body.pointer("/code").and_then(serde_json::Value::as_i64) != Some(0) {
         return Err(rust_i18n::t!(
             "backend.bilibili.login.login_url_api_failed",
@@ -236,7 +246,11 @@ async fn poll_bbdown_qr(
     qrcode_key: &str,
 ) -> Result<(i64, HashMap<String, String>, Option<String>), String> {
     let mut poll_url = Url::parse(BBDOWN_QR_POLL_URL).map_err(|error| {
-        rust_i18n::t!("backend.bilibili.login.parse_poll_url_failed", error = error).to_string()
+        rust_i18n::t!(
+            "backend.bilibili.login.parse_poll_url_failed",
+            error = error
+        )
+        .to_string()
     })?;
     poll_url
         .query_pairs_mut()
@@ -266,12 +280,9 @@ async fn poll_bbdown_qr(
         .cookies()
         .map(|cookie| (cookie.name().to_string(), cookie.value().to_string()))
         .collect::<Vec<_>>();
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|error| {
-            rust_i18n::t!("backend.bilibili.login.parse_poll_failed", error = error).to_string()
-        })?;
+    let body: serde_json::Value = response.json().await.map_err(|error| {
+        rust_i18n::t!("backend.bilibili.login.parse_poll_failed", error = error).to_string()
+    })?;
     let code = body
         .pointer("/data/code")
         .and_then(serde_json::Value::as_i64)
@@ -358,8 +369,11 @@ async fn run_bbdown_login(
             }
             other => {
                 return Err(BbdownLoginError::Failed(
-                    rust_i18n::t!("backend.bilibili.login.login_failed_with_code", code = other)
-                        .to_string(),
+                    rust_i18n::t!(
+                        "backend.bilibili.login.login_failed_with_code",
+                        code = other
+                    )
+                    .to_string(),
                 ));
             }
         }
@@ -399,14 +413,12 @@ pub(crate) async fn spawn_bbdown_login_job(
                 Some(0),
                 rust_i18n::t!("backend.bilibili.login.login_success").to_string(),
             ),
-            Err(BbdownLoginError::Failed(error)) => {
-                (
-                    "failed",
-                    None,
-                    rust_i18n::t!("backend.bilibili.login.login_not_signed_in", error = error)
-                        .to_string(),
-                )
-            }
+            Err(BbdownLoginError::Failed(error)) => (
+                "failed",
+                None,
+                rust_i18n::t!("backend.bilibili.login.login_not_signed_in", error = error)
+                    .to_string(),
+            ),
         };
         let _ = task_app.emit(
             "job-state",

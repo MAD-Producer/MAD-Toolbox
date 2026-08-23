@@ -29,10 +29,18 @@ impl std::fmt::Display for AdapterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AdapterError::MissingUrl => {
-                write!(f, "{}", rust_i18n::t!("backend.network.adapter.missing_url"))
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.network.adapter.missing_url")
+                )
             }
             AdapterError::InvalidIntent(e) => {
-                write!(f, "{}", rust_i18n::t!("backend.network.adapter.invalid_intent", e = e))
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.network.adapter.invalid_intent", e = e)
+                )
             }
             AdapterError::EmptyArgv => {
                 write!(f, "{}", rust_i18n::t!("backend.network.adapter.empty_argv"))
@@ -349,6 +357,23 @@ fn redact_argv(argv: &[String]) -> Vec<String> {
 }
 
 fn title_for(mode: NetworkMode, url: &str) -> String {
+    if let Some(id) = youtube_video_id(url) {
+        return match mode {
+            NetworkMode::Video => {
+                rust_i18n::t!("backend.network.adapter.title_youtube_video", id = id)
+            }
+            NetworkMode::Audio => {
+                rust_i18n::t!("backend.network.adapter.title_youtube_audio", id = id)
+            }
+            NetworkMode::Thumbnail => {
+                rust_i18n::t!("backend.network.adapter.title_youtube_thumbnail", id = id)
+            }
+            NetworkMode::Subtitles => {
+                rust_i18n::t!("backend.network.adapter.title_youtube_subtitle", id = id)
+            }
+        }
+        .to_string();
+    }
     let verb = match mode {
         NetworkMode::Video => rust_i18n::t!("backend.network.adapter.title_video"),
         NetworkMode::Audio => rust_i18n::t!("backend.network.adapter.title_audio"),
@@ -356,4 +381,65 @@ fn title_for(mode: NetworkMode, url: &str) -> String {
         NetworkMode::Subtitles => rust_i18n::t!("backend.network.adapter.title_subtitle"),
     };
     format!("{verb} {url}")
+}
+
+/// 解析 YouTube 链接的 11 位视频 ID（watch?v=、youtu.be、shorts/live/embed/v 路径形态）；
+/// 非 YouTube 站点与无视频 ID 的链接（纯播放列表等）返回 None，标题保持"动词 + 原始 URL"。
+fn youtube_video_id(url: &str) -> Option<String> {
+    let rest = url
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://");
+    let without_fragment = rest.split('#').next().unwrap_or_default();
+    let (location, query) = without_fragment
+        .split_once('?')
+        .unwrap_or((without_fragment, ""));
+    let mut segments = location.split('/');
+    let host = segments.next().unwrap_or_default().to_ascii_lowercase();
+    let is_youtube = host == "youtube.com"
+        || host.ends_with(".youtube.com")
+        || host == "youtu.be"
+        || host.ends_with(".youtu.be")
+        || host == "youtube-nocookie.com"
+        || host.ends_with(".youtube-nocookie.com");
+    if !is_youtube {
+        return None;
+    }
+    if host == "youtu.be" || host.ends_with(".youtu.be") {
+        return segments
+            .find(|segment| !segment.trim().is_empty())
+            .and_then(|segment| valid_youtube_id(segment.trim()));
+    }
+    for pair in query.split('&') {
+        if let Some((key, value)) = pair.split_once('=') {
+            if key.trim() == "v" {
+                if let Some(id) = valid_youtube_id(value.trim()) {
+                    return Some(id);
+                }
+            }
+        }
+    }
+    let mut expect_id = false;
+    for segment in segments {
+        let segment = segment.trim();
+        if expect_id {
+            if let Some(id) = valid_youtube_id(segment) {
+                return Some(id);
+            }
+            expect_id = false;
+        }
+        if matches!(segment, "shorts" | "live" | "embed" | "v") {
+            expect_id = true;
+        }
+    }
+    None
+}
+
+/// YouTube 视频 ID 固定 11 位，字符集为字母数字与 -_。
+fn valid_youtube_id(token: &str) -> Option<String> {
+    (token.len() == 11
+        && token
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'))
+    .then(|| token.to_string())
 }
