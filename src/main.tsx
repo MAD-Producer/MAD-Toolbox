@@ -16,6 +16,7 @@ import "./styles/notifications.css";
 import App from "./app/App";
 import { theme } from "./theme";
 import { isWindows } from "./lib/platform";
+import "./locale";
 
 document.documentElement.dataset.platform = isWindows ? "windows" : "macos";
 

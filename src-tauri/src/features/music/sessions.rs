@@ -121,7 +121,7 @@ impl Drop for PreparedSessionDir {
 pub(crate) fn canonical_session_id(session_id: &str) -> Result<String, String> {
     Uuid::parse_str(session_id)
         .map(|value| value.to_string())
-        .map_err(|_| "无效的 musicdl 搜索会话".to_string())
+        .map_err(|_| rust_i18n::t!("backend.music.invalidSession").to_string())
 }
 
 pub(crate) fn search_session_path(app: &AppHandle, session_id: &str) -> Result<PathBuf, String> {

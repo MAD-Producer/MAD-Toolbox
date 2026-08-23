@@ -1,4 +1,5 @@
 import { downloadDir, join } from "@tauri-apps/api/path";
+import { t } from "../locale";
 import type { ToolName } from "../contracts/dependency";
 
 export const isWindows = typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent);
@@ -20,28 +21,33 @@ export function resolveDefaultOutputDirectory(): Promise<string | null> {
 }
 
 export const platformLabel = isWindows ? "Windows x64" : "Apple Silicon";
-export const fileManagerName = isWindows ? "文件资源管理器" : "Finder";
-export const browserCookieOptions = isWindows
-  ? [
-      { value: "", label: "不读取浏览器 Cookie" },
-      { value: "edge", label: "Microsoft Edge" },
-      { value: "chrome", label: "Google Chrome" },
-      { value: "firefox", label: "Firefox" },
-      { value: "brave", label: "Brave" },
-      { value: "vivaldi", label: "Vivaldi" },
-      { value: "opera", label: "Opera" },
-      { value: "chromium", label: "Chromium" }
-    ]
-  : [
-      { value: "", label: "不读取浏览器 Cookie" },
-      { value: "chrome", label: "Google Chrome" },
-      { value: "safari", label: "Safari" },
-      { value: "firefox", label: "Firefox" },
-      { value: "brave", label: "Brave" },
-      { value: "vivaldi", label: "Vivaldi" },
-      { value: "opera", label: "Opera" },
-      { value: "chromium", label: "Chromium" }
-    ];
+/** 系统文件管理器名（Windows 资源管理器本地化，其余平台为专名）；函数形式避免模块期冻结译文 */
+export function fileManagerName(): string {
+  return isWindows ? t("platform.fileManager") : "Finder";
+}
+export function browserCookieOptions() {
+  return isWindows
+    ? [
+        { value: "", label: t("platform.noBrowserCookie") },
+        { value: "edge", label: "Microsoft Edge" },
+        { value: "chrome", label: "Google Chrome" },
+        { value: "firefox", label: "Firefox" },
+        { value: "brave", label: "Brave" },
+        { value: "vivaldi", label: "Vivaldi" },
+        { value: "opera", label: "Opera" },
+        { value: "chromium", label: "Chromium" }
+      ]
+    : [
+        { value: "", label: t("platform.noBrowserCookie") },
+        { value: "chrome", label: "Google Chrome" },
+        { value: "safari", label: "Safari" },
+        { value: "firefox", label: "Firefox" },
+        { value: "brave", label: "Brave" },
+        { value: "vivaldi", label: "Vivaldi" },
+        { value: "opera", label: "Opera" },
+        { value: "chromium", label: "Chromium" }
+      ];
+}
 export const defaultOutputPlaceholder = isWindows
   ? "C:\\Users\\name\\Downloads"
   : "/Users/name/Downloads";

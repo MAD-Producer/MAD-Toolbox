@@ -14,6 +14,7 @@ import { PoolIndicator } from "./PoolIndicator";
 import { TaskCard } from "./TaskCard";
 import { fetchPoolDefinitions, type PoolDefinition } from "./api";
 import type { TaskEnvelope } from "../../contracts/types";
+import { t } from "../../locale";
 import { poolOccupancy, sortedTasks, splitByDay } from "../../stores/tasks.reducer";
 import { useTasksStore } from "../../stores/tasks";
 
@@ -62,10 +63,12 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   const hero = useMemo(
     () => ({
       active: today.filter(
-        (t) => t.status === "queued" || t.status === "running" || t.status === "canceling"
+        (task) =>
+          task.status === "queued" || task.status === "running" || task.status === "canceling"
       ).length,
-      interrupted: today.filter((t) => t.status === "interrupted").length,
-      finished: today.filter((t) => ["success", "failed", "canceled"].includes(t.status)).length
+      interrupted: today.filter((task) => task.status === "interrupted").length,
+      finished: today.filter((task) => ["success", "failed", "canceled"].includes(task.status))
+        .length
     }),
     [today]
   );
@@ -76,10 +79,13 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
       remove(ids)
         .then((deleted) => {
           if (deleted.length > 0) {
-            notifications.show({ message: `已删除 ${deleted.length} 个任务`, color: "green" });
+            notifications.show({
+              message: t("tasks.deletedCount", { count: deleted.length }),
+              color: "green"
+            });
           } else {
             notifications.show({
-              message: "没有可删除的任务（活动任务不可删除）",
+              message: t("tasks.deleteNoneAvailable"),
               color: "yellow"
             });
           }
@@ -90,7 +96,10 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
             ids.forEach((id) => next.delete(id));
             return next;
           });
-          notifications.show({ message: `删除任务失败：${String(error)}`, color: "red" });
+          notifications.show({
+            message: t("tasks.deleteFailed", { error: String(error) }),
+            color: "red"
+          });
         });
     }, DELETE_ANIMATION_MS);
   };
@@ -114,13 +123,17 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
 
   return (
     <Stack gap="md" p="md">
-      <Title order={3}>任务中心</Title>
+      <Title order={3}>{t("nav.tasks")}</Title>
       <Card withBorder padding="lg">
         <Stack gap="md" align="center">
           <Group justify="center" gap="12%" w="100%" wrap="nowrap">
-            <HeroStat label="运行中" value={hero.active} color="blue" />
-            <HeroStat label="中断" value={hero.interrupted} color="yellow" />
-            <HeroStat label="结束" value={hero.finished} color="green" />
+            <HeroStat label={t("tasks.status.running")} value={hero.active} color="blue" />
+            <HeroStat
+              label={t("tasks.status.interrupted")}
+              value={hero.interrupted}
+              color="yellow"
+            />
+            <HeroStat label={t("tasks.stat.finished")} value={hero.finished} color="green" />
           </Group>
           <Box w="100%">
             <PoolIndicator
@@ -132,7 +145,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
       </Card>
       {sorted.length === 0 ? (
         <Text c="dimmed" size="sm">
-          还没有任务。从功能页提交下载后会出现在这里。
+          {t("tasks.empty")}
         </Text>
       ) : (
         <>
@@ -141,7 +154,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
               title={
                 <Group gap="xs" wrap="nowrap">
                   <Text size="sm" fw={500}>
-                    今日任务
+                    {t("tasks.today")}
                   </Text>
                   <Badge variant="light" color="gray">
                     {today.length}
@@ -159,7 +172,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
               title={
                 <Group gap="xs" wrap="nowrap">
                   <Text size="sm" fw={500}>
-                    历史任务
+                    {t("tasks.history")}
                   </Text>
                   <Badge variant="light" color="gray">
                     {history.length}
@@ -175,9 +188,9 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
                   color="red"
                   className="history-clear-all"
                   leftSection={<IconTrash size={14} />}
-                  onClick={() => deleteTasks(history.map((t) => t.id))}
+                  onClick={() => deleteTasks(history.map((tk) => tk.id))}
                 >
-                  全部删除
+                  {t("tasks.deleteAll")}
                 </Button>
               }
             >

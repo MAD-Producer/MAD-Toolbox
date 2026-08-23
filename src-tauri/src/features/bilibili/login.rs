@@ -78,17 +78,27 @@ async fn validate_bbdown_cookie(client: &Client, cookie: &str) -> Result<(), Str
         .header(REFERER, "https://www.bilibili.com/")
         .send()
         .await
-        .map_err(|error| format!("验证 BBDown Cookie 失败：{error}"))?;
+        .map_err(|error| {
+            rust_i18n::t!(
+                "backend.bilibili.login.validate_cookie_failed",
+                error = error
+            )
+            .to_string()
+        })?;
     if !response.status().is_success() {
-        return Err(format!(
-            "验证 BBDown Cookie 失败：HTTP {}",
-            response.status()
-        ));
+        return Err(rust_i18n::t!(
+            "backend.bilibili.login.validate_cookie_failed",
+            error = format!("HTTP {}", response.status())
+        )
+        .to_string());
     }
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|error| format!("解析账号验证结果失败：{error}"))?;
+    let body: serde_json::Value = response.json().await.map_err(|error| {
+        rust_i18n::t!(
+            "backend.bilibili.login.parse_validate_result_failed",
+            error = error
+        )
+        .to_string()
+    })?;
     if body
         .pointer("/data/isLogin")
         .and_then(serde_json::Value::as_bool)
@@ -96,21 +106,31 @@ async fn validate_bbdown_cookie(client: &Client, cookie: &str) -> Result<(), Str
     {
         Ok(())
     } else {
-        Err("BBDown Cookie 数据不完整或账号验证未通过".into())
+        Err(rust_i18n::t!("backend.bilibili.login.cookie_incomplete").to_string())
     }
 }
 
 fn save_bbdown_data(data_path: &Path, completed: &str) -> Result<(), String> {
     let temporary = data_path.with_extension(format!("data.{}.tmp", Uuid::new_v4()));
-    std::fs::write(&temporary, completed).map_err(|error| format!("写入登录数据失败：{error}"))?;
+    std::fs::write(&temporary, completed).map_err(|error| {
+        rust_i18n::t!("backend.bilibili.login.write_failed", error = error).to_string()
+    })?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600))
-            .map_err(|error| format!("设置登录数据权限失败：{error}"))?;
+        std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600)).map_err(
+            |error| {
+                rust_i18n::t!(
+                    "backend.bilibili.login.set_permissions_failed",
+                    error = error
+                )
+                .to_string()
+            },
+        )?;
     }
-    std::fs::rename(&temporary, data_path)
-        .map_err(|error| format!("保存完整 BBDown.data 失败：{error}"))?;
+    std::fs::rename(&temporary, data_path).map_err(|error| {
+        rust_i18n::t!("backend.bilibili.login.save_data_failed", error = error).to_string()
+    })?;
     Ok(())
 }
 
@@ -120,7 +140,7 @@ async fn validate_and_save_bbdown_data(
     cookies: &HashMap<String, String>,
 ) -> Result<(), String> {
     if !has_required_bbdown_cookie(cookies) {
-        return Err("B站二维码轮询没有返回完整 Cookie（SESSDATA、bili_jct、DedeUserID）".into());
+        return Err(rust_i18n::t!("backend.bilibili.login.poll_cookie_incomplete").to_string());
     }
     let completed = cookie_header(cookies);
     validate_bbdown_cookie(client, &completed).await?;
@@ -148,7 +168,9 @@ pub(crate) async fn bbdown_login_status(working_dir: &Path) -> Result<bool, Stri
         .user_agent(BBDOWN_USER_AGENT)
         .timeout(Duration::from_secs(5))
         .build()
-        .map_err(|error| format!("初始化 B站登录请求失败：{error}"))?;
+        .map_err(|error| {
+            rust_i18n::t!("backend.bilibili.login.init_failed", error = error).to_string()
+        })?;
     Ok(validate_bbdown_cookie(&client, &cookie).await.is_ok())
 }
 
@@ -158,38 +180,57 @@ async fn generate_bbdown_qr(client: &Client) -> Result<(String, String), String>
         .header(REFERER, "https://www.bilibili.com/")
         .send()
         .await
-        .map_err(|error| format!("获取 B站登录地址失败：{error}"))?;
+        .map_err(|error| {
+            rust_i18n::t!(
+                "backend.bilibili.login.fetch_login_url_failed",
+                error = error
+            )
+            .to_string()
+        })?;
     if !response.status().is_success() {
-        return Err(format!("获取 B站登录地址失败：HTTP {}", response.status()));
+        return Err(rust_i18n::t!(
+            "backend.bilibili.login.fetch_login_url_failed",
+            error = format!("HTTP {}", response.status())
+        )
+        .to_string());
     }
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|error| format!("解析 B站登录地址失败：{error}"))?;
+    let body: serde_json::Value = response.json().await.map_err(|error| {
+        rust_i18n::t!(
+            "backend.bilibili.login.parse_login_url_failed",
+            error = error
+        )
+        .to_string()
+    })?;
     if body.pointer("/code").and_then(serde_json::Value::as_i64) != Some(0) {
-        return Err(format!(
-            "B站登录地址接口失败：{}",
-            body.pointer("/message")
+        return Err(rust_i18n::t!(
+            "backend.bilibili.login.login_url_api_failed",
+            message = body
+                .pointer("/message")
                 .and_then(serde_json::Value::as_str)
-                .unwrap_or("未知错误")
-        ));
+                .map(str::to_string)
+                .unwrap_or_else(|| {
+                    rust_i18n::t!("backend.bilibili.login.unknown_error").to_string()
+                })
+        )
+        .to_string());
     }
     let url = body
         .pointer("/data/url")
         .and_then(serde_json::Value::as_str)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| "B站登录接口没有返回二维码地址".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.login.missing_qr_url").to_string())?;
     let qrcode_key = body
         .pointer("/data/qrcode_key")
         .and_then(serde_json::Value::as_str)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| "B站登录接口没有返回二维码密钥".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.login.missing_qr_key").to_string())?;
     Ok((url.to_string(), qrcode_key.to_string()))
 }
 
 fn bbdown_qr_data_url(url: &str) -> Result<String, String> {
-    let code =
-        QrCode::new(url.as_bytes()).map_err(|error| format!("生成登录二维码失败：{error}"))?;
+    let code = QrCode::new(url.as_bytes()).map_err(|error| {
+        rust_i18n::t!("backend.bilibili.login.qr_generate_failed", error = error).to_string()
+    })?;
     let svg = code
         .render::<qrcode::render::svg::Color>()
         .min_dimensions(320, 320)
@@ -204,8 +245,13 @@ async fn poll_bbdown_qr(
     client: &Client,
     qrcode_key: &str,
 ) -> Result<(i64, HashMap<String, String>, Option<String>), String> {
-    let mut poll_url =
-        Url::parse(BBDOWN_QR_POLL_URL).map_err(|error| format!("解析 B站轮询地址失败：{error}"))?;
+    let mut poll_url = Url::parse(BBDOWN_QR_POLL_URL).map_err(|error| {
+        rust_i18n::t!(
+            "backend.bilibili.login.parse_poll_url_failed",
+            error = error
+        )
+        .to_string()
+    })?;
     poll_url
         .query_pairs_mut()
         .append_pair("qrcode_key", qrcode_key)
@@ -215,9 +261,15 @@ async fn poll_bbdown_qr(
         .header(REFERER, "https://www.bilibili.com/")
         .send()
         .await
-        .map_err(|error| format!("轮询 B站登录状态失败：{error}"))?;
+        .map_err(|error| {
+            rust_i18n::t!("backend.bilibili.login.poll_failed", error = error).to_string()
+        })?;
     if !response.status().is_success() {
-        return Err(format!("轮询 B站登录状态失败：HTTP {}", response.status()));
+        return Err(rust_i18n::t!(
+            "backend.bilibili.login.poll_failed",
+            error = format!("HTTP {}", response.status())
+        )
+        .to_string());
     }
 
     // The current Bilibili response may intentionally leave the credentials
@@ -228,14 +280,13 @@ async fn poll_bbdown_qr(
         .cookies()
         .map(|cookie| (cookie.name().to_string(), cookie.value().to_string()))
         .collect::<Vec<_>>();
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|error| format!("解析 B站登录状态失败：{error}"))?;
+    let body: serde_json::Value = response.json().await.map_err(|error| {
+        rust_i18n::t!("backend.bilibili.login.parse_poll_failed", error = error).to_string()
+    })?;
     let code = body
         .pointer("/data/code")
         .and_then(serde_json::Value::as_i64)
-        .ok_or_else(|| "B站登录状态响应缺少 data.code".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.login.missing_poll_code").to_string())?;
     let mut cookies = HashMap::new();
     merge_cookie_fields(
         &mut cookies,
@@ -265,7 +316,7 @@ pub(crate) fn bbdown_directory(executable: &Path) -> Result<PathBuf, String> {
     executable
         .parent()
         .map(Path::to_path_buf)
-        .ok_or_else(|| "无法确定 BBDown 所在目录".to_string())
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.login.bbdown_dir_unavailable").to_string())
 }
 
 #[derive(Debug)]
@@ -281,7 +332,11 @@ async fn run_bbdown_login(
     let client = Client::builder()
         .user_agent(BBDOWN_USER_AGENT)
         .build()
-        .map_err(|error| BbdownLoginError::Failed(format!("初始化 B站登录请求失败：{error}")))?;
+        .map_err(|error| {
+            BbdownLoginError::Failed(
+                rust_i18n::t!("backend.bilibili.login.init_failed", error = error).to_string(),
+            )
+        })?;
 
     let (url, qrcode_key) = generate_bbdown_qr(&client)
         .await
@@ -302,7 +357,9 @@ async fn run_bbdown_login(
         match status {
             86101 | 86090 => {}
             86038 => {
-                return Err(BbdownLoginError::Failed("二维码已过期，请重新扫码".into()));
+                return Err(BbdownLoginError::Failed(
+                    rust_i18n::t!("backend.bilibili.login.qr_expired").to_string(),
+                ));
             }
             0 => {
                 validate_and_save_bbdown_data(&client, data_path, &cookies)
@@ -311,13 +368,19 @@ async fn run_bbdown_login(
                 return Ok(());
             }
             other => {
-                return Err(BbdownLoginError::Failed(format!(
-                    "B站登录失败，二维码状态码 {other}"
-                )));
+                return Err(BbdownLoginError::Failed(
+                    rust_i18n::t!(
+                        "backend.bilibili.login.login_failed_with_code",
+                        code = other
+                    )
+                    .to_string(),
+                ));
             }
         }
     }
-    Err(BbdownLoginError::Failed("二维码登录超时".into()))
+    Err(BbdownLoginError::Failed(
+        rust_i18n::t!("backend.bilibili.login.qr_timeout").to_string(),
+    ))
 }
 
 pub(crate) async fn spawn_bbdown_login_job(
@@ -336,7 +399,7 @@ pub(crate) async fn spawn_bbdown_login_job(
             tool: tool.clone(),
             state: "running",
             exit_code: None,
-            message: "BBDown 正在运行".into(),
+            message: rust_i18n::t!("backend.bilibili.login.running").to_string(),
         },
     );
 
@@ -348,11 +411,14 @@ pub(crate) async fn spawn_bbdown_login_job(
             Ok(()) => (
                 "completed",
                 Some(0),
-                "BBDown Cookie 数据已补全并验证登录成功".to_string(),
+                rust_i18n::t!("backend.bilibili.login.login_success").to_string(),
             ),
-            Err(BbdownLoginError::Failed(error)) => {
-                ("failed", None, format!("BBDown 账号未登录：{error}"))
-            }
+            Err(BbdownLoginError::Failed(error)) => (
+                "failed",
+                None,
+                rust_i18n::t!("backend.bilibili.login.login_not_signed_in", error = error)
+                    .to_string(),
+            ),
         };
         let _ = task_app.emit(
             "job-state",

@@ -11,6 +11,7 @@ import {
 import { IconFolderOpen } from "@tabler/icons-react";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 import { L2TabNav } from "../../components/common/L2TabNav";
+import { t } from "../../locale";
 import type { MusicFormPatch, MusicFormState } from "./configuration";
 
 interface MusicConfigurationPanelProps {
@@ -31,24 +32,24 @@ export function MusicConfigurationPanel({
     <Stack gap="sm">
       <L2TabNav
         items={[
-          { page: "search", label: "搜索音乐" },
-          { page: "playlist", label: "下载歌单" }
+          { page: "search", label: t("music.mode.search") },
+          { page: "playlist", label: t("music.mode.playlist") }
         ]}
         value={form.mode}
         onChange={(mode) => onChange({ mode })}
-        aria-label="选择音乐下载模式"
+        aria-label={t("music.mode.aria")}
       />
       {form.mode === "search" ? (
         <TextInput
-          label="搜索关键词"
-          placeholder="歌曲、歌手或专辑"
+          label={t("music.keyword.label")}
+          placeholder={t("music.keyword.placeholder")}
           value={form.keyword}
           onChange={(event) => onChange({ keyword: event.currentTarget.value })}
         />
       ) : (
         <TextInput
-          label="歌单链接"
-          description="链接必须由所选 musicdl 客户端支持"
+          label={t("music.playlistUrl.label")}
+          description={t("music.playlistUrl.description")}
           placeholder="https://music.163.com/#/playlist?id=..."
           value={form.playlistUrl}
           onChange={(event) => onChange({ playlistUrl: event.currentTarget.value })}
@@ -58,17 +59,17 @@ export function MusicConfigurationPanel({
         {/* Input.Wrapper 承担 label/description，组合行内的按钮才能与输入框同高对齐；
             Input 自带的 5px 上边距同样抵消，改由整行承担，避免行内错位 */}
         <Input.Wrapper
-          label="下载目录"
-          description="默认保存到系统「下载」目录下的 MADToolbox 文件夹"
+          label={t("music.outputDirectory")}
+          description={t("common.outputDirectoryHint")}
         >
           <FieldWithActions
             mt="calc(var(--mantine-spacing-xs) / 2)"
             actions={
-              <Tooltip label="选择目录">
+              <Tooltip label={t("common.selectDirectory")}>
                 <ActionIcon
                   variant="default"
                   size="input-sm"
-                  aria-label="选择下载目录"
+                  aria-label={t("music.outputDirectory.aria")}
                   onClick={onPickOutputDirectory}
                 >
                   <IconFolderOpen size={16} stroke={1.7} />
@@ -77,7 +78,7 @@ export function MusicConfigurationPanel({
             }
           >
             <Input
-              placeholder="留空保存到 下载/MADToolbox"
+              placeholder={t("music.outputDirectory.placeholder")}
               value={form.outputDirectory}
               onChange={(event) => onChange({ outputDirectory: event.currentTarget.value })}
               style={{ marginTop: 0 }}
@@ -85,32 +86,32 @@ export function MusicConfigurationPanel({
           </FieldWithActions>
         </Input.Wrapper>
         <NumberInput
-          label="每源结果数"
-          description="每个音乐源返回的搜索结果条数"
+          label={t("music.searchSize.label")}
+          description={t("music.searchSize.description")}
           min={1}
           max={100}
           value={form.searchSize}
           onChange={(value) => onChange({ searchSize: typeof value === "number" ? value : 5 })}
         />
         <NumberInput
-          label="每源线程数"
-          description="单个源内的并发请求数，搜索与下载共用"
+          label={t("music.threadCount.label")}
+          description={t("music.threadCount.description")}
           min={1}
           max={50}
           value={form.threadCount}
           onChange={(value) => onChange({ threadCount: typeof value === "number" ? value : 5 })}
         />
         <TextInput
-          label="代理服务器"
-          description="访问海外源（如 Spotify）时通常需要"
+          label={t("music.proxy.label")}
+          description={t("music.proxy.description")}
           placeholder={globalProxy ?? "http://127.0.0.1:7890"}
           value={form.proxy}
           onChange={(event) => onChange({ proxy: event.currentTarget.value })}
         />
       </Group>
       <Textarea
-        label="登录 Cookie（可选）"
-        description="应用到所选全部音乐源；会员音质取决于对应平台账户权限"
+        label={t("music.cookies.label")}
+        description={t("music.cookies.description")}
         autosize
         minRows={1}
         value={form.cookies}

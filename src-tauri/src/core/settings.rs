@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
+
+use super::language::{apply_language, LanguageChoice};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -19,6 +22,8 @@ pub(crate) struct AppSettings {
     pub(crate) dependency_preference: DependencyPreference,
     #[serde(default)]
     pub(crate) proxy: Option<String>,
+    #[serde(default)]
+    pub(crate) language: LanguageChoice,
 }
 
 pub(crate) fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -55,6 +60,22 @@ pub(crate) fn load_app_settings(app: &AppHandle) -> AppSettings {
         .unwrap_or_default()
 }
 
+/// 原子写盘（临时文件 + rename），Unix 下收紧为 0600。
+fn persist_app_settings(app: &AppHandle, settings: &AppSettings) -> Result<(), String> {
+    let path = settings_path(app)?;
+    let temporary = path.with_extension("json.tmp");
+    let bytes = serde_json::to_vec_pretty(settings).map_err(|error| error.to_string())?;
+    std::fs::write(&temporary, bytes).map_err(|error| error.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600))
+            .map_err(|error| error.to_string())?;
+    }
+    std::fs::rename(&temporary, &path).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 pub(crate) fn save_app_settings(
     app: AppHandle,
@@ -70,19 +91,18 @@ pub(crate) fn save_app_settings(
         .filter(|value| !value.is_empty());
     if let Some(directory) = &settings.default_output_directory {
         if !Path::new(directory).is_dir() {
-            return Err("默认导出目录不存在或不是目录".into());
+            return Err(t!("backend.settings.invalid_output_directory").to_string());
         }
     }
-    let path = settings_path(&app)?;
-    let temporary = path.with_extension("json.tmp");
-    let bytes = serde_json::to_vec_pretty(&settings).map_err(|error| error.to_string())?;
-    std::fs::write(&temporary, bytes).map_err(|error| error.to_string())?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600))
-            .map_err(|error| error.to_string())?;
-    }
-    std::fs::rename(&temporary, &path).map_err(|error| error.to_string())?;
+    persist_app_settings(&app, &settings)?;
     Ok(settings)
+}
+
+#[tauri::command]
+pub(crate) fn set_language(app: AppHandle, language: LanguageChoice) -> Result<(), String> {
+    let mut settings = load_app_settings(&app);
+    settings.language = language;
+    persist_app_settings(&app, &settings)?;
+    apply_language(language);
+    Ok(())
 }

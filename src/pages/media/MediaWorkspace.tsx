@@ -18,6 +18,7 @@ import { MediaOperationSelector } from "./MediaOperationSelector";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
 import { MediaTaskOptions } from "./MediaTaskOptions";
 import { MediaTimeRangeFields } from "./MediaTimeRangeFields";
+import { t } from "../../locale";
 
 interface MediaWorkspaceProps extends MediaWorkspacePageProps {
   page: MediaPageId;
@@ -43,7 +44,7 @@ export function MediaWorkspace({
     <Stack gap="md" p="md">
       <Group justify="space-between" wrap="nowrap">
         <Group gap="xs" wrap="nowrap">
-          <Title order={3}>媒体处理</Title>
+          <Title order={3}>{t("nav.media")}</Title>
           <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
         </Group>
         <Group gap="xs" wrap="nowrap">
@@ -53,7 +54,7 @@ export function MediaWorkspace({
             loading={workspace.submitting}
             disabled={workspace.expertMode ? false : workspace.inputs.length === 0}
           >
-            添加到任务队列
+            {t("media.submit")}
           </Button>
           <Button
             variant="default"
@@ -61,16 +62,19 @@ export function MediaWorkspace({
             disabled={!workspace.firstInput}
             onClick={() => void workspace.inspectFirst()}
           >
-            检视首个文件
+            {t("media.inspectFirst")}
           </Button>
         </Group>
       </Group>
 
       <L2TabNav
-        items={MEDIA_L2_NAVIGATION}
+        items={MEDIA_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
+          page: id,
+          label: t(labelKey)
+        }))}
         value={page}
         onChange={(next) => onNavigatePage?.(next)}
-        aria-label="选择媒体处理工作流"
+        aria-label={t("media.workflowAria")}
       />
 
       <MediaDropzone onPickFiles={workspace.addFiles} onDropPaths={workspace.addPaths} />
@@ -89,7 +93,7 @@ export function MediaWorkspace({
         <OutputDirectoryField
           value={workspace.form.outputDirectory}
           disabled={workspace.expertMode}
-          placeholder="留空则输出到源文件目录"
+          placeholder={t("media.outputToSourceHint")}
           onChange={(outputDirectory) => workspace.update({ outputDirectory })}
           onBrowse={workspace.pickOutputDirectory}
         />
@@ -147,11 +151,11 @@ export function MediaWorkspace({
           title={
             <>
               <Text size="sm" fw={500}>
-                高级参数
+                {t("media.advancedTitle")}
               </Text>
               {workspace.expertMode && (
                 <Badge size="xs" variant="light" color="orange">
-                  专家模式
+                  {t("media.expertModeBadge")}
                 </Badge>
               )}
             </>

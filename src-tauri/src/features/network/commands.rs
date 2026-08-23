@@ -39,7 +39,7 @@ pub fn network_submit(
     let ctx = resolve_ctx(&app);
     let plan = adapter::plan(&intent, &ctx).map_err(|e| e.to_string())?;
     let (tool_path, _) = resolve_tool(&app, &ToolName::YtDlp)
-        .ok_or_else(|| "未找到 yt-dlp，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.network.commands.ytdlp_not_found").to_string())?;
     let cwd = match plan.cwd {
         CwdPolicy::Inherit => None,
         CwdPolicy::ExeDir => tool_path.parent().map(|p| p.to_path_buf()),
@@ -106,12 +106,12 @@ pub async fn network_probe(
     let ctx = resolve_ctx(&app);
     let argv = adapter::probe_argv(&intent, &ctx, kind).map_err(|e| e.to_string())?;
     let (tool_path, _) = resolve_tool(&app, &ToolName::YtDlp)
-        .ok_or_else(|| "未找到 yt-dlp，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.network.commands.ytdlp_not_found").to_string())?;
 
     let _permit = PROBE_PERMITS
         .acquire()
         .await
-        .map_err(|_| "查询通道已关闭".to_string())?;
+        .map_err(|_| rust_i18n::t!("backend.network.commands.probe_channel_closed").to_string())?;
     let mut cmd = tokio::process::Command::new(&tool_path);
     cmd.args(&argv)
         .env("PATH", command_path())
@@ -124,8 +124,10 @@ pub async fn network_probe(
 
     let output = tokio::time::timeout(PROBE_TIMEOUT, cmd.output())
         .await
-        .map_err(|_| "解析超时（90 秒），请检查网络或代理".to_string())?
-        .map_err(|e| format!("启动 yt-dlp 失败：{e}"))?;
+        .map_err(|_| rust_i18n::t!("backend.network.commands.probe_timeout").to_string())?
+        .map_err(|e| {
+            rust_i18n::t!("backend.network.commands.ytdlp_start_failed", e = e).to_string()
+        })?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())

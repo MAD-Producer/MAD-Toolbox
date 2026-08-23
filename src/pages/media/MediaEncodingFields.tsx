@@ -1,4 +1,5 @@
 import { Group, Select } from "@mantine/core";
+import { t } from "../../locale";
 import type { MediaFormState } from "./form";
 import type { MediaPageOperation } from "./workflow";
 
@@ -27,7 +28,7 @@ export function MediaEncodingFields({
     <Group grow>
       {containers && (
         <Select
-          label="输出容器"
+          label={t("media.fields.container")}
           data={containers}
           value={containers.includes(form.container) ? form.container : containers[0]}
           onChange={(value) => value && onUpdate({ container: value })}
@@ -37,7 +38,7 @@ export function MediaEncodingFields({
       )}
       {showCodecs && (
         <Select
-          label="视频编码"
+          label={t("media.fields.videoCodec")}
           data={videoCodecs}
           value={form.videoCodec}
           onChange={(value) => value && onUpdate({ videoCodec: value })}
@@ -47,7 +48,7 @@ export function MediaEncodingFields({
       )}
       {(showCodecs || operation === "audio") && (
         <Select
-          label="音频编码"
+          label={t("media.fields.audioCodec")}
           data={audioCodecs}
           value={form.audioCodec}
           onChange={(value) => value && onUpdate({ audioCodec: value })}

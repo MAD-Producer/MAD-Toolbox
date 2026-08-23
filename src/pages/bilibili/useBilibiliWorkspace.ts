@@ -3,6 +3,7 @@ import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
 import type { TaskIntent, TaskSeed } from "../../contracts/types";
+import { t } from "../../locale";
 import { bilibiliPreview, bilibiliSubmit, type PreviewResult } from "./api";
 import { defaultBilibiliForm, type BilibiliFormState } from "./form";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
@@ -95,7 +96,7 @@ export function useBilibiliWorkspace({
       if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
         notifications.show({
           color: "yellow",
-          message: "手改命令中的敏感值（***）未被保存，请重新填写后再运行"
+          message: t("bilibili.notice.redactedArgs")
         });
       }
     }
@@ -165,7 +166,7 @@ export function useBilibiliWorkspace({
     setSubmitting(true);
     try {
       await bilibiliSubmit(intent);
-      notifications.show({ color: "green", message: "任务已加入队列" });
+      notifications.show({ color: "green", message: t("bilibili.notice.queued") });
       if (draftRevisionRef.current === submittedRevision) onSubmitted?.();
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });

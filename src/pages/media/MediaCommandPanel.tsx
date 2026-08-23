@@ -2,6 +2,7 @@ import { Button, Divider, Group, Stack, Text, Textarea } from "@mantine/core";
 import { IconPencil, IconRotate } from "@tabler/icons-react";
 import type { PreviewResult } from "./api";
 import { CommandPreview } from "../../components/common/CommandPreview";
+import { t } from "../../locale";
 
 interface MediaCommandPanelProps {
   isPr: boolean;
@@ -31,10 +32,10 @@ export function MediaCommandPanel({
       <Group justify="space-between">
         <Text size="sm" fw={500}>
           {isPr
-            ? "PR 兼容转码"
+            ? t("media.op.prCompatible")
             : expertMode
-              ? "命令（可编辑，每行一个参数）"
-              : "命令预览（首个文件）"}
+              ? t("media.command.expertTitle")
+              : t("media.command.previewTitle")}
         </Text>
         {!isPr &&
           (expertMode ? (
@@ -44,7 +45,7 @@ export function MediaCommandPanel({
               leftSection={<IconRotate size={14} />}
               onClick={onExitExpert}
             >
-              还原为表单
+              {t("media.command.restoreForm")}
             </Button>
           ) : (
             <Button
@@ -54,19 +55,18 @@ export function MediaCommandPanel({
               onClick={onEnterExpert}
               disabled={!preview}
             >
-              编辑命令
+              {t("media.command.editCommand")}
             </Button>
           ))}
       </Group>
       {isPr ? (
         <Text size="sm" c="dimmed">
-          逐文件探测流信息后自动决定容器与编码（H.264/HEVC → MP4 直拷，其余转 ProRes/MOV；
-          纯音频按无损/有损选 WAV/M4A）。命令由探测结果决定，提交后可在任务详情查看。
+          {t("media.command.prDescription")}
         </Text>
       ) : expertMode ? (
         <>
           <Text size="xs" c="yellow">
-            专家模式：表单已锁定，提交将按下方命令原文执行（ffmpeg 本体不可更换）
+            {t("media.command.expertNotice")}
           </Text>
           <Textarea
             autosize

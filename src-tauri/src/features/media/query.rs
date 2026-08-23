@@ -32,12 +32,26 @@ async fn run_external_query(mut command: Command, operation: &str) -> Result<Out
     let _permit = PROCESS_QUERY_GATE
         .acquire()
         .await
-        .map_err(|_| "媒体查询并发控制已关闭".to_string())?;
+        .map_err(|_| rust_i18n::t!("backend.media.query.concurrencyClosed").to_string())?;
     command.kill_on_drop(true);
     timeout(PROCESS_QUERY_TIMEOUT, command.output())
         .await
-        .map_err(|_| format!("{operation}超时（{PROCESS_QUERY_TIMEOUT_SECONDS} 秒）"))?
-        .map_err(|error| format!("无法启动{operation}：{error}"))
+        .map_err(|_| {
+            rust_i18n::t!(
+                "backend.media.query.timeout",
+                operation = operation,
+                seconds = PROCESS_QUERY_TIMEOUT_SECONDS
+            )
+            .to_string()
+        })?
+        .map_err(|error| {
+            rust_i18n::t!(
+                "backend.media.query.launchFailed",
+                operation = operation,
+                error = error
+            )
+            .to_string()
+        })
 }
 
 fn media_info_value<'a>(track: &'a serde_json::Value, key: &str) -> Option<&'a str> {
@@ -71,35 +85,85 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
     let tracks = document
         .pointer("/media/track")
         .and_then(|value| value.as_array())
-        .ok_or_else(|| "MediaInfo JSON 中缺少轨道信息".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.media.query.missingTracks").to_string())?;
     let mut summary = String::new();
-    writeln!(summary, "文件信息").unwrap();
-    writeln!(summary, "路径：{path}").unwrap();
+    writeln!(
+        summary,
+        "{}",
+        rust_i18n::t!("backend.media.inspect.fileInfo")
+    )
+    .unwrap();
+    writeln!(
+        summary,
+        "{}",
+        rust_i18n::t!("backend.media.inspect.path", path = path)
+    )
+    .unwrap();
 
     if let Some(general) = tracks
         .iter()
         .find(|track| media_info_value(track, "@type") == Some("General"))
     {
         if let Some(format) = media_info_value(general, "Format") {
-            writeln!(summary, "封装格式：{format}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.containerFormat", format = format)
+            )
+            .unwrap();
         }
         if let Some(profile) = media_info_value(general, "Format_Profile") {
-            writeln!(summary, "格式配置：{profile}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.formatProfile", profile = profile)
+            )
+            .unwrap();
         }
         if let Some(size) = media_info_number(general, "FileSize") {
-            writeln!(summary, "文件大小：{:.2} MiB", size / 1_048_576.0).unwrap();
+            let size_text = format!("{:.2} MiB", size / 1_048_576.0);
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.fileSize", size = size_text)
+            )
+            .unwrap();
         }
         if let Some(duration) = media_info_number(general, "Duration") {
-            writeln!(summary, "时长：{}", human_duration(duration)).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!(
+                    "backend.media.inspect.duration",
+                    value = human_duration(duration)
+                )
+            )
+            .unwrap();
         }
         if let Some(bitrate) = media_info_number(general, "OverallBitRate") {
-            writeln!(summary, "总码率：{:.0} kb/s", bitrate / 1000.0).unwrap();
+            let bitrate_text = format!("{:.0} kb/s", bitrate / 1000.0);
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.overallBitrate", value = bitrate_text)
+            )
+            .unwrap();
         }
         if let Some(title) = media_info_value(general, "Title") {
-            writeln!(summary, "标题：{title}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.title", title = title)
+            )
+            .unwrap();
         }
         if let Some(performer) = media_info_value(general, "Performer") {
-            writeln!(summary, "作者/艺术家：{performer}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.performer", performer = performer)
+            )
+            .unwrap();
         }
     }
 
@@ -112,58 +176,133 @@ fn media_info_summary(document: &serde_json::Value, path: &str) -> Result<String
         let counter = counters.entry(kind).or_insert(0);
         *counter += 1;
         let localized = match kind {
-            "Video" => "视频轨道",
-            "Audio" => "音频轨道",
-            "Text" => "字幕轨道",
-            "Image" => "图片/封面轨道",
-            "Menu" => "章节轨道",
-            _ => "其他轨道",
+            "Video" => rust_i18n::t!("backend.media.inspect.trackVideo"),
+            "Audio" => rust_i18n::t!("backend.media.inspect.trackAudio"),
+            "Text" => rust_i18n::t!("backend.media.inspect.trackSubtitle"),
+            "Image" => rust_i18n::t!("backend.media.inspect.trackImage"),
+            "Menu" => rust_i18n::t!("backend.media.inspect.trackMenu"),
+            _ => rust_i18n::t!("backend.media.inspect.trackOther"),
         };
         writeln!(summary, "\n{localized} {}", *counter).unwrap();
         if let Some(format) = media_info_value(track, "Format") {
             let profile = media_info_value(track, "Format_Profile")
                 .map(|value| format!(" / {value}"))
                 .unwrap_or_default();
-            writeln!(summary, "编码格式：{format}{profile}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!(
+                    "backend.media.inspect.codecFormat",
+                    format = format,
+                    profile = profile
+                )
+            )
+            .unwrap();
         }
         if let Some(codec) = media_info_value(track, "CodecID") {
-            writeln!(summary, "编码标识：{codec}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.codecId", codec = codec)
+            )
+            .unwrap();
         }
         if let (Some(width), Some(height)) = (
             media_info_number(track, "Width"),
             media_info_number(track, "Height"),
         ) {
-            writeln!(summary, "分辨率：{} × {}", width as u64, height as u64).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!(
+                    "backend.media.inspect.resolution",
+                    width = width as u64,
+                    height = height as u64
+                )
+            )
+            .unwrap();
         }
         if let Some(frame_rate) = media_info_number(track, "FrameRate") {
-            writeln!(summary, "帧率：{frame_rate:.3} fps").unwrap();
+            let frame_rate_text = format!("{:.3} fps", frame_rate);
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.frameRate", value = frame_rate_text)
+            )
+            .unwrap();
         }
         if let Some(bitrate) = media_info_number(track, "BitRate") {
-            writeln!(summary, "码率：{:.0} kb/s", bitrate / 1000.0).unwrap();
+            let bitrate_text = format!("{:.0} kb/s", bitrate / 1000.0);
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.bitrate", value = bitrate_text)
+            )
+            .unwrap();
         }
         if let Some(bit_depth) = media_info_number(track, "BitDepth") {
-            writeln!(summary, "位深：{} bit", bit_depth as u64).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.bitDepth", value = bit_depth as u64)
+            )
+            .unwrap();
         }
         if let Some(color) = media_info_value(track, "ColorSpace") {
             let chroma = media_info_value(track, "ChromaSubsampling")
                 .map(|value| format!(" / {value}"))
                 .unwrap_or_default();
-            writeln!(summary, "色彩：{color}{chroma}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!(
+                    "backend.media.inspect.colorSpace",
+                    color = color,
+                    chroma = chroma
+                )
+            )
+            .unwrap();
         }
         if let Some(channels) = media_info_number(track, "Channels") {
-            writeln!(summary, "声道数：{}", channels as u64).unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.channels", value = channels as u64)
+            )
+            .unwrap();
         }
         if let Some(layout) = media_info_value(track, "ChannelLayout") {
-            writeln!(summary, "声道布局：{layout}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.channelLayout", layout = layout)
+            )
+            .unwrap();
         }
         if let Some(sample_rate) = media_info_number(track, "SamplingRate") {
-            writeln!(summary, "采样率：{:.1} kHz", sample_rate / 1000.0).unwrap();
+            let sample_rate_text = format!("{:.1} kHz", sample_rate / 1000.0);
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.sampleRate", value = sample_rate_text)
+            )
+            .unwrap();
         }
         if let Some(language) = media_info_value(track, "Language") {
-            writeln!(summary, "语言：{language}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.language", language = language)
+            )
+            .unwrap();
         }
         if let Some(title) = media_info_value(track, "Title") {
-            writeln!(summary, "轨道标题：{title}").unwrap();
+            writeln!(
+                summary,
+                "{}",
+                rust_i18n::t!("backend.media.inspect.trackTitle", title = title)
+            )
+            .unwrap();
         }
     }
     Ok(summary.trim().to_string())
@@ -176,11 +315,12 @@ pub(crate) async fn inspect_media(app: AppHandle, path: String) -> Result<MediaI
         let count = media_files_in(&input)?.len();
         return Ok(MediaInspection {
             path,
-            summary: format!("目录\n可处理的媒体文件：{count} 个\n默认递归子目录并忽略隐藏文件。"),
+            summary: rust_i18n::t!("backend.media.inspect.directorySummary", count = count)
+                .to_string(),
         });
     }
     if !input.is_file() {
-        return Err("文件不存在".into());
+        return Err(rust_i18n::t!("backend.media.query.fileNotFound").to_string());
     }
     let (executable, args, use_media_info_json) =
         if let Some((mediainfo, _)) = resolve_tool(&app, &ToolName::Mediainfo) {
@@ -203,21 +343,24 @@ pub(crate) async fn inspect_media(app: AppHandle, path: String) -> Result<MediaI
                 false,
             )
         } else {
-            return Err("未找到 MediaInfo 或 ffprobe".into());
+            return Err(rust_i18n::t!("backend.media.query.toolMissing").to_string());
         };
     let mut command = background_command(executable);
     command.args(args).env("PATH", command_path());
-    let output = run_external_query(command, "媒体信息读取").await?;
+    let output =
+        run_external_query(command, &rust_i18n::t!("backend.media.query.readOperation")).await?;
     if !output.status.success() {
         let reason = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!("媒体信息读取失败：{reason}"));
+        return Err(rust_i18n::t!("backend.media.query.readFailed", reason = reason).to_string());
     }
     let mut summary = String::from_utf8_lossy(&output.stdout).into_owned();
     if summary.trim().is_empty() {
         summary = String::from_utf8_lossy(&output.stderr).into_owned();
     } else if use_media_info_json {
-        let document: serde_json::Value = serde_json::from_slice(&output.stdout)
-            .map_err(|error| format!("无法解析 MediaInfo 输出：{error}"))?;
+        let document: serde_json::Value =
+            serde_json::from_slice(&output.stdout).map_err(|error| {
+                rust_i18n::t!("backend.media.query.parseMediaInfoFailed", error = error).to_string()
+            })?;
         summary = media_info_summary(&document, &path)?;
     }
     Ok(MediaInspection { path, summary })
@@ -243,14 +386,21 @@ pub(crate) fn media_files_in(directory: &Path) -> Result<Vec<PathBuf>, String> {
     ];
     fn visit(directory: &Path, output: &mut Vec<PathBuf>) -> Result<(), String> {
         let entries = std::fs::read_dir(directory).map_err(|error| {
-            format!("无法读取媒体目录 {}：{error}", directory.to_string_lossy())
+            rust_i18n::t!(
+                "backend.media.query.readDirFailed",
+                directory = directory.to_string_lossy(),
+                error = error
+            )
+            .to_string()
         })?;
         for entry in entries {
             let entry = entry.map_err(|error| {
-                format!(
-                    "无法读取媒体目录项 {}：{error}",
-                    directory.to_string_lossy()
+                rust_i18n::t!(
+                    "backend.media.query.readDirEntryFailed",
+                    directory = directory.to_string_lossy(),
+                    error = error
                 )
+                .to_string()
             })?;
             let path = entry.path();
             let hidden = path
@@ -309,13 +459,15 @@ pub(crate) fn expand_media_inputs(
             );
         } else if path.is_file() {
             if is_text_subtitle_file(&path) && !include_subtitles {
-                return Err(
-                    "字幕文件请在「PR 原生兼容」中统一转为 SRT，或在「封装与抽流」中处理。".into(),
-                );
+                return Err(rust_i18n::t!("backend.media.query.subtitleHint").to_string());
             }
             output.push(path.to_string_lossy().into_owned());
         } else {
-            return Err(format!("输入不存在：{}", path.to_string_lossy()));
+            return Err(rust_i18n::t!(
+                "backend.media.query.inputNotFound",
+                path = path.to_string_lossy()
+            )
+            .to_string());
         }
     }
     output.sort();
@@ -339,17 +491,23 @@ pub(crate) async fn probe_streams(
         ])
         .arg(input)
         .env("PATH", command_path());
-    let operation = format!("媒体流探测 {}", input.to_string_lossy());
+    let operation = rust_i18n::t!(
+        "backend.media.query.probeOperation",
+        path = input.to_string_lossy()
+    )
+    .to_string();
     let output = run_external_query(command, &operation).await?;
     if !output.status.success() {
-        return Err(format!(
-            "无法识别媒体文件 {}：{}",
-            input.to_string_lossy(),
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
+        return Err(rust_i18n::t!(
+            "backend.media.query.probeFailed",
+            path = input.to_string_lossy(),
+            reason = String::from_utf8_lossy(&output.stderr).trim()
+        )
+        .to_string());
     }
-    let value: serde_json::Value = serde_json::from_slice(&output.stdout)
-        .map_err(|error| format!("无法解析媒体流探测结果：{error}"))?;
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).map_err(|error| {
+        rust_i18n::t!("backend.media.query.probeParseFailed", error = error).to_string()
+    })?;
     Ok(streams_from_probe(&value))
 }
 

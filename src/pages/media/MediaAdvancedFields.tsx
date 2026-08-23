@@ -1,4 +1,5 @@
 import { Group, NumberInput, Select, Stack, Switch, TextInput } from "@mantine/core";
+import { t } from "../../locale";
 import type { MediaFormState } from "./form";
 
 interface MediaAdvancedFieldsProps {
@@ -11,24 +12,24 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
     <Stack gap="sm">
       <Group grow>
         <TextInput
-          label="缩放宽度"
-          placeholder="留空保持"
+          label={t("media.fields.scaleWidth")}
+          placeholder={t("media.fields.keepEmpty")}
           value={form.width}
           onChange={(event) => onUpdate({ width: event.currentTarget.value })}
         />
         <TextInput
-          label="缩放高度"
-          placeholder="留空保持"
+          label={t("media.fields.scaleHeight")}
+          placeholder={t("media.fields.keepEmpty")}
           value={form.height}
           onChange={(event) => onUpdate({ height: event.currentTarget.value })}
         />
         <TextInput
-          label="帧率"
+          label={t("media.fields.frameRate")}
           value={form.frameRate}
           onChange={(event) => onUpdate({ frameRate: event.currentTarget.value })}
         />
         <NumberInput
-          label="倍速"
+          label={t("media.fields.speed")}
           step={0.25}
           min={0.25}
           value={form.speed}
@@ -37,8 +38,8 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
       </Group>
       <Group grow>
         <TextInput
-          label="视频码率"
-          placeholder="如 8M"
+          label={t("media.fields.videoBitrate")}
+          placeholder={t("media.fields.videoBitrateHint")}
           value={form.videoBitrate}
           onChange={(event) => onUpdate({ videoBitrate: event.currentTarget.value })}
         />
@@ -48,24 +49,24 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
           onChange={(event) => onUpdate({ crf: event.currentTarget.value })}
         />
         <TextInput
-          label="音频码率"
+          label={t("media.fields.audioBitrate")}
           value={form.audioBitrate}
           onChange={(event) => onUpdate({ audioBitrate: event.currentTarget.value })}
         />
         <TextInput
-          label="采样率"
-          placeholder="如 48000"
+          label={t("media.fields.sampleRate")}
+          placeholder={t("media.fields.sampleRateHint")}
           value={form.sampleRate}
           onChange={(event) => onUpdate({ sampleRate: event.currentTarget.value })}
         />
       </Group>
       <Group grow align="end">
         <Select
-          label="旋转"
+          label={t("media.fields.rotation")}
           data={[
-            { value: "none", label: "不旋转" },
-            { value: "90cw", label: "顺时针 90°" },
-            { value: "90ccw", label: "逆时针 90°" },
+            { value: "none", label: t("media.rotation.none") },
+            { value: "90cw", label: t("media.rotation.90cw") },
+            { value: "90ccw", label: t("media.rotation.90ccw") },
             { value: "180", label: "180°" }
           ]}
           value={form.rotation}
@@ -73,36 +74,36 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
           allowDeselect={false}
         />
         <TextInput
-          label="裁剪"
-          placeholder="如 1920:800:0:140"
+          label={t("media.fields.crop")}
+          placeholder={t("media.fields.cropHint")}
           value={form.crop}
           onChange={(event) => onUpdate({ crop: event.currentTarget.value })}
         />
         <TextInput
-          label="音量"
-          placeholder="如 1.5 或 -3dB"
+          label={t("media.fields.volume")}
+          placeholder={t("media.fields.volumeHint")}
           value={form.volume}
           onChange={(event) => onUpdate({ volume: event.currentTarget.value })}
         />
       </Group>
       <Group gap="lg">
         <Switch
-          label="去隔行"
+          label={t("media.fields.deinterlace")}
           checked={form.deinterlace}
           onChange={(event) => onUpdate({ deinterlace: event.currentTarget.checked })}
         />
         <Switch
-          label="水平翻转"
+          label={t("media.fields.flipHorizontal")}
           checked={form.flipHorizontal}
           onChange={(event) => onUpdate({ flipHorizontal: event.currentTarget.checked })}
         />
         <Switch
-          label="垂直翻转"
+          label={t("media.fields.flipVertical")}
           checked={form.flipVertical}
           onChange={(event) => onUpdate({ flipVertical: event.currentTarget.checked })}
         />
         <Switch
-          label="响度归一化"
+          label={t("media.fields.loudnessNormalization")}
           checked={form.loudnessNormalization}
           onChange={(event) => onUpdate({ loudnessNormalization: event.currentTarget.checked })}
         />

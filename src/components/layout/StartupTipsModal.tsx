@@ -9,6 +9,7 @@ import {
   IconNetwork,
   IconQrcode
 } from "@tabler/icons-react";
+import { t } from "../../locale";
 
 const DISMISSED_AT_KEY = "mad-toolbox:startup-tips-dismissed-at";
 
@@ -59,7 +60,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
     <Modal
       opened={opened}
       onClose={onClose}
-      title="使用提示"
+      title={t("startup.title")}
       size={560}
       centered
       withCloseButton={false}
@@ -78,18 +79,16 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
               <ThemeIcon variant="light" color="orange" size="lg">
                 <IconQrcode size={18} />
               </ThemeIcon>
-              <Text fw={600}>Bilibili 下载画质与登录状态相关</Text>
+              <Text fw={600}>{t("startup.bilibiliQuality.title")}</Text>
             </Group>
             <Text size="sm" c="dimmed">
-              Bilibili 视频下载的画质，取决于是否通过界面扫码登录，以及大会员账号的等级。
-              未登录时最高只能下载 480P，扫码登录后一般可以下载到 1080P。
+              {t("startup.bilibiliQuality.p1")}
             </Text>
             <Text size="sm" c="dimmed">
-              哔哩哔哩页右上角的按钮会显示当前登录状态：显示「扫码登录」即代表当前未登录，
-              或之前的登录已过期；显示「已登录」则无需重复扫码。
+              {t("startup.bilibiliQuality.p2")}
             </Text>
             <Text size="sm" c="dimmed">
-              下载时默认选择能够获取到的最高规格画质。
+              {t("startup.bilibiliQuality.p3")}
             </Text>
           </Stack>
         </Carousel.Slide>
@@ -99,18 +98,16 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
               <ThemeIcon variant="light" color="orange" size="lg">
                 <IconNetwork size={18} />
               </ThemeIcon>
-              <Text fw={600}>按数据源合理开关系统代理</Text>
+              <Text fw={600}>{t("startup.proxy.title")}</Text>
             </Group>
             <Text size="sm" c="dimmed">
-              系统代理的设置会影响应用发起请求时使用的 IP。
+              {t("startup.proxy.p1")}
             </Text>
             <Text size="sm" c="dimmed">
-              国内服务器的下载任务（如 Bilibili 视频下载、国内音乐源下载）建议关闭代理；
-              国外服务器的下载任务（如 YouTube、国外音乐源）建议开启代理。
+              {t("startup.proxy.p2")}
             </Text>
             <Text size="sm" c="dimmed">
-              若代理软件开启了 TUN 模式，相当于所有流量都经过代理，下载国内服务器的任务时建议关闭
-              TUN 模式。
+              {t("startup.proxy.p3")}
             </Text>
           </Stack>
         </Carousel.Slide>
@@ -120,17 +117,13 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
               <ThemeIcon variant="light" color="orange" size="lg">
                 <IconFileMusic size={18} />
               </ThemeIcon>
-              <Text fw={600}>体积偏大的 FLAC 可能是「假无损」</Text>
+              <Text fw={600}>{t("startup.flac.title")}</Text>
             </Group>
             <Text size="sm" c="dimmed">
-              音乐搜索结果中体积明显偏大的无损文件，可能只是通过升高采样率把体积撑大，
-              多出的体积都是无效信息。这是音源站返回的文件本身如此，工具侧无法解决，
-              请结合体积与时长自行判断是否下载。
+              {t("startup.flac.p1")}
             </Text>
             <Text size="sm" c="dimmed">
-              也可以在「音乐下载」页标题旁开启「自动去杂」开关：下载完成后自动把高于 48kHz
-              的音频统一降至 48kHz。但受API限制，不保证所有都能探测准确，且少数官方发行版本高于
-              48kHz 的音乐音质可能有所影响，请按需取舍。
+              {t("startup.flac.p2")}
             </Text>
           </Stack>
         </Carousel.Slide>
@@ -145,13 +138,13 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           h={32}
           disabled={slide === 0}
           onClick={() => embla?.scrollPrev()}
-          aria-label="上一页"
+          aria-label={t("startup.prev")}
         >
           <IconChevronLeft size={18} />
         </ActionIcon>
         <span style={{ visibility: slide === 2 ? "visible" : "hidden" }}>
           <Button variant="light" onClick={dismissForToday}>
-            今日不再提醒
+            {t("startup.dismissToday")}
           </Button>
         </span>
         <ActionIcon
@@ -161,7 +154,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           h={32}
           disabled={slide === 2}
           onClick={() => embla?.scrollNext()}
-          aria-label="下一页"
+          aria-label={t("startup.next")}
         >
           <IconChevronRight size={18} />
         </ActionIcon>

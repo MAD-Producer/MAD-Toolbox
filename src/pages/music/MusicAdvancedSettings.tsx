@@ -1,4 +1,5 @@
 import { Group, Stack, Text, Textarea } from "@mantine/core";
+import { t } from "../../locale";
 import type { MusicFormPatch, MusicFormState } from "./configuration";
 
 interface MusicAdvancedSettingsProps {
@@ -10,12 +11,11 @@ export function MusicAdvancedSettings({ form, onChange }: MusicAdvancedSettingsP
   return (
     <Stack gap="sm">
       <Text size="xs" c="dimmed">
-        以下四项对应 musicdl 的全部高级 CLI 参数；上方的目录、Cookie、代理、结果数与线程数会与 JSON
-        合并。
+        {t("music.advanced.hint")}
       </Text>
       <Group grow align="start">
         <Textarea
-          label="-i 客户端初始化设置（JSON）"
+          label={t("music.advanced.initLabel")}
           autosize
           minRows={3}
           value={form.rawInit}
@@ -23,7 +23,7 @@ export function MusicAdvancedSettings({ form, onChange }: MusicAdvancedSettingsP
           styles={{ input: { fontFamily: "monospace", fontSize: 12 } }}
         />
         <Textarea
-          label="-r 请求覆盖设置（JSON）"
+          label={t("music.advanced.requestsLabel")}
           autosize
           minRows={3}
           value={form.rawRequests}
@@ -33,7 +33,7 @@ export function MusicAdvancedSettings({ form, onChange }: MusicAdvancedSettingsP
       </Group>
       <Group grow align="start">
         <Textarea
-          label="-c 客户端线程设置（JSON）"
+          label={t("music.advanced.threadingsLabel")}
           autosize
           minRows={3}
           value={form.rawThreadings}
@@ -41,7 +41,7 @@ export function MusicAdvancedSettings({ form, onChange }: MusicAdvancedSettingsP
           styles={{ input: { fontFamily: "monospace", fontSize: 12 } }}
         />
         <Textarea
-          label="-s 搜索规则（JSON）"
+          label={t("music.advanced.searchRulesLabel")}
           autosize
           minRows={3}
           value={form.rawSearchRules}

@@ -17,7 +17,7 @@ use crate::core::task::{TaskHub, TaskSpec};
 #[tauri::command]
 pub(crate) async fn bilibili_login_start(app: AppHandle) -> Result<RunResult, String> {
     let (executable, _) = resolve_tool(&app, &ToolName::Bbdown)
-        .ok_or_else(|| "未找到 BBDown，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.commands.bbdown_not_found").to_string())?;
     let working_dir = login::bbdown_directory(&executable)?;
     login::spawn_bbdown_login_job(app, working_dir).await
 }
@@ -27,7 +27,7 @@ pub(crate) async fn bilibili_login_start(app: AppHandle) -> Result<RunResult, St
 #[tauri::command]
 pub(crate) async fn bilibili_login_status(app: AppHandle) -> Result<bool, String> {
     let (executable, _) = resolve_tool(&app, &ToolName::Bbdown)
-        .ok_or_else(|| "未找到 BBDown，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.commands.bbdown_not_found").to_string())?;
     let working_dir = login::bbdown_directory(&executable)?;
     login::bbdown_login_status(&working_dir).await
 }
@@ -46,7 +46,7 @@ pub fn bilibili_submit(
 ) -> Result<SubmitResult, String> {
     let plan = adapter::plan(&intent).map_err(|e| e.to_string())?;
     let (tool_path, _bundled) = resolve_tool(&app, &ToolName::Bbdown)
-        .ok_or_else(|| "未找到 BBDown，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.commands.bbdown_not_found").to_string())?;
     let cwd = match plan.cwd {
         CwdPolicy::ExeDir => Some(login::bbdown_directory(&tool_path)?),
         CwdPolicy::Inherit => None,

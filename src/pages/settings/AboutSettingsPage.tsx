@@ -23,39 +23,47 @@ import organizationLogo from "../../assets/organization_logo.png";
 import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
+import { t, type TranslationKey } from "../../locale";
 import { checkForUpdate, type UpdateCheck } from "./api";
 
 const GITHUB_URL = "https://github.com/MAD-Producer/MAD-Toolbox";
 
 const TEAM_LINKS = [
-  { name: "开发者名单", url: "https://github.com/MAD-Producer/MAD-Toolbox/graphs/contributors" },
-  { name: "关于 MAD Producer Studio", url: "https://madproducer.cn/about#module-2339" }
-] as const;
+  {
+    nameKey: "settings.about.teamDevelopers",
+    url: "https://github.com/MAD-Producer/MAD-Toolbox/graphs/contributors"
+  },
+  { nameKey: "settings.about.teamAboutStudio", url: "https://madproducer.cn/about#module-2339" }
+] as const satisfies ReadonlyArray<{ nameKey: TranslationKey; url: string }>;
 
 const CREDITS = [
   {
     name: "FFmpeg",
-    note: "媒体转码与处理核心",
+    noteKey: "settings.about.credit.ffmpeg",
     url: "https://www.ffmpeg.org/"
   },
   {
     name: "yt-dlp",
-    note: "提供YouTube视频和大多数网页媒体下载功能",
+    noteKey: "settings.about.credit.ytDlp",
     url: "https://github.com/yt-dlp/yt-dlp"
   },
-  { name: "BBDown", note: "提供Bilibili视频下载功能", url: "https://github.com/nilaoda/BBDown" },
+  {
+    name: "BBDown",
+    noteKey: "settings.about.credit.bbdown",
+    url: "https://github.com/nilaoda/BBDown"
+  },
   {
     name: "Musicdl",
-    note: "提供多平台音乐搜索与下载功能",
+    noteKey: "settings.about.credit.musicdl",
     url: "https://pypi.org/project/musicdl/2.6.1/"
   },
-  { name: "Deno", note: "为部分 JavaScript 提供运行时支撑", url: "https://deno.com/" },
+  { name: "Deno", noteKey: "settings.about.credit.deno", url: "https://deno.com/" },
   {
     name: "MediaInfo",
-    note: "提供媒体元数据探测功能",
+    noteKey: "settings.about.credit.mediainfo",
     url: "https://github.com/mediaarea/mediainfo"
   }
-] as const;
+] as const satisfies ReadonlyArray<{ name: string; noteKey: TranslationKey; url: string }>;
 
 interface AboutListRowProps {
   primary: string;
@@ -75,7 +83,7 @@ function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) 
             variant="transparent"
             color="gray"
             className="about-action"
-            aria-label={`打开 ${primary}`}
+            aria-label={t("settings.about.openLink", { name: primary })}
             onClick={() => void openUrl(href)}
           >
             <IconExternalLink size={16} stroke={1.7} />
@@ -131,9 +139,12 @@ export function AboutSettingsPage() {
       const result = await checkForUpdate();
       if (result.updateAvailable) {
         setUpdate(result);
-        notifications.show({ message: `发现新版本 v${result.latestVersion}`, color: "green" });
+        notifications.show({
+          message: t("settings.about.updateFound", { version: result.latestVersion }),
+          color: "green"
+        });
       } else {
-        notifications.show({ message: "已是最新版本", color: "green" });
+        notifications.show({ message: t("settings.about.upToDate"), color: "green" });
       }
     } catch (error) {
       notifications.show({ message: String(error), color: "red" });
@@ -144,7 +155,7 @@ export function AboutSettingsPage() {
 
   return (
     <Stack gap="lg">
-      <AboutSection title="关于" cardProps={{ p: 24 }}>
+      <AboutSection title={t("settings.about.title")} cardProps={{ p: 24 }}>
         <Group justify="space-between" align="center" wrap="nowrap">
           <Group gap="lg" wrap="nowrap" align="center">
             <Image src={appIcon} alt="MAD Toolbox" h={64} w="auto" radius="sm" flex="0 0 auto" />
@@ -184,7 +195,7 @@ export function AboutSettingsPage() {
                   void openUrl(update.releaseUrl);
                 }}
               >
-                下载最新版本
+                {t("settings.about.downloadLatest")}
               </Button>
             ) : (
               <Button
@@ -192,14 +203,14 @@ export function AboutSettingsPage() {
                 loading={checking}
                 onClick={() => void handleCheckUpdate()}
               >
-                检查软件更新
+                {t("settings.about.checkUpdate")}
               </Button>
             )}
           </Group>
         </Group>
       </AboutSection>
 
-      <AboutSection title="开发团队">
+      <AboutSection title={t("settings.about.team")}>
         <Group justify="space-between" align="center" wrap="nowrap" px="xl" py="xl" gap="lg">
           <Image
             src={organizationLogo}
@@ -220,26 +231,29 @@ export function AboutSettingsPage() {
                 leftSection={<IconExternalLink size={16} stroke={1.7} />}
                 onClick={() => void openUrl(link.url)}
               >
-                {link.name}
+                {t(link.nameKey)}
               </Button>
             ))}
           </Stack>
         </Group>
       </AboutSection>
 
-      <AboutSection title="致谢">
+      <AboutSection title={t("settings.about.credits")}>
         {CREDITS.map((item, index) => (
           <Fragment key={item.name}>
             {index > 0 && <Divider />}
-            <AboutListRow primary={item.name} secondary={item.note} href={item.url} />
+            <AboutListRow primary={item.name} secondary={t(item.noteKey)} href={item.url} />
           </Fragment>
         ))}
       </AboutSection>
 
-      <AboutSection title="法律信息">
-        <AboutListRow primary="版权" secondary="Copyright © 2026 MAD Producer Studio" />
+      <AboutSection title={t("settings.about.legal")}>
+        <AboutListRow
+          primary={t("settings.about.copyright")}
+          secondary="Copyright © 2026 MAD Producer Studio"
+        />
         <Divider />
-        <AboutListRow primary="开源协议" secondary="MIT License" />
+        <AboutListRow primary={t("settings.about.license")} secondary="MIT License" />
       </AboutSection>
 
       <Stack align="center" gap="xs" mt="xl">

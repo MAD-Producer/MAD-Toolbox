@@ -1,4 +1,5 @@
 import { Group, Switch } from "@mantine/core";
+import { t } from "../../locale";
 import type { MediaFormState } from "./form";
 
 interface MediaTaskOptionsProps {
@@ -11,19 +12,19 @@ export function MediaTaskOptions({ form, disabled, onUpdate }: MediaTaskOptionsP
   return (
     <Group gap="lg">
       <Switch
-        label="保留全部流"
+        label={t("media.options.mapAll")}
         checked={form.mapAll}
         onChange={(event) => onUpdate({ mapAll: event.currentTarget.checked })}
         disabled={disabled}
       />
       <Switch
-        label="保留元数据与章节"
+        label={t("media.options.preserveMetadata")}
         checked={form.preserveMetadata}
         onChange={(event) => onUpdate({ preserveMetadata: event.currentTarget.checked })}
         disabled={disabled}
       />
       <Switch
-        label="覆盖已存在文件"
+        label={t("media.options.overwrite")}
         checked={form.overwrite}
         onChange={(event) => onUpdate({ overwrite: event.currentTarget.checked })}
         disabled={disabled}

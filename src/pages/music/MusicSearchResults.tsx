@@ -1,12 +1,13 @@
 import { Badge, Button, Checkbox, Chip, Group, Stack, Table, Text } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { t } from "../../locale";
 import type { MusicdlSearchResponse, MusicdlSearchResult } from "./api";
 import { musicSourceLabel } from "./configuration";
 import type { MusicSessionPhase } from "../../stores/music-session";
 
 function resultFormat(result: MusicdlSearchResult): string {
-  return (result.extension || result.codec || "未知格式").toLowerCase();
+  return (result.extension || result.codec || t("music.format.unknown")).toLowerCase();
 }
 
 const DOWNSAMPLE_TARGET_RATE = 48000;
@@ -22,7 +23,7 @@ function denoiseEstimate(result: MusicdlSearchResult, enabled: boolean): string 
     bytes = Number.parseFloat(parsed[1]) * 1024 * 1024;
   }
   const megabytes = ((bytes * DOWNSAMPLE_TARGET_RATE) / sampleRate / 1024 / 1024).toFixed(1);
-  return `去杂后约${megabytes}MB`;
+  return t("music.denoise.estimate", { size: megabytes });
 }
 
 interface MusicSearchResultsProps {
@@ -97,12 +98,15 @@ export function MusicSearchResults({
     <Stack gap="xs">
       <Group justify="space-between">
         <Text fw={500}>
-          搜索结果
+          {t("music.results.title")}
           <Text span size="xs" c="dimmed" ml={8}>
             {formats.length
-              ? `${visibleResults.length} / ${response.results.length} 项`
-              : `${response.results.length} 项`}{" "}
-            · 已选 {selected.length} 项 · 已入队 {queuedIndices.length} 项
+              ? t("music.results.range", {
+                  visible: visibleResults.length,
+                  total: response.results.length
+                })
+              : t("music.results.count", { count: response.results.length })}{" "}
+            {t("music.results.stats", { selected: selected.length, queued: queuedIndices.length })}
           </Text>
         </Text>
         <Group gap="xs">
@@ -114,10 +118,10 @@ export function MusicSearchResults({
             disabled={sessionPhase !== "ready" || taskSubmitting}
             onClick={onEndSession}
           >
-            清空搜索结果
+            {t("music.results.clear")}
           </Button>
           <Button size="compact-sm" variant="default" onClick={toggleSelectVisible}>
-            {allVisibleSelected ? "取消全选" : "全选"}
+            {allVisibleSelected ? t("music.results.deselectAll") : t("music.results.selectAll")}
           </Button>
           <Button
             size="compact-sm"
@@ -128,7 +132,7 @@ export function MusicSearchResults({
               )
             }
           >
-            只选无损
+            {t("music.results.losslessOnly")}
           </Button>
           <Button
             size="compact-sm"
@@ -137,7 +141,7 @@ export function MusicSearchResults({
             loading={taskSubmitting}
             onClick={onDownload}
           >
-            下载所选
+            {t("music.download.selected")}
           </Button>
         </Group>
       </Group>
@@ -154,11 +158,11 @@ export function MusicSearchResults({
       ) : null}
       {response.results.length === 0 ? (
         <Text size="sm" c="dimmed">
-          没有找到音乐，请更换关键词、音乐源或登录 Cookie。
+          {t("music.results.noneFound")}
         </Text>
       ) : visibleResults.length === 0 ? (
         <Text size="sm" c="dimmed">
-          当前格式筛选没有匹配的结果，取消筛选即可查看全部。
+          {t("music.results.formatFilteredEmpty")}
         </Text>
       ) : (
         <Table highlightOnHover verticalSpacing={6}>
@@ -183,7 +187,7 @@ export function MusicSearchResults({
                       </Text>
                       {queued ? (
                         <Badge size="xs" variant="light" color="blue">
-                          已入队
+                          {t("music.results.queued")}
                         </Badge>
                       ) : null}
                     </Group>
@@ -205,7 +209,7 @@ export function MusicSearchResults({
                         color={result.lossless ? "teal" : "gray"}
                         style={{ textTransform: "none" }}
                       >
-                        {result.extension || result.codec || "未知格式"}
+                        {result.extension || result.codec || t("music.format.unknown")}
                         {result.bitrate ? ` · ${Math.round(result.bitrate / 1000)}k` : ""}
                       </Badge>
                     </Group>

@@ -2,6 +2,7 @@
 
 pub mod adapter;
 pub mod deps;
+pub mod language;
 pub mod process;
 pub mod query;
 pub mod redaction;

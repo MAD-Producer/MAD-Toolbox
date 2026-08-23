@@ -14,6 +14,7 @@ import {
 } from "./api";
 import { defaultMediaForm, type MediaFormState } from "./form";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
+import { t } from "../../locale";
 import {
   AUDIO_CODECS,
   CONTAINER_BY_OPERATION,
@@ -236,7 +237,7 @@ export function useMediaWorkspace({
     try {
       const files = await mediaScanInputs(paths, includeSubtitles);
       if (files.length === 0) {
-        notifications.show({ message: "没有找到可处理的媒体文件", color: "yellow" });
+        notifications.show({ message: t("media.noMediaFilesFound"), color: "yellow" });
         return;
       }
       reviseDraft();
@@ -305,7 +306,7 @@ export function useMediaWorkspace({
           data: { ...form, operation, input: "" }
         });
       }
-      notifications.show({ color: "green", message: "任务已加入队列" });
+      notifications.show({ color: "green", message: t("media.taskQueued") });
       if (draftRevisionRef.current === submittedRevision) onSubmitted?.();
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });

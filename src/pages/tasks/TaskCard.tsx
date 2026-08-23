@@ -41,20 +41,26 @@ import {
 import { useState } from "react";
 import type { TaskEnvelope, TaskStatus } from "../../contracts/types";
 import { isWindows } from "../../lib/platform";
+import { t, type TranslationKey } from "../../locale";
 import type { TaskLogLine } from "../../stores/tasks.reducer";
 import { exportTaskDiagnostics } from "./api";
 
 const STATUS_META: Record<
   TaskStatus,
-  { label: string; color: string; icon: TablerIcon; spinning?: boolean }
+  { labelKey: TranslationKey; color: string; icon: TablerIcon; spinning?: boolean }
 > = {
-  queued: { label: "排队中", color: "gray", icon: IconClock },
-  running: { label: "运行中", color: "orange", icon: IconLoader, spinning: true },
-  canceling: { label: "取消中", color: "orange", icon: IconLoader, spinning: true },
-  success: { label: "成功", color: "green", icon: IconCircleCheck },
-  failed: { label: "失败", color: "red", icon: IconCircleX },
-  canceled: { label: "已取消", color: "gray", icon: IconCancel },
-  interrupted: { label: "中断", color: "yellow", icon: IconLinkOff }
+  queued: { labelKey: "tasks.status.queued", color: "gray", icon: IconClock },
+  running: { labelKey: "tasks.status.running", color: "orange", icon: IconLoader, spinning: true },
+  canceling: {
+    labelKey: "tasks.status.canceling",
+    color: "orange",
+    icon: IconLoader,
+    spinning: true
+  },
+  success: { labelKey: "tasks.status.success", color: "green", icon: IconCircleCheck },
+  failed: { labelKey: "tasks.status.failed", color: "red", icon: IconCircleX },
+  canceled: { labelKey: "tasks.status.canceled", color: "gray", icon: IconCancel },
+  interrupted: { labelKey: "tasks.status.interrupted", color: "yellow", icon: IconLinkOff }
 };
 
 const FAILED_TAIL_LINES = 10;
@@ -115,13 +121,13 @@ export function TaskCard({
 
   const exportDiagnostics = async () => {
     const target = await saveDialog({
-      defaultPath: `MAD-诊断-${task.id.slice(0, 8)}.txt`,
-      filters: [{ name: "文本文件", extensions: ["txt"] }]
+      defaultPath: t("tasks.diagnostics.defaultFileName", { id: task.id.slice(0, 8) }),
+      filters: [{ name: t("tasks.diagnostics.textFileType"), extensions: ["txt"] }]
     });
     if (!target) return;
     try {
       await exportTaskDiagnostics(task.id, target);
-      notifications.show({ message: "诊断文件已导出", color: "teal" });
+      notifications.show({ message: t("tasks.diagnostics.exported"), color: "teal" });
     } catch (error) {
       notifications.show({ message: String(error), color: "red" });
     }
@@ -129,29 +135,33 @@ export function TaskCard({
 
   // 打开失败（权限/文件缺失）必须有可见反馈，否则按钮形似无响应
   const notifyOpenError = (what: string) => (error: unknown) => {
-    notifications.show({ message: `无法打开${what}：${String(error)}`, color: "red" });
+    notifications.show({
+      message: t("tasks.openFailed", { what, error: String(error) }),
+      color: "red"
+    });
   };
 
   const openLogFile = () => {
     const path = task.logPath;
-    if (path) openPath(path).catch(notifyOpenError("日志文件"));
+    if (path) openPath(path).catch(notifyOpenError(t("tasks.logFile")));
   };
 
   const revealOutput = () => {
     const path = task.outputPaths[0];
     if (!path) {
-      if (task.workingDir) openPath(task.workingDir).catch(notifyOpenError("输出位置"));
+      if (task.workingDir)
+        openPath(task.workingDir).catch(notifyOpenError(t("tasks.outputLocation")));
       return;
     }
     if (task.feature === "media") {
       // 媒体任务输出的是具体文件，在所在目录中定位该文件
-      revealItemInDir(path).catch(notifyOpenError("输出位置"));
+      revealItemInDir(path).catch(notifyOpenError(t("tasks.outputLocation")));
       return;
     }
     // 下载类任务的输出路径是目录：补平台分隔符，让文件管理器直接进入目录内部
     const separator = isWindows ? "\\" : "/";
     const directory = path.endsWith("\\") || path.endsWith("/") ? path : path + separator;
-    openPath(directory).catch(notifyOpenError("输出位置"));
+    openPath(directory).catch(notifyOpenError(t("tasks.outputLocation")));
   };
 
   return (
@@ -179,7 +189,7 @@ export function TaskCard({
             <StatusIcon
               size={16}
               role="img"
-              aria-label={status.label}
+              aria-label={t(status.labelKey)}
               color={`var(--mantine-color-${status.color}-light-color)`}
               className={status.spinning ? "task-status-spinning" : undefined}
               style={{ flexShrink: 0 }}
@@ -191,7 +201,7 @@ export function TaskCard({
         </UnstyledButton>
         <Group gap={4} wrap="nowrap">
           {task.intent.type === "form" && onReuse && (
-            <Tooltip label="复用此配置">
+            <Tooltip label={t("tasks.action.reuse")}>
               <ActionIcon
                 variant="transparent"
                 color="gray"
@@ -203,7 +213,7 @@ export function TaskCard({
             </Tooltip>
           )}
           {cancellable && (
-            <Tooltip label="取消">
+            <Tooltip label={t("tasks.action.cancel")}>
               <ActionIcon
                 variant="transparent"
                 color="gray"
@@ -215,7 +225,7 @@ export function TaskCard({
             </Tooltip>
           )}
           {task.logPath && (
-            <Tooltip label="打开日志文件">
+            <Tooltip label={t("tasks.action.openLog")}>
               <ActionIcon
                 variant="transparent"
                 color="gray"
@@ -227,7 +237,7 @@ export function TaskCard({
             </Tooltip>
           )}
           {TERMINAL_STATUSES.has(task.status) && (
-            <Tooltip label="导出诊断文件（脱敏）">
+            <Tooltip label={t("tasks.action.exportDiagnostics")}>
               <ActionIcon
                 variant="transparent"
                 color="gray"
@@ -239,7 +249,7 @@ export function TaskCard({
             </Tooltip>
           )}
           {(task.outputPaths[0] || task.workingDir) && (
-            <Tooltip label="打开输出位置">
+            <Tooltip label={t("tasks.action.openOutput")}>
               <ActionIcon
                 variant="transparent"
                 color="gray"
@@ -251,7 +261,7 @@ export function TaskCard({
             </Tooltip>
           )}
           {TERMINAL_STATUSES.has(task.status) && (
-            <Tooltip label="删除任务">
+            <Tooltip label={t("tasks.action.delete")}>
               <ActionIcon
                 variant="transparent"
                 color="gray"
@@ -275,7 +285,7 @@ export function TaskCard({
             {task.tool} {task.argvRedacted.join(" ")}
           </Code>
           {task.status === "queued" && (
-            <Tooltip label="置顶（移到队首）">
+            <Tooltip label={t("tasks.action.promote")}>
               <ActionIcon variant="subtle" onClick={() => onPromote(task.id)}>
                 <IconArrowUp size={16} color="var(--mantine-color-dimmed)" />
               </ActionIcon>
@@ -284,10 +294,12 @@ export function TaskCard({
           {task.status === "interrupted" && onRerun && (
             <Group gap="xs">
               <Text size="xs" c="dimmed">
-                {task.startedAt ? "上次会话中被中断" : "排队中未执行"}
+                {task.startedAt
+                  ? t("tasks.interruptedAfterStart")
+                  : t("tasks.interruptedBeforeStart")}
               </Text>
               <Button size="compact-xs" variant="light" onClick={() => onRerun(task)}>
-                再次运行
+                {t("tasks.action.rerun")}
               </Button>
             </Group>
           )}

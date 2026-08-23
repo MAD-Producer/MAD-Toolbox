@@ -1,6 +1,6 @@
 # Windows x64 build
 
-MAD Toolbox 0.11.0 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
+MAD Toolbox 1.0.0 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
 processors (`x86_64-pc-windows-msvc`). ARM64 and 32-bit x86 installers are not
 currently produced.
 

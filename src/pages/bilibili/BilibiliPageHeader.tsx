@@ -1,6 +1,7 @@
 import { Button, Group, Title } from "@mantine/core";
 import { IconCircleCheck, IconPlayerPlay, IconQrcode } from "@tabler/icons-react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
+import { t } from "../../locale";
 
 interface BilibiliPageHeaderProps {
   loginPhase: "idle" | "starting" | "running";
@@ -26,7 +27,7 @@ export function BilibiliPageHeader({
   return (
     <Group justify="space-between" wrap="nowrap">
       <Group gap="xs" wrap="nowrap">
-        <Title order={3}>哔哩哔哩下载</Title>
+        <Title order={3}>{t("bilibili.title")}</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
       </Group>
       <Group gap="xs" wrap="nowrap">
@@ -36,7 +37,7 @@ export function BilibiliPageHeader({
           disabled={submitDisabled}
           onClick={onSubmit}
         >
-          添加到任务队列
+          {t("bilibili.actions.addToQueue")}
         </Button>
         {loggedIn ? (
           <Button
@@ -45,7 +46,7 @@ export function BilibiliPageHeader({
             leftSection={<IconCircleCheck size={16} />}
             disabled
           >
-            已登录
+            {t("bilibili.login.signedIn")}
           </Button>
         ) : (
           <Button
@@ -55,7 +56,9 @@ export function BilibiliPageHeader({
             disabled={loginPhase !== "idle"}
             onClick={onBeginLogin}
           >
-            {loginPhase === "running" ? "等待扫码" : "扫码登录"}
+            {loginPhase === "running"
+              ? t("bilibili.login.waitingScan")
+              : t("bilibili.login.qrLogin")}
           </Button>
         )}
       </Group>

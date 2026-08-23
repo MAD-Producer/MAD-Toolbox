@@ -9,6 +9,8 @@ export interface AppSettings {
   defaultOutputDirectory: string | null;
   dependencyPreference: "bundled" | "system";
   proxy: string | null;
+  /** 界面与后端消息语言；auto = 跟随系统（zh 系 → 中文，其余 → 英文） */
+  language: "auto" | "zh" | "en";
 }
 
 export interface UpdateCheck {

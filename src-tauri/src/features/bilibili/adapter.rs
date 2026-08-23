@@ -21,9 +21,27 @@ pub enum AdapterError {
 impl std::fmt::Display for AdapterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AdapterError::MissingUrl => write!(f, "请填写视频地址"),
-            AdapterError::InvalidIntent(e) => write!(f, "表单数据无效: {e}"),
-            AdapterError::EmptyArgv => write!(f, "命令不能为空"),
+            AdapterError::MissingUrl => {
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.bilibili.adapter.missing_url")
+                )
+            }
+            AdapterError::InvalidIntent(e) => {
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.bilibili.adapter.invalid_intent", e = e)
+                )
+            }
+            AdapterError::EmptyArgv => {
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.bilibili.adapter.empty_argv")
+                )
+            }
         }
     }
 }
@@ -152,10 +170,11 @@ fn plan_manual(argv: &[String]) -> Result<AdapterPlan, AdapterError> {
     let argv_redacted = redact_argv(&argv);
     Ok(AdapterPlan {
         tool: "bbdown",
-        title: format!(
-            "BBDown 手动命令 {}",
-            argv.first().map(String::as_str).unwrap_or("")
-        ),
+        title: rust_i18n::t!(
+            "backend.bilibili.adapter.manual_title",
+            command = argv.first().map(String::as_str).unwrap_or("")
+        )
+        .to_string(),
         argv,
         argv_redacted,
         pool: Pool::Download,
@@ -176,15 +195,51 @@ fn known_output_dir(directory: &str) -> Vec<String> {
 
 fn title_for(mode: Mode, url: &str) -> String {
     let verb = match mode {
-        Mode::Video => "下载",
-        Mode::VideoOnly => "下载视频轨",
-        Mode::Audio => "下载音频",
-        Mode::Cover => "下载封面",
-        Mode::Subtitle => "下载字幕",
-        Mode::Danmaku => "下载弹幕",
-        Mode::Info => "解析信息",
+        Mode::Video => rust_i18n::t!("backend.bilibili.adapter.title_video"),
+        Mode::VideoOnly => rust_i18n::t!("backend.bilibili.adapter.title_video_track"),
+        Mode::Audio => rust_i18n::t!("backend.bilibili.adapter.title_audio"),
+        Mode::Cover => rust_i18n::t!("backend.bilibili.adapter.title_cover"),
+        Mode::Subtitle => rust_i18n::t!("backend.bilibili.adapter.title_subtitle"),
+        Mode::Danmaku => rust_i18n::t!("backend.bilibili.adapter.title_danmaku"),
+        Mode::Info => rust_i18n::t!("backend.bilibili.adapter.title_info"),
     };
-    format!("{verb} {url}")
+    match bilibili_id(url) {
+        Some(id) => format!("{verb} {id}"),
+        None => format!("{verb} {url}"),
+    }
+}
+
+/// 解析地址中的 BV/av/au/ss/ep 号：逐段检查路径（…/video/BV1xx、…/bangumi/play/ss1），
+/// 裸输入（BV1xx）与路径段同构；b23.tv 短链需网络请求才能展开，保持原样交给标题兜底。
+fn bilibili_id(url: &str) -> Option<String> {
+    let path = url
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .split(['?', '#'])
+        .next()
+        .unwrap_or_default();
+    path.split('/')
+        .find_map(|segment| canonical_id(segment.trim()))
+}
+
+/// 合法 ID 形态：BV + 10 位字母数字（统一规范成大写 BV），或 av/au/ss/ep 前缀 + 数字。
+fn canonical_id(token: &str) -> Option<String> {
+    let bytes = token.as_bytes();
+    if bytes.len() == 12
+        && bytes[..2].eq_ignore_ascii_case(b"bv")
+        && bytes[2..].iter().all(|b| b.is_ascii_alphanumeric())
+    {
+        return Some(format!("BV{}", &token[2..]));
+    }
+    ["av", "au", "ss", "ep"]
+        .into_iter()
+        .find_map(|prefix| match token.strip_prefix(prefix) {
+            Some(digits) if !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()) => {
+                Some(token.to_string())
+            }
+            _ => None,
+        })
 }
 
 /// 落库前的意图脱敏（§4.5 的推论，实现期发现的设计洞）：

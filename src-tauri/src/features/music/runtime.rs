@@ -19,7 +19,7 @@ pub(crate) fn adapter_path(app: &AppHandle) -> Result<PathBuf, String> {
     candidates
         .into_iter()
         .find(|path| path.is_file())
-        .ok_or_else(|| "找不到 MAD Toolbox musicdl 适配器".to_string())
+        .ok_or_else(|| rust_i18n::t!("backend.music.adapterNotFound").to_string())
 }
 
 pub(crate) fn sessions_dir(app: &AppHandle) -> Result<PathBuf, String> {

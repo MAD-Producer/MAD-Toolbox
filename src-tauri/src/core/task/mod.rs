@@ -492,7 +492,10 @@ impl HubState {
             Err(err) => {
                 // spawn 失败即失败终态，不占用池
                 if let Some(w) = writer.as_mut() {
-                    w.write_line(LogStream::System, &format!("启动失败: {err}"));
+                    w.write_line(
+                        LogStream::System,
+                        &rust_i18n::t!("backend.task.startFailed", error = err),
+                    );
                 }
                 envelope.status = TaskStatus::Failed;
                 envelope.finished_at = Some(Utc::now());
@@ -500,7 +503,7 @@ impl HubState {
                 self.sink.emit(&TaskEvent::Log {
                     task_id: id.to_string(),
                     stream: LogStream::System,
-                    line: format!("启动失败: {err}"),
+                    line: rust_i18n::t!("backend.task.startFailed", error = err).to_string(),
                     seq,
                 });
                 self.persist_and_emit(envelope);
@@ -654,7 +657,8 @@ impl HubState {
                             run.retried = true;
                             run.signals.clear();
                             run.killer = killer;
-                            let note = format!("重试：{}", retry.note);
+                            let note = rust_i18n::t!("backend.task.retryNote", note = retry.note)
+                                .to_string();
                             if let Some(w) = run.writer.as_mut() {
                                 w.write_line(LogStream::System, &note);
                                 w.write_line(
@@ -694,7 +698,11 @@ impl HubState {
         if let Some(w) = run.writer.as_mut() {
             w.write_line(
                 LogStream::System,
-                &format!("进程退出（退出码 {code:?}）→ {}", status_label(next)),
+                &rust_i18n::t!(
+                    "backend.task.processExited",
+                    code = format!("{code:?}"),
+                    status = status_label(next)
+                ),
             );
         }
         self.persist_and_emit(envelope);

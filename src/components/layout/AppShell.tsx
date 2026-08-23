@@ -3,6 +3,7 @@ import { IconArrowLeft, IconSettings } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { L1NavigationItem, L2NavigationItem } from "../../app/navigation";
 import type { AppRoute } from "../../app/route";
+import { t } from "../../locale";
 import { AppBrand } from "./AppBrand";
 import { LeftNavigation } from "./LeftNavigation";
 import { TopNavigation } from "./TopNavigation";
@@ -36,7 +37,7 @@ function HeaderSettingsButton({
   status?: NavigationStatus;
   onNavigate: (section: AppSection) => void;
 }) {
-  const label = "设置";
+  const label = t("shell.settings");
   return (
     <Tooltip
       label={status ? `${label} · ${status.label}` : label}
@@ -107,12 +108,12 @@ export function AppShell({
               variant="default"
               radius="md"
               size="lg"
-              aria-label="返回主界面"
+              aria-label={t("shell.backToMain")}
               onClick={onBackFromSettings}
             >
               <IconArrowLeft size={20} stroke={1.7} />
             </ActionIcon>
-            <Title order={3}>设置</Title>
+            <Title order={3}>{t("shell.settings")}</Title>
           </Group>
         ) : (
           <Box

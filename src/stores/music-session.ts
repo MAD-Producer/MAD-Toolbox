@@ -2,6 +2,7 @@ import { notifications } from "../lib/notifications";
 import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import type { JobState, RunResult } from "../contracts/job";
+import { t } from "../locale";
 import {
   musicdlSearch,
   musicdlSearchCancel,
@@ -132,7 +133,7 @@ export const useMusicSessionStore = create<MusicSessionStore>((set, get) => {
       if (startPromise) return startPromise;
       const current = get();
       if (current.phase !== "idle" && current.phase !== "ready") {
-        return Promise.reject(new Error("已有 musicdl 搜索正在进行"));
+        return Promise.reject(new Error(t("music.sessionBusy")));
       }
 
       const previousSessionId = current.response?.sessionId ?? null;
@@ -149,7 +150,7 @@ export const useMusicSessionStore = create<MusicSessionStore>((set, get) => {
             void musicdlSessionRelease(previousSessionId).catch((error) =>
               notifications.show({
                 color: "red",
-                message: `旧搜索会话清理失败：${errorMessage(error)}`
+                message: t("music.sessionCleanupFailed", { message: errorMessage(error) })
               })
             );
           }

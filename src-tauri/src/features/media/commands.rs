@@ -97,7 +97,7 @@ pub async fn media_submit(
         let ctx = media_ctx(&app).await;
         let plan = adapter::plan(&intent, &ctx).map_err(|e| e.to_string())?;
         let (tool_path, _) = resolve_tool(&app, &ToolName::Ffmpeg)
-            .ok_or_else(|| "未找到 FFmpeg，请先在依赖页安装".to_string())?;
+            .ok_or_else(|| rust_i18n::t!("backend.media.commands.ffmpegMissing").to_string())?;
         let id = hub.submit(ffmpeg_spec(plan, tool_path, intent.clone()));
         return Ok(BatchSubmitResult { task_ids: vec![id] });
     };
@@ -108,7 +108,7 @@ pub async fn media_submit(
         .is_some_and(|op| op == "subtitle-extract");
     let expanded = query::expand_media_inputs(inputs, Some(include_subtitles))?;
     if expanded.is_empty() {
-        return Err("没有可处理的媒体文件".into());
+        return Err(rust_i18n::t!("backend.media.commands.noMediaFiles").to_string());
     }
 
     // 指定了输出目录时先建目录：ffmpeg 不会自建，默认目录也可能尚未落盘
@@ -123,7 +123,7 @@ pub async fn media_submit(
 
     let ctx = media_ctx(&app).await;
     let (tool_path, _) = resolve_tool(&app, &ToolName::Ffmpeg)
-        .ok_or_else(|| "未找到 FFmpeg，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.media.commands.ffmpegMissing").to_string())?;
 
     // 先为全部文件完成 plan，确保第一个任务入队后不再有可失败的准备步骤。
     let specs = expanded
@@ -152,9 +152,9 @@ pub async fn media_pr_submit(
     output_directory: Option<String>,
 ) -> Result<BatchSubmitResult, String> {
     let (tool_path, _) = resolve_tool(&app, &ToolName::Ffmpeg)
-        .ok_or_else(|| "未找到 FFmpeg，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.media.commands.ffmpegMissing").to_string())?;
     let (ffprobe, _) = resolve_tool(&app, &ToolName::Ffprobe)
-        .ok_or_else(|| "未找到 ffprobe，请先在依赖页安装".to_string())?;
+        .ok_or_else(|| rust_i18n::t!("backend.media.commands.ffprobeMissing").to_string())?;
 
     let mut expanded = Vec::new();
     for input in inputs {
@@ -164,13 +164,13 @@ pub async fn media_pr_submit(
         } else if input_path.is_file() {
             expanded.push(input_path);
         } else {
-            return Err("输入文件或目录不存在".into());
+            return Err(rust_i18n::t!("backend.media.commands.inputMissing").to_string());
         }
     }
     expanded.sort();
     expanded.dedup();
     if expanded.is_empty() {
-        return Err("没有可处理的媒体文件".into());
+        return Err(rust_i18n::t!("backend.media.commands.noMediaFiles").to_string());
     }
 
     // 探测与 plan 全部完成后再准备目录；任一步失败都不会产生部分入队。

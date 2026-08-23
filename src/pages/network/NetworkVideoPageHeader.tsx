@@ -2,6 +2,7 @@ import { Button, Group, Title } from "@mantine/core";
 import { IconInfoCircle, IconListDetails, IconPlayerPlay } from "@tabler/icons-react";
 import type { ProbeKind } from "./api";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
+import { t } from "../../locale";
 
 interface NetworkVideoPageHeaderProps {
   probing: ProbeKind | null;
@@ -27,7 +28,7 @@ export function NetworkVideoPageHeader({
   return (
     <Group justify="space-between" wrap="nowrap">
       <Group gap="xs" wrap="nowrap">
-        <Title order={3}>网络视频下载</Title>
+        <Title order={3}>{t("network.title")}</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
       </Group>
       <Group gap="xs" wrap="nowrap">
@@ -37,7 +38,7 @@ export function NetworkVideoPageHeader({
           disabled={submitDisabled}
           onClick={onSubmit}
         >
-          添加到任务队列
+          {t("network.submit")}
         </Button>
         <Button
           variant="default"
@@ -46,7 +47,7 @@ export function NetworkVideoPageHeader({
           disabled={probeDisabled}
           onClick={() => void onProbe("formats")}
         >
-          查看格式
+          {t("network.probe.formatsButton")}
         </Button>
         <Button
           variant="default"
@@ -55,7 +56,7 @@ export function NetworkVideoPageHeader({
           disabled={probeDisabled}
           onClick={() => void onProbe("metadata")}
         >
-          查看元数据
+          {t("network.probe.metadataButton")}
         </Button>
       </Group>
     </Group>

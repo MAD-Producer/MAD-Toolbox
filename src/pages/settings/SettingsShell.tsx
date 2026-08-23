@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { SETTINGS_L2_NAVIGATION } from "../../app/navigation";
 import type { SettingsPageId } from "../../app/route";
 import { L2TabNav } from "../../components/common/L2TabNav";
+import { t } from "../../locale";
 
 interface SettingsShellProps {
   page: SettingsPageId;
@@ -25,7 +26,10 @@ export function SettingsShell({
   return (
     <Stack gap="lg" p="md">
       <L2TabNav
-        items={SETTINGS_L2_NAVIGATION}
+        items={SETTINGS_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
+          page: id,
+          label: t(labelKey)
+        }))}
         value={page}
         onChange={onNavigatePage}
         badges={
@@ -33,7 +37,7 @@ export function SettingsShell({
             ? { dependencies: missingDependencies }
             : undefined
         }
-        aria-label="选择设置分区"
+        aria-label={t("settings.shell.sectionAria")}
       />
       {children}
     </Stack>

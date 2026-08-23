@@ -1,7 +1,7 @@
 {
   "name": "mad-toolbox",
   "private": true,
-  "version": "0.11.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "tauri:build:lite": "node scripts/build/build.js --edition lite",
     "tauri:build:full": "node scripts/build/build.js --edition full",
     "check": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "i18n:check": "node scripts/i18n/check.mjs",
     "format": "prettier --write . --ignore-unknown",
     "format:check": "prettier --check . --ignore-unknown",
     "version:bump": "node scripts/version/bump.js",
@@ -27,6 +28,7 @@
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-opener": "^2.0.0",
     "embla-carousel-react": "^8.6.0",
+    "i18next": "^26.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.15"

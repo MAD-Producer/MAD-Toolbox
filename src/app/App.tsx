@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useMantineColorScheme } from "@mantine/core";
 import { notifications } from "../lib/notifications";
 import { useBackend } from "../hooks/useBackend";
 import { useTasksStore } from "../stores/tasks";
 import type { ToolName } from "../contracts/dependency";
 import type { TaskEnvelope, TaskSeed } from "../contracts/types";
-import { syncNativeWindowTheme } from "./api";
+import { setAppLanguage, syncNativeWindowTheme } from "./api";
 import { AppShell } from "../components/layout/AppShell";
 import { SplashScreen } from "../components/layout/SplashScreen";
 import {
@@ -31,6 +31,14 @@ import { useWorkspacesStore, type WorkspaceId } from "../stores/workspaces";
 import { musicdlDownload, musicdlPlaylist, type MusicdlPlaylistRequest } from "../pages/music/api";
 import type { MusicFormState } from "../pages/music/configuration";
 import { L1_NAVIGATION } from "./navigation";
+import {
+  currentLanguage,
+  onLanguageChanged,
+  resolveChoice,
+  setLanguageChoice,
+  t,
+  type LanguageChoice
+} from "../locale";
 import {
   DEFAULT_APP_ROUTE,
   routeForTask,
@@ -64,6 +72,7 @@ export default function App() {
   const [taskSeed, setTaskSeed] = useState<TaskSeed | null>(null);
   const [booted, setBooted] = useState(false);
   const [tipsOpened, setTipsOpened] = useState(false);
+  const [lang, setLang] = useState(currentLanguage());
   const backend = useBackend();
   const initTasksStore = useTasksStore((s) => s.init);
   const activeTaskCount = useTasksStore(
@@ -102,6 +111,13 @@ export default function App() {
     if (!isStartupTipsDismissedToday()) setTipsOpened(true);
   }, []);
 
+  useEffect(() => onLanguageChanged(() => setLang(currentLanguage())), []);
+
+  useEffect(() => {
+    const backendChoice: LanguageChoice = backend.settings.language ?? "auto";
+    if (resolveChoice(backendChoice) !== currentLanguage()) setLanguageChoice(backendChoice);
+  }, [backend.settings.language]);
+
   const distributionMode =
     backend.dependencies.some((item) => item.required) &&
     backend.dependencies.every((item) => !item.required || item.bundledAvailable)
@@ -133,10 +149,11 @@ export default function App() {
     if (missing.length === 0) return;
     notifications.show({
       color: "yellow",
-      title: "依赖未就绪",
-      message: `检测到 ${missing.length} 个必要依赖缺失：${missing
-        .map((item) => item.label)
-        .join("、")}。请前往 设置 → 依赖 安装。`
+      title: t("app.dependenciesMissingTitle"),
+      message: t("app.dependenciesMissingBody", {
+        count: missing.length,
+        names: missing.map((item) => item.label)
+      })
     });
   }, [backend.loadingDependencies, backend.dependencies, dependenciesReady]);
 
@@ -145,6 +162,14 @@ export default function App() {
       color: "red",
       message: error instanceof Error ? error.message : String(error)
     });
+  };
+
+  // 语言切换（设置页）：乐观更新 UI 并持久化到后端，后端随即同步其消息语言
+  const changeLanguage = (choice: LanguageChoice) => {
+    setLanguageChoice(choice);
+    void setAppLanguage(choice)
+      .then(() => backend.refreshSettings())
+      .catch(showError);
   };
 
   const downloadMusic = async (
@@ -203,7 +228,7 @@ export default function App() {
       if (
         session.mounted &&
         session.phase === "retained" &&
-        !window.confirm("目标页面有尚未释放的配置。放弃当前配置并载入这个任务吗？")
+        !window.confirm(t("app.confirmDiscardDraft"))
       ) {
         return;
       }
@@ -231,7 +256,11 @@ export default function App() {
         missingDependencies={missingDependencyCount}
       >
         {route.page === "general" ? (
-          <GeneralSettingsPage settings={backend.settings} onSave={backend.saveSettings} />
+          <GeneralSettingsPage
+            settings={backend.settings}
+            onSave={backend.saveSettings}
+            onSetLanguage={changeLanguage}
+          />
         ) : route.page === "dependencies" ? (
           <DependenciesSettingsPage
             settings={backend.settings}
@@ -323,7 +352,7 @@ export default function App() {
   if (!booted) return <SplashScreen />;
 
   return (
-    <>
+    <Fragment key={lang}>
       <AppShell
         route={route}
         primaryItems={L1_NAVIGATION}
@@ -336,7 +365,7 @@ export default function App() {
             ? {
                 tasks: {
                   count: activeTaskCount,
-                  label: `${activeTaskCount} 个活动任务`,
+                  label: t("app.activeTasksLabel", { count: activeTaskCount }),
                   color: "blue"
                 }
               }
@@ -345,7 +374,7 @@ export default function App() {
             ? {
                 settings: {
                   count: missingDependencyCount,
-                  label: `${missingDependencyCount} 个必要依赖未就绪`,
+                  label: t("app.missingDepsLabel", { count: missingDependencyCount }),
                   color: "yellow"
                 }
               }
@@ -361,6 +390,6 @@ export default function App() {
         ) : null}
       </AppShell>
       <StartupTipsModal opened={tipsOpened} onClose={() => setTipsOpened(false)} />
-    </>
+    </Fragment>
   );
 }

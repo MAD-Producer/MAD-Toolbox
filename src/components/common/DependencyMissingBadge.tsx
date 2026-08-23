@@ -1,4 +1,5 @@
 import { Badge, Tooltip } from "@mantine/core";
+import { t } from "../../locale";
 
 interface DependencyMissingBadgeProps {
   labels?: string[];
@@ -10,12 +11,12 @@ export function DependencyMissingBadge({ labels, onOpen }: DependencyMissingBadg
   if (!labels?.length || !onOpen) return null;
   return (
     <Tooltip
-      label="点击前往 设置 → 依赖"
+      label={t("deps.badgeTooltip")}
       position="bottom"
       events={{ hover: true, focus: true, touch: true }}
     >
       <Badge variant="outline" color="red" size="lg" style={{ cursor: "pointer" }} onClick={onOpen}>
-        {labels.join("、")}依赖缺失
+        {t("deps.missingBadge", { names: labels })}
       </Badge>
     </Tooltip>
   );

@@ -19,7 +19,8 @@ export function useBackend() {
   const [settings, setSettings] = useState<AppSettings>({
     defaultOutputDirectory: null,
     dependencyPreference: "bundled",
-    proxy: null
+    proxy: null,
+    language: "auto"
   });
 
   const refreshDependencies = useCallback(async () => {
@@ -67,6 +68,7 @@ export function useBackend() {
     loadingDependencies,
     settings,
     saveSettings,
+    refreshSettings,
     refreshDependencies
   };
 }

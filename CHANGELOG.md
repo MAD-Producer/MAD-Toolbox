@@ -4,9 +4,11 @@ All notable changes to MAD Toolbox are documented here.
 
 ## 1.0.0
 
-- feat: A new appearance in "Settings->About" page
 - feat: 增加了音乐下载的“自动去杂”功能，能够对部分假无损音乐进行降频处理，减小文件体积
 - feat: 任务卡片增加“复用此配置”选项，可以快捷复用任务配置。同时移除了模板功能
+- feat：完成i18n，支持简中和英文两种语言
+- feat: 下载任务卡片显示更加简洁，对于B站和YouTube，会直接显示视频唯一标识 id
+- feat: 关于页面焕然一新！
 - fix: 修复了输入参数时命令预览的高度抖动问题
 
 ## 0.10.1

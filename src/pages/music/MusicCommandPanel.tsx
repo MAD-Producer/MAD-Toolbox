@@ -1,4 +1,5 @@
 import { Code, Divider, Stack, Text } from "@mantine/core";
+import { t } from "../../locale";
 import type { MusicSessionPhase } from "../../stores/music-session";
 
 interface MusicCommandPanelProps {
@@ -22,10 +23,10 @@ export function MusicCommandPanel({
   return (
     <Stack gap="xs">
       <Text size="sm" fw={500}>
-        等效命令预览
+        {t("music.preview.title")}
       </Text>
       <Text size="xs" c="dimmed">
-        实际执行由 musicdl 适配器接管；这里仅展示当前配置对应的等效命令。
+        {t("music.preview.hint")}
       </Text>
       {previewError ? (
         <Text size="sm" c="red">
@@ -39,10 +40,10 @@ export function MusicCommandPanel({
       {searchInProgress && (
         <Text size="sm" c="dimmed">
           {sessionPhase === "starting"
-            ? "正在启动新搜索；旧结果会保留到后端确认新会话。"
+            ? t("music.preview.starting")
             : sessionPhase === "canceling"
-              ? "正在停止搜索……"
-              : `正在通过 ${sourceCount} 个音乐源搜索……结果将陆续显示。`}
+              ? t("music.preview.canceling")
+              : t("music.preview.searching", { count: sourceCount })}
         </Text>
       )}
       {withDivider && <Divider my={4} />}
