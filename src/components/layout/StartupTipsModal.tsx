@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { EmblaCarouselType } from "embla-carousel";
 import { Carousel } from "@mantine/carousel";
-import { ActionIcon, Button, Group, Modal, Stack, Text, ThemeIcon } from "@mantine/core";
+import { ActionIcon, Button, Group, Modal, ScrollArea, Stack, Text, ThemeIcon } from "@mantine/core";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -63,7 +63,6 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
       title={t("startup.title")}
       size={560}
       centered
-      withCloseButton={false}
     >
       <Carousel
         slideSize="100%"
@@ -74,58 +73,64 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
         onSlideChange={setSlide}
       >
         <Carousel.Slide>
-          <Stack gap="sm" h="100%" justify="flex-start" pt="sm" px="xl">
-            <Group gap="xs">
-              <ThemeIcon variant="light" color="orange" size="lg">
-                <IconQrcode size={18} />
-              </ThemeIcon>
-              <Text fw={600}>{t("startup.bilibiliQuality.title")}</Text>
-            </Group>
-            <Text size="sm" c="dimmed">
-              {t("startup.bilibiliQuality.p1")}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {t("startup.bilibiliQuality.p2")}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {t("startup.bilibiliQuality.p3")}
-            </Text>
-          </Stack>
+          <ScrollArea h="100%" type="never">
+            <Stack gap="sm" pt="sm" px="xl">
+              <Group gap="xs">
+                <ThemeIcon variant="light" color="orange" size="lg">
+                  <IconQrcode size={18} />
+                </ThemeIcon>
+                <Text fw={600}>{t("startup.bilibiliQuality.title")}</Text>
+              </Group>
+              <Text size="sm" c="dimmed">
+                {t("startup.bilibiliQuality.p1")}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {t("startup.bilibiliQuality.p2")}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {t("startup.bilibiliQuality.p3")}
+              </Text>
+            </Stack>
+          </ScrollArea>
         </Carousel.Slide>
         <Carousel.Slide>
-          <Stack gap="sm" h="100%" justify="flex-start" pt="sm" px="xl">
-            <Group gap="xs">
-              <ThemeIcon variant="light" color="orange" size="lg">
-                <IconNetwork size={18} />
-              </ThemeIcon>
-              <Text fw={600}>{t("startup.proxy.title")}</Text>
-            </Group>
-            <Text size="sm" c="dimmed">
-              {t("startup.proxy.p1")}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {t("startup.proxy.p2")}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {t("startup.proxy.p3")}
-            </Text>
-          </Stack>
+          <ScrollArea h="100%" type="never">
+            <Stack gap="sm" pt="sm" px="xl">
+              <Group gap="xs">
+                <ThemeIcon variant="light" color="orange" size="lg">
+                  <IconNetwork size={18} />
+                </ThemeIcon>
+                <Text fw={600}>{t("startup.proxy.title")}</Text>
+              </Group>
+              <Text size="sm" c="dimmed">
+                {t("startup.proxy.p1")}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {t("startup.proxy.p2")}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {t("startup.proxy.p3")}
+              </Text>
+            </Stack>
+          </ScrollArea>
         </Carousel.Slide>
         <Carousel.Slide>
-          <Stack gap="sm" h="100%" justify="flex-start" pt="sm" px="xl">
-            <Group gap="xs">
-              <ThemeIcon variant="light" color="orange" size="lg">
-                <IconFileMusic size={18} />
-              </ThemeIcon>
-              <Text fw={600}>{t("startup.flac.title")}</Text>
-            </Group>
-            <Text size="sm" c="dimmed">
-              {t("startup.flac.p1")}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {t("startup.flac.p2")}
-            </Text>
-          </Stack>
+          <ScrollArea h="100%" type="never">
+            <Stack gap="sm" pt="sm" px="xl">
+              <Group gap="xs">
+                <ThemeIcon variant="light" color="orange" size="lg">
+                  <IconFileMusic size={18} />
+                </ThemeIcon>
+                <Text fw={600}>{t("startup.flac.title")}</Text>
+              </Group>
+              <Text size="sm" c="dimmed">
+                {t("startup.flac.p1")}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {t("startup.flac.p2")}
+              </Text>
+            </Stack>
+          </ScrollArea>
         </Carousel.Slide>
       </Carousel>
       {/* 底部控制行：左右圆角矩形翻页箭头分居两侧，「今日不再提醒」居中且仅末页可见。
