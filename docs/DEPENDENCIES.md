@@ -35,9 +35,12 @@ winget install --id MediaArea.MediaInfo -e
 winget install --id DenoLand.Deno -e
 ```
 
-MAD Toolbox searches the inherited `PATH`, WindowsApps, WinGet Links, Scoop and
-Chocolatey locations, pipx locations and user Python directories. Use Settings
-to choose whether bundled or system tools are preferred.
+MAD Toolbox searches the inherited `PATH`, the application directory,
+WindowsApps, WinGet Links and the supported packages under WinGet Packages,
+Scoop/Chocolatey shims, pipx locations, and the Python 3.13 location used by the
+in-app installer. It does not reread the registry `PATH` while running; restart
+the app to detect tools newly installed into other locations. Use Settings to
+choose whether bundled or system tools are preferred.
 
 The Windows Lite installer does not install WebView2. It uses the system
 WebView2 Runtime, which is normally present on Windows 10 22H2 and Windows 11;
@@ -73,8 +76,8 @@ installer to satisfy source and attribution obligations.
 Python and musicdl remain external in both modes:
 
 ```powershell
-winget install --id Python.Python.3.13 -e
-py -m pip install --user pipx
-py -m pipx ensurepath
-py -m pipx install musicdl
+winget install --id Python.Python.3.13 -e --scope user
+& "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" -m pip install --user pipx
+& "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" -m pipx ensurepath
+& "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" -m pipx install musicdl
 ```

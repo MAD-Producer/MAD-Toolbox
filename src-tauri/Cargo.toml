@@ -1,6 +1,6 @@
 [package]
 name = "mad-toolbox"
-version = "1.0.0"
+version = "1.0.1"
 description = "A GUI toolbox for BBDown, yt-dlp, FFmpeg and MediaInfo"
 authors = ["MAD Toolbox Contributors"]
 license = "MIT"
@@ -36,7 +36,6 @@ windows-sys = { version = "0.59", features = [
   "Win32_Foundation",
   "Win32_Security",
   "Win32_System_JobObjects",
-  "Win32_System_Registry",
   "Win32_System_Threading",
 ] }
 

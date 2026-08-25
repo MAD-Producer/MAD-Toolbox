@@ -111,10 +111,10 @@ impl ToolName {
                     "winget install --id DenoLand.Deno -e --accept-package-agreements --accept-source-agreements",
                 ),
                 Self::Python => Some(
-                    "winget install --id Python.Python.3.13 -e --accept-package-agreements --accept-source-agreements",
+                    "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements",
                 ),
                 Self::Musicdl => Some(
-                    "winget install --id Python.Python.3.13 -e --accept-package-agreements --accept-source-agreements && py -m pip install --user --upgrade pipx && py -m pipx ensurepath && py -m pipx install musicdl",
+                    r#"winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements && "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" -m pip install --user --upgrade pipx && "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" -m pipx ensurepath && "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" -m pipx install musicdl"#,
                 ),
                 _ => None,
             }
@@ -150,6 +150,73 @@ pub(crate) struct DependencyStatus {
     install_hint: Option<String>,
 }
 
+#[cfg(target_os = "windows")]
+fn find_executable_directory(
+    directory: &Path,
+    executable: &str,
+    remaining_depth: usize,
+) -> Option<PathBuf> {
+    if directory.join(executable).is_file() {
+        return Some(directory.to_path_buf());
+    }
+    if remaining_depth == 0 {
+        return None;
+    }
+    std::fs::read_dir(directory)
+        .ok()?
+        .flatten()
+        .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_dir()))
+        .find_map(|entry| find_executable_directory(&entry.path(), executable, remaining_depth - 1))
+}
+
+#[cfg(target_os = "windows")]
+fn winget_package_paths(packages_root: &Path) -> Vec<PathBuf> {
+    // Portable packages do not always create WinGet Links. Rescan only the
+    // packages this app installs so a completed install is visible immediately.
+    const MAX_DEPTH: usize = 3;
+    const PACKAGES: [(&str, &str); 4] = [
+        ("Gyan.FFmpeg_", "ffmpeg.exe"),
+        ("yt-dlp.yt-dlp_", "yt-dlp.exe"),
+        ("MediaArea.MediaInfo_", "mediainfo.exe"),
+        ("DenoLand.Deno_", "deno.exe"),
+    ];
+
+    let Ok(entries) = std::fs::read_dir(packages_root) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_dir()))
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            PACKAGES
+                .iter()
+                .find(|(prefix, _)| {
+                    name.get(..prefix.len())
+                        .is_some_and(|name| name.eq_ignore_ascii_case(prefix))
+                })
+                .and_then(|(_, executable)| {
+                    find_executable_directory(&entry.path(), executable, MAX_DEPTH)
+                })
+        })
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn windows_local_paths(local: &Path) -> Vec<PathBuf> {
+    // The in-app Python installer is pinned to the user-scoped 3.13 package.
+    let python = local.join("Programs").join("Python").join("Python313");
+    let winget = local.join("Microsoft").join("WinGet");
+    let mut paths = vec![python.join("Scripts"), python, winget.join("Links")];
+    paths.extend(winget_package_paths(&winget.join("Packages")));
+    paths.extend([
+        local.join("pipx").join("bin"),
+        local.join("Microsoft").join("WindowsApps"),
+    ]);
+    paths
+}
+
 pub(crate) fn command_path() -> OsString {
     let inherited = env::var_os("PATH").unwrap_or_default();
     let mut paths = Vec::new();
@@ -173,33 +240,33 @@ pub(crate) fn command_path() -> OsString {
             paths.push(profile.join(".local").join("bin"));
             paths.push(profile.join("scoop").join("shims"));
         }
+        if let Some(pipx_bin) = env::var_os("PIPX_BIN_DIR") {
+            paths.push(PathBuf::from(pipx_bin));
+        }
+        if let Some(scoop) = env::var_os("SCOOP") {
+            paths.push(PathBuf::from(scoop).join("shims"));
+        }
         if let Some(local) = env::var_os("LOCALAPPDATA") {
             let local = PathBuf::from(local);
-            let python_root = local.join("Programs").join("Python");
-            paths.push(python_root.join("Scripts"));
-            if let Ok(entries) = std::fs::read_dir(&python_root) {
-                for entry in entries.flatten().filter(|entry| entry.path().is_dir()) {
-                    paths.push(entry.path());
-                    paths.push(entry.path().join("Scripts"));
-                }
-            }
-            paths.push(local.join("Microsoft").join("WinGet").join("Links"));
-            paths.push(local.join("pipx").join("bin"));
-            paths.push(local.join("Microsoft").join("WindowsApps"));
-        }
-        if let Some(app_data) = env::var_os("APPDATA") {
-            let python_root = PathBuf::from(app_data).join("Python");
-            if let Ok(entries) = std::fs::read_dir(python_root) {
-                for entry in entries.flatten() {
-                    paths.push(entry.path().join("Scripts"));
-                }
-            }
+            paths.extend(windows_local_paths(&local));
         }
         if let Some(program_data) = env::var_os("ProgramData") {
             paths.push(PathBuf::from(program_data).join("chocolatey").join("bin"));
         }
+        if let Some(chocolatey) = env::var_os("ChocolateyInstall") {
+            paths.push(PathBuf::from(chocolatey).join("bin"));
+        }
         if let Some(program_files) = env::var_os("ProgramFiles") {
-            paths.push(PathBuf::from(program_files).join("WinGet").join("Links"));
+            let winget = PathBuf::from(program_files).join("WinGet");
+            paths.push(winget.join("Links"));
+            paths.extend(winget_package_paths(&winget.join("Packages")));
+        }
+        if let Some(program_files_x86) = env::var_os("ProgramFiles(x86)") {
+            paths.extend(winget_package_paths(
+                &PathBuf::from(program_files_x86)
+                    .join("WinGet")
+                    .join("Packages"),
+            ));
         }
     }
     #[cfg(not(target_os = "windows"))]
@@ -212,70 +279,7 @@ pub(crate) fn command_path() -> OsString {
         }
     }
     paths.extend(env::split_paths(&inherited));
-    #[cfg(target_os = "windows")]
-    {
-        use windows_sys::Win32::System::Registry::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
-        if let Some(user) = registry_path(HKEY_CURRENT_USER, "Environment") {
-            paths.extend(env::split_paths(&user));
-        }
-        if let Some(machine) = registry_path(
-            HKEY_LOCAL_MACHINE,
-            r"System\CurrentControlSet\Control\Session Manager\Environment",
-        ) {
-            paths.extend(env::split_paths(&machine));
-        }
-    }
     env::join_paths(paths).unwrap_or(inherited)
-}
-
-#[cfg(target_os = "windows")]
-fn registry_path(
-    root: windows_sys::Win32::System::Registry::HKEY,
-    sub_key: &str,
-) -> Option<OsString> {
-    use std::os::windows::ffi::OsStringExt;
-    use windows_sys::Win32::Foundation::ERROR_SUCCESS;
-    use windows_sys::Win32::System::Registry::{RegGetValueW, RRF_RT_REG_EXPAND_SZ, RRF_RT_REG_SZ};
-
-    fn wide(text: &str) -> Vec<u16> {
-        text.encode_utf16().chain(std::iter::once(0)).collect()
-    }
-
-    let sub_key = wide(sub_key);
-    let value = wide("PATH");
-    unsafe {
-        let mut size = 0u32;
-        if RegGetValueW(
-            root,
-            sub_key.as_ptr(),
-            value.as_ptr(),
-            RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ,
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-            &mut size,
-        ) != ERROR_SUCCESS
-            || size < 2
-        {
-            return None;
-        }
-        let mut buffer = vec![0u16; size as usize / 2];
-        if RegGetValueW(
-            root,
-            sub_key.as_ptr(),
-            value.as_ptr(),
-            RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ,
-            std::ptr::null_mut(),
-            buffer.as_mut_ptr().cast(),
-            &mut size,
-        ) != ERROR_SUCCESS
-        {
-            return None;
-        }
-        while buffer.last() == Some(&0) {
-            buffer.pop();
-        }
-        Some(OsString::from_wide(&buffer))
-    }
 }
 
 fn executable_filename(name: &str) -> String {
@@ -497,8 +501,18 @@ pub(crate) fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
         );
     }
     if let Some(local) = env::var_os("LOCALAPPDATA") {
+        let local = PathBuf::from(local);
         candidates.push(
-            PathBuf::from(local)
+            local
+                .join("pipx")
+                .join("pipx")
+                .join("venvs")
+                .join("musicdl")
+                .join("Scripts")
+                .join("python.exe"),
+        );
+        candidates.push(
+            local
                 .join("pipx")
                 .join("venvs")
                 .join("musicdl")
@@ -638,7 +652,7 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
                             .into()
                     }),
                     ToolName::Python => Some(if cfg!(target_os = "windows") {
-                        "winget install --id Python.Python.3.13 -e --accept-package-agreements --accept-source-agreements".into()
+                        "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements".into()
                     } else {
                         "brew install python".into()
                     }),
@@ -773,32 +787,34 @@ pub(crate) async fn ffmpeg_encoders(app: AppHandle) -> Result<Vec<String>, Strin
 
 #[cfg(all(test, target_os = "windows"))]
 mod tests {
+    use std::os::windows::ffi::OsStringExt;
+
     use super::*;
 
-    #[test]
-    fn machine_registry_path_contains_windows_dir() {
-        let path = registry_path(
-            windows_sys::Win32::System::Registry::HKEY_LOCAL_MACHINE,
-            r"System\CurrentControlSet\Control\Session Manager\Environment",
-        )
-        .expect("读取机器级注册表 PATH 失败");
-        let directories: Vec<String> = env::split_paths(&path)
-            .map(|directory| directory.to_string_lossy().to_ascii_lowercase())
-            .collect();
-        assert!(
-            directories
-                .iter()
-                .any(|directory| directory.contains("windows")),
-            "机器级 PATH 未包含 Windows 系统目录：{directories:?}"
-        );
+    fn command_processor() -> PathBuf {
+        env::var_os("ComSpec")
+            .map(PathBuf::from)
+            .or_else(|| {
+                env::var_os("SystemRoot")
+                    .map(|root| PathBuf::from(root).join("System32").join("cmd.exe"))
+            })
+            .expect("无法定位 cmd.exe")
     }
 
     #[test]
-    fn command_path_merges_registry_entries() {
-        let merged = command_path().to_string_lossy().to_ascii_lowercase();
-        assert!(
-            merged.contains(r"winget\links"),
-            "合并后的搜索路径未包含 WinGet Links 目录：{merged}"
-        );
+    fn embedded_nul_path_reproduces_spawn_failure() {
+        let mut buffer = r"C:\Tools".encode_utf16().collect::<Vec<_>>();
+        buffer.push(0);
+        buffer.extend(r"ignored-after-terminator".encode_utf16());
+        let invalid_path = OsString::from_wide(&buffer);
+
+        let error = std::process::Command::new(command_processor())
+            .args(["/D", "/C", "exit 0"])
+            .env("PATH", invalid_path)
+            .status()
+            .expect_err("含嵌入式 NUL 的 PATH 不应成功启动进程");
+        eprintln!("reproduced spawn error: {:?}: {error}", error.kind());
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+        assert_eq!(error.to_string(), "nul byte found in provided data");
     }
 }
