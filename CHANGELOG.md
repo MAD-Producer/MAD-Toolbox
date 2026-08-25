@@ -2,6 +2,13 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 1.0.1
+
+- fix: 修复了Music Page音乐源右侧 `{count}` 等变量未解析的问题
+- fix: 修复了英文版启动提示的文本被截断的问题
+- fix: 修复了About页面Website链接指向GitHub仓库的问题
+- fix: 修复了调用底层工具时路径出现”nul byte"的问题
+
 ## 1.0.0
 
 - feat: 增加了音乐下载的“自动去杂”功能，能够对部分假无损音乐进行降频处理，减小文件体积
