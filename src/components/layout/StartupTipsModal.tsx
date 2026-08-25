@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import type { EmblaCarouselType } from "embla-carousel";
 import { Carousel } from "@mantine/carousel";
-import { ActionIcon, Button, Group, Modal, ScrollArea, Stack, Text, ThemeIcon } from "@mantine/core";
+import {
+  ActionIcon,
+  Button,
+  Group,
+  Modal,
+  ScrollArea,
+  Stack,
+  Text,
+  ThemeIcon
+} from "@mantine/core";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -57,13 +66,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={t("startup.title")}
-      size={560}
-      centered
-    >
+    <Modal opened={opened} onClose={onClose} title={t("startup.title")} size={560} centered>
       <Carousel
         slideSize="100%"
         height={240}
