@@ -8,6 +8,7 @@ All notable changes to MAD Toolbox are documented here.
 - fix: 修复了英文版启动提示的文本被截断的问题
 - fix: 修复了About页面Website链接指向GitHub仓库的问题
 - fix: 修复了调用底层工具时路径出现”nul byte"的问题
+- fix: 修复FFmpeg依赖不固定问题
 
 ## 1.0.0
 
