@@ -119,16 +119,18 @@ try {
     $FfmpegDestination = [System.IO.Path]::Combine($BinaryRoot, "ffmpeg-$Target.exe")
     $FfprobeDestination = [System.IO.Path]::Combine($BinaryRoot, "ffprobe-$Target.exe")
     $FfmpegValid = [System.IO.File]::Exists($FfmpegDestination) -and `
-    ((Get-FileSha256 -Path $FfmpegDestination) -eq "ad62137371b2111d52d29c9bc82d5aecf7065c8f937e95dfed087b2bc63ea88d")
+    ((Get-FileSha256 -Path $FfmpegDestination) -eq "6099366f31293cdc6c283ea44ffb32f07e3139cd0caf6d0db652a7d064d089cb")
     $FfprobeValid = [System.IO.File]::Exists($FfprobeDestination) -and `
-    ((Get-FileSha256 -Path $FfprobeDestination) -eq "4014fdd4541d38f6be291afb7f8d2abf15cd7de5be6dc0b7ca5bbfd280500ceb")
+    ((Get-FileSha256 -Path $FfprobeDestination) -eq "4c2f730969c9551aec21c5ca07eb73f63bb0920204c9cd6c9a6e7be6be0458d2")
     if (-not ($FfmpegValid -and $FfprobeValid)) {
       $Archive = [System.IO.Path]::Combine($TemporaryRoot, "ffmpeg.zip")
       $Expanded = [System.IO.Path]::Combine($TemporaryRoot, "ffmpeg")
+      # BtbN removes ordinary daily builds after 14 days. Pin the latest
+      # month-end build instead; upstream retains those builds for two years.
       Get-VerifiedFile `
-        -Url "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-10-13-17/ffmpeg-n8.1.2-34-g9b6c8969e0-win64-lgpl-8.1.zip" `
+        -Url "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-07-31-14-10/ffmpeg-n8.1.2-34-g9b6c8969e0-win64-lgpl-8.1.zip" `
         -Output $Archive `
-        -Sha256 "b0531e470d73bf2e0d3e22a3a35f6e890781e0791c496950664da9be9ea8c0ab"
+        -Sha256 "089e4169e93b2b3f3acbfced3c0704d24276a225641bdda04d796d28b07a2a38"
       Expand-VerifiedArchive -Archive $Archive -Destination $Expanded
       $Bins = [System.IO.Directory]::GetFiles($Expanded, "ffmpeg.exe", [System.IO.SearchOption]::AllDirectories)
       $Probes = [System.IO.Directory]::GetFiles($Expanded, "ffprobe.exe", [System.IO.SearchOption]::AllDirectories)
@@ -138,8 +140,8 @@ try {
       [System.IO.File]::Copy($Bins[0], $FfmpegDestination, $true)
       [System.IO.File]::Copy($Probes[0], $FfprobeDestination, $true)
     }
-    Assert-Hash -Path $FfmpegDestination -Expected "ad62137371b2111d52d29c9bc82d5aecf7065c8f937e95dfed087b2bc63ea88d"
-    Assert-Hash -Path $FfprobeDestination -Expected "4014fdd4541d38f6be291afb7f8d2abf15cd7de5be6dc0b7ca5bbfd280500ceb"
+    Assert-Hash -Path $FfmpegDestination -Expected "6099366f31293cdc6c283ea44ffb32f07e3139cd0caf6d0db652a7d064d089cb"
+    Assert-Hash -Path $FfprobeDestination -Expected "4c2f730969c9551aec21c5ca07eb73f63bb0920204c9cd6c9a6e7be6be0458d2"
 
     $YtDlpDestination = [System.IO.Path]::Combine($BinaryRoot, "yt-dlp-$Target.exe")
     Install-VerifiedBinary `
