@@ -27,6 +27,7 @@ import { t, type TranslationKey } from "../../locale";
 import { checkForUpdate, type UpdateCheck } from "./api";
 
 const GITHUB_URL = "https://github.com/MAD-Producer/MAD-Toolbox";
+const TOOLBOX_URL = "https://toolbox.madproducer.cn";
 
 const TEAM_LINKS = [
   {
@@ -174,7 +175,7 @@ export function AboutSettingsPage() {
               color="gray"
               className="about-action"
               leftSection={<IconWorld size={16} />}
-              onClick={() => void openUrl(GITHUB_URL)}
+              onClick={() => void openUrl(TOOLBOX_URL)}
             >
               Website
             </Button>
