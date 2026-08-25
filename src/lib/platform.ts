@@ -56,9 +56,10 @@ export const mediaOutputPlaceholder = isWindows
   : "/Users/name/Movies/Output";
 
 const WINGET_ACCEPT = "--accept-package-agreements --accept-source-agreements";
+const WINDOWS_PYTHON313 = '& "$env:LOCALAPPDATA\\Programs\\Python\\Python313\\python.exe"';
 
 export const musicdlInstallCommand = isWindows
-  ? "winget install --id Python.Python.3.13 -e --accept-package-agreements --accept-source-agreements; py -m pip install --user --upgrade pipx; py -m pipx ensurepath; py -m pipx install musicdl"
+  ? `winget install --id Python.Python.3.13 -e --scope user ${WINGET_ACCEPT}; ${WINDOWS_PYTHON313} -m pip install --user --upgrade pipx; ${WINDOWS_PYTHON313} -m pipx ensurepath; ${WINDOWS_PYTHON313} -m pipx install musicdl`
   : "brew install python pipx && pipx ensurepath && pipx install musicdl";
 
 export const pipCommand = isWindows ? "py -m pip" : "python3 -m pip";
@@ -74,7 +75,7 @@ export const toolInstallCommands: Partial<Record<ToolName, string>> = {
     : "brew install media-info",
   deno: isWindows ? `winget install --id DenoLand.Deno -e ${WINGET_ACCEPT}` : "brew install deno",
   python: isWindows
-    ? `winget install --id Python.Python.3.13 -e ${WINGET_ACCEPT}`
+    ? `winget install --id Python.Python.3.13 -e --scope user ${WINGET_ACCEPT}`
     : "brew install python",
   musicdl: musicdlInstallCommand
 };
