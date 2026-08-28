@@ -11,8 +11,11 @@ import {
   type ProbeKind
 } from "./api";
 import { defaultNetworkForm, type NetworkFormState } from "./form";
+import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
+
+const NETWORK_FORM_STORAGE_KEY = "network.form";
 
 export interface NetworkVideoPageProps {
   active: boolean;
@@ -44,7 +47,9 @@ export function useNetworkVideoWorkspace({
   onRetain,
   onSubmitted
 }: NetworkVideoPageProps) {
-  const [form, setForm] = useState<NetworkFormState>(defaultNetworkForm);
+  const [form, setForm] = useState<NetworkFormState>(() =>
+    loadStoredForm(NETWORK_FORM_STORAGE_KEY, defaultNetworkForm)
+  );
   const [advancedOpen, advanced] = useDisclosure(false);
   const [expertText, setExpertTextState] = useState<string | null>(null);
   const [draftRevision, setDraftRevision] = useState(0);
@@ -81,6 +86,11 @@ export function useNetworkVideoWorkspace({
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const { url, ...persisted } = form;
+    saveStoredForm(NETWORK_FORM_STORAGE_KEY, persisted);
+  }, [form]);
 
   const setExpertText = (value: string | null) => {
     reviseDraft();

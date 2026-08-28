@@ -1,6 +1,6 @@
 [package]
 name = "mad-toolbox"
-version = "1.0.1"
+version = "1.0.2"
 description = "A GUI toolbox for BBDown, yt-dlp, FFmpeg and MediaInfo"
 authors = ["MAD Toolbox Contributors"]
 license = "MIT"

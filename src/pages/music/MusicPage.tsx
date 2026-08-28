@@ -19,6 +19,7 @@ import { MusicSearchResults } from "./MusicSearchResults";
 import { MusicSourcePicker } from "./MusicSourcePicker";
 import type { DependencyStatus } from "../../contracts/dependency";
 import type { TaskSeed } from "../../contracts/types";
+import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { useMusicSessionStore } from "../../stores/music-session";
 import { previewMusicCommand, type MusicdlPlaylistRequest, type SubmitResult } from "./api";
@@ -33,7 +34,8 @@ import {
 } from "./configuration";
 
 const MUSIC_PREVIEW_DEBOUNCE_MS = 180;
-const MUSIC_SOURCES_STORAGE_KEY = "music.selectedSources";
+const MUSIC_FORM_STORAGE_KEY = "music.form";
+const MUSIC_LEGACY_SOURCES_STORAGE_KEY = "music.selectedSources";
 const MUSIC_DENOISE_STORAGE_KEY = "music.autoDenoise";
 
 const KNOWN_MUSIC_SOURCE_IDS = new Set(
@@ -41,18 +43,18 @@ const KNOWN_MUSIC_SOURCE_IDS = new Set(
 );
 
 function createPersistedMusicForm(): MusicFormState {
-  const form = createInitialMusicForm();
+  const form = loadStoredForm(MUSIC_FORM_STORAGE_KEY, createInitialMusicForm());
+  if (localStorage.getItem(MUSIC_FORM_STORAGE_KEY) !== null) return form;
   try {
-    const saved = JSON.parse(localStorage.getItem(MUSIC_SOURCES_STORAGE_KEY) ?? "null") as unknown;
+    const saved = JSON.parse(
+      localStorage.getItem(MUSIC_LEGACY_SOURCES_STORAGE_KEY) ?? "null"
+    ) as unknown;
     if (Array.isArray(saved)) {
-      const sources = saved.filter(
+      form.sources = saved.filter(
         (id): id is string => typeof id === "string" && KNOWN_MUSIC_SOURCE_IDS.has(id)
       );
-      return { ...form, sources };
     }
-  } catch {
-    // 本地数据损坏时回落到默认源
-  }
+  } catch {}
   return form;
 }
 
@@ -150,10 +152,10 @@ export function MusicPage({
     };
   }, [defaultOutputDirectory]);
 
-  // 音乐源选择随改动落盘，下次启动沿用
   useEffect(() => {
-    localStorage.setItem(MUSIC_SOURCES_STORAGE_KEY, JSON.stringify(form.sources));
-  }, [form.sources]);
+    const { keyword, playlistUrl, ...persisted } = form;
+    saveStoredForm(MUSIC_FORM_STORAGE_KEY, persisted);
+  }, [form]);
 
   useEffect(() => {
     localStorage.setItem(MUSIC_DENOISE_STORAGE_KEY, denoise ? "1" : "0");

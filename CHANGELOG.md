@@ -2,6 +2,10 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 1.0.2
+
+- fix: 修复了提交任务后页面参数全部恢复默认值的问题
+
 ## 1.0.1
 
 - fix: 修复了Music Page音乐源右侧 `{count}` 等变量未解析的问题
