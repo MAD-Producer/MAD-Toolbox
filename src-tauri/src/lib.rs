@@ -9,6 +9,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let handle = app.handle().clone();
             let data_dir = core::settings::app_data_dir(&handle).map_err(std::io::Error::other)?;
@@ -42,6 +43,7 @@ pub fn run() {
             core::settings::save_app_settings,
             core::settings::set_language,
             core::update::check_for_update,
+            core::update::install_update,
             core::deps::dependency_status,
             core::deps::dependency_install,
             core::task::commands::task_export_diagnostics,

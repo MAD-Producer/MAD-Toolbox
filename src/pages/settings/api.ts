@@ -32,6 +32,11 @@ export function checkForUpdate(): Promise<UpdateCheck> {
   return invoke<UpdateCheck>("check_for_update");
 }
 
+/** 经 tauri-plugin-updater 下载验签并安装更新；useMirror 时经 store.madproducer.cn 镜像下载 */
+export function installUpdate(useMirror: boolean): Promise<void> {
+  return invoke<void>("install_update", { useMirror });
+}
+
 export function fetchDependencyStatus(): Promise<DependencyStatus[]> {
   return invoke<DependencyStatus[]>("dependency_status");
 }

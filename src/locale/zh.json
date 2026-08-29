@@ -453,5 +453,11 @@
   "tasks.status.queued": "排队中",
   "tasks.status.running": "运行中",
   "tasks.status.success": "成功",
-  "tasks.today": "今日任务"
+  "tasks.today": "今日任务",
+  "settings.about.sourceGithub": "GitHub",
+  "settings.about.sourceMirror": "镜像",
+  "settings.about.downloading": "下载中…",
+  "settings.about.downloadingProgress": "下载中… {{percent}}%",
+  "app.updateAvailableNotice": "发现新版本 v{{version}}，请前往 设置 → 关于 页面更新",
+  "settings.about.updateToVersion": "更新至 v{{version}}"
 }

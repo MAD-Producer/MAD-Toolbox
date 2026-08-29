@@ -344,7 +344,8 @@ fn find_distinct_system_binary(name: &str, bundled: Option<&Path>) -> Option<Pat
     None
 }
 
-fn bundled_binary(app: &AppHandle, name: &str) -> Option<PathBuf> {
+// 通过内置依赖的路径来区分FULL和LITE，为自动更新下载版本做选择
+pub(crate) fn bundled_binary(app: &AppHandle, name: &str) -> Option<PathBuf> {
     let target_name = executable_filename(name);
     let target = env::var("TARGET").unwrap_or_else(|_| {
         if cfg!(target_os = "windows") {

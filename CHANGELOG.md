@@ -2,8 +2,9 @@
 
 All notable changes to MAD Toolbox are documented here.
 
-## 1.0.2
+## 1.1.0
 
+- feat: 新增应用内下载功能，支持GitHub和MAD Producer双源下载
 - fix: 修复了提交任务后页面参数全部恢复默认值的问题
 
 ## 1.0.1

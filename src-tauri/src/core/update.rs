@@ -1,17 +1,31 @@
-//! 应用更新检查：拉取 GitHub 最新 Release 与当前版本比较。
-//! 系统浏览器打开 Release 页面
+//! 应用更新：check_for_update 拉 GitHub 最新 Release 比较版本（启动静默检查 + 设置页展示），
+//! install_update 经 tauri-plugin-updater 下载验签并就地安装，支持镜像源与设置页代理。
 
 use reqwest::header::ACCEPT;
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
-use tokio::time::Duration;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use tauri::{AppHandle, Emitter, Url};
+use tauri_plugin_updater::UpdaterExt;
 
+use super::deps::bundled_binary;
 use super::settings::load_app_settings;
 
 const RELEASES_LATEST_URL: &str =
     "https://api.github.com/repos/MAD-Producer/MAD-Toolbox/releases/latest";
+const MANIFEST_URL: &str =
+    "https://github.com/MAD-Producer/MAD-Toolbox/releases/latest/download/latest-%EDITION%.json";
+/// MAD Producer 官方镜像：代理 GitHub 直链，供无法直连 GitHub 的用户手动切换
+const MIRROR_PREFIX: &str = "https://store.madproducer.cn/";
 /// 未认证 GitHub API 限流 60 次/时/IP，仅手动触发足够；超时覆盖连接到响应读完
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+/// 清单请求超时；下载阶段在 check 后单独放宽
+const UPDATER_TIMEOUT: Duration = Duration::from_secs(30);
+/// 安装包下载不设整体超时（镜像源较慢），仅放宽到 1 小时兜底
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(3600);
+/// 进度事件最小间隔，避免大文件下载时事件洪泛
+const PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(500);
 
 #[derive(Deserialize)]
 struct GithubRelease {
@@ -28,6 +42,13 @@ pub(crate) struct UpdateCheck {
     release_url: String,
 }
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct UpdateDownloadProgress {
+    received: u64,
+    total: Option<u64>,
+}
+
 /// 解析失败返回 None，调用方按无更新处理，避免格式意外时误报。
 fn parse_version(text: &str) -> Option<(u64, u64, u64)> {
     let mut segments = text
@@ -40,6 +61,16 @@ fn parse_version(text: &str) -> Option<(u64, u64, u64)> {
     let minor = segments.next()?.parse().ok()?;
     let patch = segments.next()?.parse().ok()?;
     (segments.next().is_none()).then_some((major, minor, patch))
+}
+
+/// 安装版本检测：Full 捆绑 ffmpeg 等 sidecar，Lite 只带 BBDown。
+/// 只查应用安装目录/资源目录，系统 PATH 上的 ffmpeg 不影响判定。
+fn installed_edition(app: &AppHandle) -> &'static str {
+    if bundled_binary(app, "ffmpeg").is_some() {
+        "full"
+    } else {
+        "lite"
+    }
 }
 
 #[tauri::command]
@@ -87,6 +118,104 @@ pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, Stri
         release_url: release.html_url,
         current_version: current,
     })
+}
+
+#[tauri::command]
+pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<String, String> {
+    let edition = installed_edition(&app);
+    let endpoint = if use_mirror {
+        format!(
+            "{MIRROR_PREFIX}{}",
+            MANIFEST_URL.replace("%EDITION%", edition)
+        )
+    } else {
+        MANIFEST_URL.replace("%EDITION%", edition)
+    };
+    let endpoint: Url = endpoint
+        .parse()
+        .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
+    let mut builder = app
+        .updater_builder()
+        .endpoints(vec![endpoint])
+        .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
+        .timeout(UPDATER_TIMEOUT);
+    if let Some(proxy) = load_app_settings(&app).proxy {
+        let proxy = proxy
+            .parse()
+            .map_err(|_| rust_i18n::t!("backend.update.invalidProxy").to_string())?;
+        builder = builder.proxy(proxy);
+    }
+    let updater = builder.build().map_err(|error| {
+        rust_i18n::t!("backend.update.manifestFailed", error = error).to_string()
+    })?;
+    let mut update = updater
+        .check()
+        .await
+        .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
+        .ok_or_else(|| rust_i18n::t!("backend.update.alreadyUpToDate").to_string())?;
+    // 清单本身可经镜像获取，但其中的下载直链仍是 GitHub：镜像模式下重写后再下载
+    if use_mirror {
+        update.download_url = format!("{MIRROR_PREFIX}{}", update.download_url)
+            .parse()
+            .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
+    }
+    update.timeout = Some(DOWNLOAD_TIMEOUT);
+
+    // Tauri 命令的 future 需要 Send：进度状态用原子量/锁共享；结束时补发一次最终进度
+    let received = Arc::new(AtomicU64::new(0));
+    let total: Arc<Mutex<Option<u64>>> = Arc::new(Mutex::new(None));
+    let last_emit = Arc::new(Mutex::new(Instant::now()));
+    let progress_app = app.clone();
+    let on_chunk = {
+        let received = Arc::clone(&received);
+        let total = Arc::clone(&total);
+        let last_emit = Arc::clone(&last_emit);
+        move |chunk: usize, content_length: Option<u64>| {
+            received.fetch_add(chunk as u64, Ordering::Relaxed);
+            if let Some(length) = content_length {
+                *total.lock().unwrap() = Some(length);
+            }
+            let mut last_emit = last_emit.lock().unwrap();
+            if last_emit.elapsed() >= PROGRESS_EMIT_INTERVAL {
+                *last_emit = Instant::now();
+                let _ = progress_app.emit(
+                    "update-download-progress",
+                    UpdateDownloadProgress {
+                        received: received.load(Ordering::Relaxed),
+                        total: *total.lock().unwrap(),
+                    },
+                );
+            }
+        }
+    };
+    let finish_app = app.clone();
+    let on_finish = {
+        let received = Arc::clone(&received);
+        let total = Arc::clone(&total);
+        move || {
+            let _ = finish_app.emit(
+                "update-download-progress",
+                UpdateDownloadProgress {
+                    received: received.load(Ordering::Relaxed),
+                    total: total
+                        .lock()
+                        .unwrap()
+                        .or(Some(received.load(Ordering::Relaxed))),
+                },
+            );
+        }
+    };
+    update
+        .download_and_install(on_chunk, on_finish)
+        .await
+        .map_err(|error| {
+            rust_i18n::t!("backend.update.downloadFailed", error = error).to_string()
+        })?;
+    // Windows：install 已退出应用并交由 NSIS passive 安装器接管（装完自动重启应用）；
+    // macOS：就地替换 .app 后需要重启进程（tauri 核心 API，等价 process 插件的 relaunch）
+    #[cfg(not(target_os = "windows"))]
+    app.request_restart();
+    Ok(update.version.clone())
 }
 
 #[cfg(test)]
