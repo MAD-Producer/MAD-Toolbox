@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Url};
 use tauri_plugin_updater::UpdaterExt;
 
 use super::deps::bundled_binary;
@@ -121,24 +121,23 @@ pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, Stri
 }
 
 #[tauri::command]
-pub(crate) async fn install_update(
-    app: AppHandle,
-    use_mirror: bool,
-) -> Result<String, String> {
+pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<String, String> {
     let edition = installed_edition(&app);
     let endpoint = if use_mirror {
-        format!("{MIRROR_PREFIX}{}", MANIFEST_URL.replace("%EDITION%", edition))
+        format!(
+            "{MIRROR_PREFIX}{}",
+            MANIFEST_URL.replace("%EDITION%", edition)
+        )
     } else {
         MANIFEST_URL.replace("%EDITION%", edition)
     };
+    let endpoint: Url = endpoint
+        .parse()
+        .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
     let mut builder = app
         .updater_builder()
-        .endpoints(vec![endpoint
-            .parse()
-            .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?])
-        .map_err(|error| {
-            rust_i18n::t!("backend.update.manifestFailed", error = error).to_string()
-        })?
+        .endpoints(vec![endpoint])
+        .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .timeout(UPDATER_TIMEOUT);
     if let Some(proxy) = load_app_settings(&app).proxy {
         let proxy = proxy
@@ -146,17 +145,13 @@ pub(crate) async fn install_update(
             .map_err(|_| rust_i18n::t!("backend.update.invalidProxy").to_string())?;
         builder = builder.proxy(proxy);
     }
-    let updater = builder
-        .build()
-        .map_err(|error| {
-            rust_i18n::t!("backend.update.manifestFailed", error = error).to_string()
-        })?;
+    let updater = builder.build().map_err(|error| {
+        rust_i18n::t!("backend.update.manifestFailed", error = error).to_string()
+    })?;
     let mut update = updater
         .check()
         .await
-        .map_err(|error| {
-            rust_i18n::t!("backend.update.manifestFailed", error = error).to_string()
-        })?
+        .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .ok_or_else(|| rust_i18n::t!("backend.update.alreadyUpToDate").to_string())?;
     // 清单本身可经镜像获取，但其中的下载直链仍是 GitHub：镜像模式下重写后再下载
     if use_mirror {
@@ -201,7 +196,10 @@ pub(crate) async fn install_update(
                 "update-download-progress",
                 UpdateDownloadProgress {
                     received: received.load(Ordering::Relaxed),
-                    total: total.lock().unwrap().or(Some(received.load(Ordering::Relaxed))),
+                    total: total
+                        .lock()
+                        .unwrap()
+                        .or(Some(received.load(Ordering::Relaxed))),
                 },
             );
         }
