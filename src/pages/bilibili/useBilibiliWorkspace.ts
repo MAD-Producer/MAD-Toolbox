@@ -6,8 +6,11 @@ import type { TaskIntent, TaskSeed } from "../../contracts/types";
 import { t } from "../../locale";
 import { bilibiliPreview, bilibiliSubmit, type PreviewResult } from "./api";
 import { defaultBilibiliForm, type BilibiliFormState } from "./form";
+import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { useBilibiliLoginStore } from "../../stores/bilibili-login";
+
+const BILIBILI_FORM_STORAGE_KEY = "bilibili.form";
 
 export interface BilibiliPageProps {
   active: boolean;
@@ -32,7 +35,9 @@ export function useBilibiliWorkspace({
   onRetain,
   onSubmitted
 }: BilibiliPageProps) {
-  const [form, setForm] = useState<BilibiliFormState>(defaultBilibiliForm);
+  const [form, setForm] = useState<BilibiliFormState>(() =>
+    loadStoredForm(BILIBILI_FORM_STORAGE_KEY, defaultBilibiliForm)
+  );
   const [advancedOpen, advanced] = useDisclosure(false);
   const [expertText, setExpertTextState] = useState<string | null>(null);
   const [draftRevision, setDraftRevision] = useState(0);
@@ -73,6 +78,11 @@ export function useBilibiliWorkspace({
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const { url, ...persisted } = form;
+    saveStoredForm(BILIBILI_FORM_STORAGE_KEY, persisted);
+  }, [form]);
 
   const setExpertText = (value: string | null) => {
     reviseDraft();

@@ -13,6 +13,7 @@ import {
   type PreviewResult
 } from "./api";
 import { defaultMediaForm, type MediaFormState } from "./form";
+import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import {
@@ -41,6 +42,8 @@ interface RevisionedPreview {
   result: PreviewResult | null;
   error: string | null;
 }
+
+const MEDIA_FORM_STORAGE_KEY = "media.form";
 
 export interface MediaWorkspaceModel {
   active: boolean;
@@ -84,10 +87,12 @@ export function useMediaWorkspace({
 }: UseMediaWorkspaceOptions): MediaWorkspaceModel {
   const pageConfig = MEDIA_PAGE_CONFIG[page];
   const [inputs, setInputsState] = useState<string[]>([]);
-  const [operation, setOperationState] = useState<MediaPageOperation>(
-    () => pageConfig.operations[0]
+  const [form, setForm] = useState<MediaFormState>(() =>
+    loadStoredForm(MEDIA_FORM_STORAGE_KEY, defaultMediaForm)
   );
-  const [form, setForm] = useState<MediaFormState>(defaultMediaForm);
+  const [operation, setOperationState] = useState<MediaPageOperation>(() =>
+    pageConfig.operations.includes(form.operation) ? form.operation : pageConfig.operations[0]
+  );
   const [encoders, setEncoders] = useState<string[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [expertText, setExpertTextState] = useState<string | null>(null);
@@ -134,6 +139,11 @@ export function useMediaWorkspace({
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const { input, ...persisted } = form;
+    saveStoredForm(MEDIA_FORM_STORAGE_KEY, { ...persisted, operation });
+  }, [form, operation]);
 
   const update = (patch: Partial<MediaFormState>) => {
     reviseDraft();
