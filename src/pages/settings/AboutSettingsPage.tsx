@@ -5,10 +5,13 @@ import {
   Divider,
   Group,
   Image,
+  SegmentedControl,
   Stack,
   Text,
+  Tooltip,
   type CardProps
 } from "@mantine/core";
+import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   IconBrandGithub,
@@ -17,14 +20,16 @@ import {
   IconRefresh,
   IconWorld
 } from "@tabler/icons-react";
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import organizationLogo from "../../assets/organization_logo.png";
 import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 import { t, type TranslationKey } from "../../locale";
-import { checkForUpdate, type UpdateCheck } from "./api";
+import { checkForUpdate, installUpdate, type UpdateCheck } from "./api";
+
+type DownloadSource = "github" | "mirror";
 
 const GITHUB_URL = "https://github.com/MAD-Producer/MAD-Toolbox";
 const TOOLBOX_URL = "https://toolbox.madproducer.cn";
@@ -133,13 +138,33 @@ function AboutSection({
 export function AboutSettingsPage() {
   const [checking, setChecking] = useState(false);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
+  const [source, setSource] = useState<DownloadSource>("github");
+  const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
+  const checkButtonRef = useRef<HTMLButtonElement>(null);
+  const [updateBarWidth, setUpdateBarWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const promise = listen<{ received: number; total: number | null }>(
+      "update-download-progress",
+      (event) => {
+        const { received, total } = event.payload;
+        setProgress(total && total > 0 ? Math.floor((received / total) * 100) : null);
+      }
+    );
+    return () => {
+      void promise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   async function handleCheckUpdate() {
     setChecking(true);
     try {
       const result = await checkForUpdate();
       if (result.updateAvailable) {
+        setUpdateBarWidth(checkButtonRef.current?.offsetWidth ?? null);
         setUpdate(result);
+        setProgress(null);
         notifications.show({
           message: t("settings.about.updateFound", { version: result.latestVersion }),
           color: "green"
@@ -151,6 +176,20 @@ export function AboutSettingsPage() {
       notifications.show({ message: String(error), color: "red" });
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function handleDownloadUpdate() {
+    if (!update) return;
+    setDownloading(true);
+    setProgress(null);
+    try {
+      await installUpdate(source === "mirror");
+    } catch (error) {
+      notifications.show({ message: String(error), color: "red" });
+    } finally {
+      setDownloading(false);
+      setProgress(null);
     }
   }
 
@@ -189,17 +228,54 @@ export function AboutSettingsPage() {
               GitHub
             </Button>
             {update ? (
-              <Button
-                color="green"
-                leftSection={<IconDownload size={16} />}
-                onClick={() => {
-                  void openUrl(update.releaseUrl);
+              <Group
+                gap={0}
+                wrap="nowrap"
+                justify="space-between"
+                style={{
+                  width: updateBarWidth ?? undefined,
+                  // 宽度不够容纳控件时按内容撑开，避免挤压变形
+                  minWidth: "max-content"
                 }}
               >
-                {t("settings.about.downloadLatest")}
-              </Button>
+                <Tooltip
+                  label={
+                    downloading
+                      ? progress !== null
+                        ? t("settings.about.downloadingProgress", { percent: progress })
+                        : t("settings.about.downloading")
+                      : t("settings.about.updateToVersion", { version: update.latestVersion })
+                  }
+                  opened={downloading || undefined}
+                  position="bottom"
+                >
+                  <ActionIcon
+                    size="input-sm"
+                    variant="filled"
+                    color="green"
+                    loading={downloading}
+                    aria-label={t("settings.about.updateToVersion", {
+                      version: update.latestVersion
+                    })}
+                    onClick={() => void handleDownloadUpdate()}
+                  >
+                    <IconDownload size={16} stroke={1.7} />
+                  </ActionIcon>
+                </Tooltip>
+                <SegmentedControl
+                  size="xs"
+                  value={source}
+                  onChange={(value) => setSource(value as DownloadSource)}
+                  disabled={downloading}
+                  data={[
+                    { value: "github", label: t("settings.about.sourceGithub") },
+                    { value: "mirror", label: t("settings.about.sourceMirror") }
+                  ]}
+                />
+              </Group>
             ) : (
               <Button
+                ref={checkButtonRef}
                 leftSection={<IconRefresh size={16} />}
                 loading={checking}
                 onClick={() => void handleCheckUpdate()}

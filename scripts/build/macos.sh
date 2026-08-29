@@ -24,8 +24,13 @@ bbdown="$project_directory/src-tauri/binaries/BBDown-aarch64-apple-darwin"
 cd "$project_directory"
 sh "$project_directory/scripts/build/macos-tools.sh" "$edition"
 
+updater_args=""
+if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+  updater_args="--config src-tauri/tauri.updater.conf.json"
+fi
+
 if [ "$edition" = "lite" ]; then
-  npm exec tauri -- build --target aarch64-apple-darwin "$@"
+  npm exec tauri -- build --target aarch64-apple-darwin $updater_args "$@"
   exit 0
 fi
 
@@ -42,6 +47,7 @@ npm exec tauri -- build \
   --target aarch64-apple-darwin \
   --config src-tauri/tauri.full.conf.json \
   --bundles app \
+  $updater_args \
   "$@"
 
 # Tauri applies hardened runtime to every sidecar. Restore the verified
@@ -57,6 +63,15 @@ codesign --verify --deep --strict "$app"
 shasum -a 256 "$app/Contents/MacOS/BBDown" |
   grep -q "33597b2b7b83eecb4fbb4f0a50a43f1ada3ac1d9b6adf4eadda8399c700ea470"
 "$app/Contents/MacOS/yt-dlp" --version | grep -q "2026.07.04"
+
+# createUpdaterArtifacts 在构建期生成的 app.tar.gz/.sig 来自重封前的 .app：
+# sidecar 恢复并重签后重新打包、重签，作为真正的 updater 产物
+if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+  app_directory="$(dirname "$app")"
+  rm -f "$app_directory/MAD Toolbox.app.tar.gz" "$app_directory/MAD Toolbox.app.tar.gz.sig"
+  tar -czf "$app_directory/MAD Toolbox.app.tar.gz" -C "$app_directory" "MAD Toolbox.app"
+  npm exec tauri -- signer sign -p "" "$app_directory/MAD Toolbox.app.tar.gz"
+fi
 
 mkdir -p "$dmg_directory"
 ditto "$app" "$staging_directory/MAD Toolbox.app"

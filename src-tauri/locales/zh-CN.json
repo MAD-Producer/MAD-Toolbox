@@ -186,5 +186,9 @@
   "backend.update.githubUnreachable": "GitHub 无法连通，请检查网络或代理设置",
   "backend.update.invalidProxy": "代理地址无效，请检查设置中的代理配置",
   "backend.update.releaseParseFailed": "解析 GitHub Release 信息失败",
-  "backend.update.requestInitFailed": "初始化更新检查请求失败：%{error}"
+  "backend.update.requestInitFailed": "初始化更新检查请求失败：%{error}",
+  "backend.update.manifestFailed": "获取更新清单失败：%{error}",
+  "backend.update.manifestInvalidUrl": "更新清单地址无效",
+  "backend.update.alreadyUpToDate": "当前已是最新版本",
+  "backend.update.downloadFailed": "下载或安装更新失败：%{error}"
 }

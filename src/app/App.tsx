@@ -6,6 +6,7 @@ import { useTasksStore } from "../stores/tasks";
 import type { ToolName } from "../contracts/dependency";
 import type { TaskEnvelope, TaskSeed } from "../contracts/types";
 import { setAppLanguage, syncNativeWindowTheme } from "./api";
+import { checkForUpdate } from "../pages/settings/api";
 import { AppShell } from "../components/layout/AppShell";
 import { SplashScreen } from "../components/layout/SplashScreen";
 import {
@@ -91,6 +92,19 @@ export default function App() {
     void initBilibiliLogin();
     void initMusicSession();
   }, [initBilibiliLogin, initMusicSession, initTasksStore]);
+
+  // 每次启动静默检查更新：有新版本才发通知引导到 设置 → 关于，无更新/失败均不打扰
+  useEffect(() => {
+    checkForUpdate()
+      .then((result) => {
+        if (!result.updateAvailable) return;
+        notifications.show({
+          color: "green",
+          message: t("app.updateAvailableNotice", { version: result.latestVersion })
+        });
+      })
+      .catch((error) => console.warn("startup update check failed:", error));
+  }, []);
 
   // 设置页顶栏「返回」的目标：记住进入设置前的最后一个主分区（覆盖重跑、依赖跳转等所有入口）
   useEffect(() => {

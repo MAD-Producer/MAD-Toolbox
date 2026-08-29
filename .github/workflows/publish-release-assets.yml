@@ -100,12 +100,22 @@ jobs:
           set -euo pipefail
           windows_full=$(find staging/windows-full -type f -name '*.exe' -print -quit)
           windows_lite=$(find staging/windows-lite -type f -name '*.exe' -print -quit)
+          windows_full_sig=$(find staging/windows-full -type f -name '*.exe.sig' -print -quit)
+          windows_lite_sig=$(find staging/windows-lite -type f -name '*.exe.sig' -print -quit)
           macos_full=$(find staging/macos-full -type f -name '*.dmg' -print -quit)
           macos_lite=$(find staging/macos-lite -type f -name '*.dmg' -print -quit)
-          test -n "$windows_full"
-          test -n "$windows_lite"
-          test -n "$macos_full"
-          test -n "$macos_lite"
+          macos_full_tar=$(find staging/macos-full -type f -name '*.app.tar.gz' -print -quit)
+          macos_lite_tar=$(find staging/macos-lite -type f -name '*.app.tar.gz' -print -quit)
+          macos_full_sig=$(find staging/macos-full -type f -name '*.app.tar.gz.sig' -print -quit)
+          macos_lite_sig=$(find staging/macos-lite -type f -name '*.app.tar.gz.sig' -print -quit)
+          for required in windows_full windows_lite windows_full_sig windows_lite_sig \
+                          macos_full macos_lite macos_full_tar macos_lite_tar \
+                          macos_full_sig macos_lite_sig; do
+            if [ -z "${!required}" ]; then
+              echo "::error::Missing '${required}' artifact file. Updater assets (.sig / .app.tar.gz) are produced only when the build workflows run with TAURI_SIGNING_PRIVATE_KEY configured; re-run the build workflows."
+              exit 1
+            fi
+          done
 
           # GitHub release assets replace spaces with dots in uploaded names.
           # Use the final names here so SHA256SUMS.txt is verifiable after
@@ -115,8 +125,37 @@ jobs:
           cp "$macos_full" "dist/MAD.Toolbox_${TAG#v}_aarch64-Full.dmg"
           cp "$macos_lite" "dist/MAD.Toolbox_${TAG#v}_aarch64-Lite.dmg"
 
-          (cd dist && shasum -a 256 *.exe *.dmg > SHA256SUMS.txt)
+          # 应用内更新（tauri-plugin-updater）产物与按安装版本区分的清单
+          cp "$windows_full_sig" "dist/MAD.Toolbox_${TAG#v}_x64-Full-setup.exe.sig"
+          cp "$windows_lite_sig" "dist/MAD.Toolbox_${TAG#v}_x64-Lite-setup.exe.sig"
+          cp "$macos_full_tar" "dist/MAD.Toolbox_${TAG#v}_aarch64-Full.app.tar.gz"
+          cp "$macos_lite_tar" "dist/MAD.Toolbox_${TAG#v}_aarch64-Lite.app.tar.gz"
+          cp "$macos_full_sig" "dist/MAD.Toolbox_${TAG#v}_aarch64-Full.app.tar.gz.sig"
+          cp "$macos_lite_sig" "dist/MAD.Toolbox_${TAG#v}_aarch64-Lite.app.tar.gz.sig"
+
+          version="${TAG#v}"
+          download_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+          pub_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          make_manifest() {
+            local edition="$1" out="$2" win_sig_file="$3" mac_sig_file="$4"
+            jq -n \
+              --arg version "$version" \
+              --arg pub_date "$pub_date" \
+              --arg win_url "$download_base/MAD.Toolbox_${version}_x64-${edition}-setup.exe" \
+              --arg win_sig "$(cat "$win_sig_file")" \
+              --arg mac_url "$download_base/MAD.Toolbox_${version}_aarch64-${edition}.app.tar.gz" \
+              --arg mac_sig "$(cat "$mac_sig_file")" \
+              '{version: $version, pub_date: $pub_date,
+                platforms: {
+                  "windows-x86_64": {signature: $win_sig, url: $win_url},
+                  "darwin-aarch64": {signature: $mac_sig, url: $mac_url}
+                }}' > "$out"
+          }
+          make_manifest Full dist/latest-full.json "$windows_full_sig" "$macos_full_sig"
+          make_manifest Lite dist/latest-lite.json "$windows_lite_sig" "$macos_lite_sig"
+
+          (cd dist && shasum -a 256 *.exe *.dmg *.app.tar.gz > SHA256SUMS.txt)
 
       - name: Upload release assets
         shell: bash
-        run: gh release upload "$TAG" dist/*.exe dist/*.dmg dist/SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$TAG" dist/*.exe dist/*.exe.sig dist/*.dmg dist/*.app.tar.gz dist/*.app.tar.gz.sig dist/latest-full.json dist/latest-lite.json dist/SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"

@@ -453,5 +453,11 @@
   "tasks.status.queued": "Queued",
   "tasks.status.running": "Running",
   "tasks.status.success": "Completed",
-  "tasks.today": "Today"
+  "tasks.today": "Today",
+  "settings.about.sourceGithub": "GitHub",
+  "settings.about.sourceMirror": "Mirror",
+  "settings.about.downloading": "Downloading…",
+  "settings.about.downloadingProgress": "Downloading… {{percent}}%",
+  "app.updateAvailableNotice": "New version v{{version}} available. Go to Settings → About to update",
+  "settings.about.updateToVersion": "Update to v{{version}}"
 }

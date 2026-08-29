@@ -186,5 +186,9 @@
   "backend.update.githubUnreachable": "Cannot connect to GitHub. Please check your network or proxy settings",
   "backend.update.invalidProxy": "Invalid proxy address. Please check the proxy settings",
   "backend.update.releaseParseFailed": "Failed to parse GitHub Release information",
-  "backend.update.requestInitFailed": "Failed to initialize the update check request: %{error}"
+  "backend.update.requestInitFailed": "Failed to initialize the update check request: %{error}",
+  "backend.update.manifestFailed": "Failed to fetch the update manifest: %{error}",
+  "backend.update.manifestInvalidUrl": "Invalid update manifest URL",
+  "backend.update.alreadyUpToDate": "You are already on the latest version",
+  "backend.update.downloadFailed": "Failed to download or install the update: %{error}"
 }
