@@ -188,11 +188,12 @@ pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<S
             }
         }
     };
+    let finish_app = app.clone();
     let on_finish = {
         let received = Arc::clone(&received);
         let total = Arc::clone(&total);
         move || {
-            let _ = app.emit(
+            let _ = finish_app.emit(
                 "update-download-progress",
                 UpdateDownloadProgress {
                     received: received.load(Ordering::Relaxed),
