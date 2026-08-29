@@ -211,9 +211,9 @@ pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<S
             rust_i18n::t!("backend.update.downloadFailed", error = error).to_string()
         })?;
     // Windows：install 已退出应用并交由 NSIS passive 安装器接管（装完自动重启应用）；
-    // macOS：就地替换 .app 后需要重启进程
+    // macOS：就地替换 .app 后需要重启进程（tauri 核心 API，等价 process 插件的 relaunch）
     #[cfg(not(target_os = "windows"))]
-    tauri_plugin_process::restart(&app);
+    app.request_restart();
     Ok(update.version.clone())
 }
 
