@@ -50,8 +50,8 @@ export function TopNavigation({ items, active, onNavigate, statuses }: TopNaviga
           display: "flex",
           alignItems: "center",
           gap: 4,
-          padding: 3,
-          borderRadius: "calc(var(--mantine-radius-md) + 3px)"
+          padding: 4,
+          borderRadius: "calc(var(--mantine-radius-md) + 4px)"
         }}
       >
         {items.map(({ section, labelKey, icon: Icon }, index) => {

@@ -2,8 +2,9 @@
   --app-surface-chrome: var(--mantine-color-white);
   --app-surface-workspace: var(--mantine-color-default);
 
-  --app-nav-active-bg: var(--mantine-color-gray-2);
-  --app-nav-active-shadow: none;
+  --app-nav-track-bg: var(--mantine-color-gray-1);
+  --app-nav-active-bg: var(--mantine-color-white);
+  --app-nav-active-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   --app-nav-active-icon: var(--mantine-color-blue-filled);
   --app-nav-hover-bg: var(--mantine-color-gray-2);
 
@@ -25,9 +26,10 @@
   --app-surface-chrome: var(--mantine-color-dark-8);
   --app-surface-workspace: var(--mantine-color-body);
 
-  --app-nav-active-bg: #000;
-  --app-nav-active-shadow: none;
-  --app-nav-hover-bg: rgba(0, 0, 0, 0.35);
+  --app-nav-track-bg: rgba(0, 0, 0, 0.3);
+  --app-nav-active-bg: var(--mantine-color-dark-5);
+  --app-nav-active-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --app-nav-hover-bg: rgba(255, 255, 255, 0.07);
 
   --app-seg-active-bg: var(--mantine-color-dark-4);
   --app-seg-hover-bg: rgba(0, 0, 0, 0.35);

@@ -15,16 +15,18 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
   return (
     <Box mih="100%">
       <Stack gap="md" p="lg">
-        <NetworkVideoPageHeader
-          probing={workspace.probing}
-          probeDisabled={!workspace.form.url.trim() || workspace.expertMode}
-          submitting={workspace.submitting}
-          submitDisabled={!workspace.expertMode && !workspace.preview}
-          onSubmit={() => void workspace.submit()}
-          onProbe={workspace.probe}
-          dependencyLabels={props.dependencyLabels}
-          onOpenDependencies={props.onOpenDependencies}
-        />
+        {props.active && (
+          <NetworkVideoPageHeader
+            probing={workspace.probing}
+            probeDisabled={!workspace.form.url.trim() || workspace.expertMode}
+            submitting={workspace.submitting}
+            submitDisabled={!workspace.expertMode && !workspace.preview}
+            onSubmit={() => void workspace.submit()}
+            onProbe={workspace.probe}
+            dependencyLabels={props.dependencyLabels}
+            onOpenDependencies={props.onOpenDependencies}
+          />
+        )}
 
         <SettingsSection>
           <NetworkVideoDownloadFields

@@ -295,19 +295,21 @@ export function MusicPage({
   return (
     <Box mih="100%">
       <Stack gap="md" p="lg">
-        <MusicPageHeader
-          mode={form.mode}
-          runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
-          runDisabled={runDisabled}
-          onRun={() => void run()}
-          searching={sessionPhase === "searching" || sessionPhase === "canceling"}
-          stopping={sessionPhase === "canceling"}
-          onStopSearch={() => void stopSearch()}
-          denoise={denoise}
-          onDenoiseChange={setDenoise}
-          dependencyLabels={dependencyLabels}
-          onOpenDependencies={onOpenDependencies}
-        />
+        {active && (
+          <MusicPageHeader
+            mode={form.mode}
+            runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
+            runDisabled={runDisabled}
+            onRun={() => void run()}
+            searching={sessionPhase === "searching" || sessionPhase === "canceling"}
+            stopping={sessionPhase === "canceling"}
+            onStopSearch={() => void stopSearch()}
+            denoise={denoise}
+            onDenoiseChange={setDenoise}
+            dependencyLabels={dependencyLabels}
+            onOpenDependencies={onOpenDependencies}
+          />
+        )}
         <L2TabNav
           items={[
             { page: "search", label: t("music.mode.search") },

@@ -15,16 +15,18 @@ export function BilibiliPage(props: BilibiliPageProps) {
   return (
     <Box mih="100%">
       <Stack gap="md" p="lg">
-        <BilibiliPageHeader
-          loginPhase={workspace.loginPhase}
-          loggedIn={workspace.loginLoggedIn}
-          submitting={workspace.submitting}
-          submitDisabled={!workspace.expertMode && !workspace.preview}
-          onSubmit={() => void workspace.submit()}
-          onBeginLogin={workspace.beginLogin}
-          dependencyLabels={props.dependencyLabels}
-          onOpenDependencies={props.onOpenDependencies}
-        />
+        {props.active && (
+          <BilibiliPageHeader
+            loginPhase={workspace.loginPhase}
+            loggedIn={workspace.loginLoggedIn}
+            submitting={workspace.submitting}
+            submitDisabled={!workspace.expertMode && !workspace.preview}
+            onSubmit={() => void workspace.submit()}
+            onBeginLogin={workspace.beginLogin}
+            dependencyLabels={props.dependencyLabels}
+            onOpenDependencies={props.onOpenDependencies}
+          />
+        )}
 
         <SettingsSection>
           <BilibiliDownloadFields

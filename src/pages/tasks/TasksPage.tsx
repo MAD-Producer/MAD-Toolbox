@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { Badge, Box, Button, Group, Stack, Text } from "@mantine/core";
 import {
   IconActivity,
   IconAlertTriangle,
@@ -144,8 +144,6 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   return (
     <Box mih="100%">
       <Stack gap="md" p="lg">
-        <Title order={3}>{t("nav.tasks")}</Title>
-
         <SettingsSection>
           <Stack gap="md">
             <Group grow align="stretch">

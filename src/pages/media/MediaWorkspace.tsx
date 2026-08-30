@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Card, Group, Stack, Text, Title } from "@mantine/core";
+import { Badge, Box, Button, Card, Group, Stack, Text } from "@mantine/core";
 import { IconAdjustmentsHorizontal, IconInfoCircle, IconPlayerPlay } from "@tabler/icons-react";
 import type { MediaPageId } from "../../app/route";
 import { MEDIA_L2_NAVIGATION } from "../../app/navigation";
@@ -6,6 +6,7 @@ import { useMediaWorkspace, type MediaWorkspacePageProps } from "./useMediaWorks
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
 import { L2TabNav } from "../../components/common/L2TabNav";
+import { HeaderActions, HeaderIconButton } from "../../components/layout/HeaderActions";
 import { MediaAdvancedFields } from "./MediaAdvancedFields";
 import { MediaCommandPanel } from "./MediaCommandPanel";
 import { MediaDropzone } from "./MediaDropzone";
@@ -29,41 +30,42 @@ interface MediaWorkspaceProps extends MediaWorkspacePageProps {
 }
 
 export function MediaWorkspace({
+  active,
   page,
   onNavigatePage,
   dependencyLabels,
   onOpenDependencies,
   ...pageProps
 }: MediaWorkspaceProps) {
-  const workspace = useMediaWorkspace({ page, ...pageProps });
+  const workspace = useMediaWorkspace({ page, active, ...pageProps });
 
   return (
     <Box mih="100%">
       <Stack gap="md" p="lg">
-        <Group justify="space-between" wrap="nowrap">
-          <Group gap="xs" wrap="nowrap">
-            <Title order={3}>{t("nav.media")}</Title>
-            <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-          </Group>
-          <Group gap="xs" wrap="nowrap">
-            <Button
-              leftSection={<IconPlayerPlay size={16} />}
-              onClick={() => void workspace.submit()}
-              loading={workspace.submitting}
-              disabled={workspace.expertMode ? false : workspace.inputs.length === 0}
-            >
-              {t("media.submit")}
-            </Button>
-            <Button
-              variant="default"
-              leftSection={<IconInfoCircle size={16} />}
-              disabled={!workspace.firstInput}
-              onClick={() => void workspace.inspectFirst()}
-            >
-              {t("media.inspectFirst")}
-            </Button>
-          </Group>
-        </Group>
+        {active && (
+          <HeaderActions section="media">
+            <Group gap="xs" wrap="nowrap">
+              <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
+              <HeaderIconButton
+                label={t("media.inspectFirst")}
+                variant="default"
+                disabled={!workspace.firstInput}
+                onClick={() => void workspace.inspectFirst()}
+              >
+                <IconInfoCircle size={20} />
+              </HeaderIconButton>
+              <Button
+                size="compact-md"
+                leftSection={<IconPlayerPlay size={16} />}
+                onClick={() => void workspace.submit()}
+                loading={workspace.submitting}
+                disabled={workspace.expertMode ? false : workspace.inputs.length === 0}
+              >
+                {t("media.submit")}
+              </Button>
+            </Group>
+          </HeaderActions>
+        )}
 
         <L2TabNav
           items={MEDIA_L2_NAVIGATION.map(({ page: id, labelKey }) => ({

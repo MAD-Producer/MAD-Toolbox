@@ -1,6 +1,7 @@
-import { Button, Group, Paper, Switch, Title, Tooltip } from "@mantine/core";
+import { Button, Group, Paper, Switch, Tooltip } from "@mantine/core";
 import { IconMistOff, IconPlayerPlay, IconPlayerStop } from "@tabler/icons-react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
+import { HeaderActions, headerTooltipProps } from "../../components/layout/HeaderActions";
 import { t } from "../../locale";
 import type { MusicMode } from "./configuration";
 
@@ -31,13 +32,19 @@ export function MusicPageHeader({
   dependencyLabels,
   onOpenDependencies
 }: MusicPageHeaderProps) {
+  const runLabel = mode === "search" ? t("music.run.search") : t("music.mode.playlist");
   return (
-    <Group justify="space-between" wrap="nowrap">
+    <HeaderActions section="music">
       <Group gap="xs" wrap="nowrap">
-        <Title order={3}>{t("nav.music")}</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-        <Tooltip label={t("music.denoise.label")}>
-          <Paper radius="md" withBorder px="xs" py={6}>
+        <Tooltip {...headerTooltipProps} label={t("music.denoise.label")}>
+          <Paper
+            radius="md"
+            withBorder
+            px="xs"
+            h={40}
+            style={{ display: "flex", alignItems: "center" }}
+          >
             <Group gap="xs" wrap="nowrap">
               <IconMistOff size={18} />
               <Switch
@@ -48,10 +55,9 @@ export function MusicPageHeader({
             </Group>
           </Paper>
         </Tooltip>
-      </Group>
-      <Group gap="xs" wrap="nowrap">
         {searching ? (
           <Button
+            size="compact-md"
             color="red"
             variant="light"
             leftSection={<IconPlayerStop size={16} />}
@@ -62,15 +68,16 @@ export function MusicPageHeader({
           </Button>
         ) : (
           <Button
+            size="compact-md"
             leftSection={<IconPlayerPlay size={16} />}
             loading={runLoading}
             disabled={runDisabled}
             onClick={onRun}
           >
-            {mode === "search" ? t("music.run.search") : t("music.mode.playlist")}
+            {runLabel}
           </Button>
         )}
       </Group>
-    </Group>
+    </HeaderActions>
   );
 }
