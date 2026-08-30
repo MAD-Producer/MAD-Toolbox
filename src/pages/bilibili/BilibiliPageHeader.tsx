@@ -1,6 +1,7 @@
-import { Button, Group, Title } from "@mantine/core";
+import { Button, Group } from "@mantine/core";
 import { IconCircleCheck, IconPlayerPlay, IconQrcode } from "@tabler/icons-react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
+import { HeaderActions } from "../../components/layout/HeaderActions";
 import { t } from "../../locale";
 
 interface BilibiliPageHeaderProps {
@@ -24,23 +25,16 @@ export function BilibiliPageHeader({
   dependencyLabels,
   onOpenDependencies
 }: BilibiliPageHeaderProps) {
+  const submitLabel = t("bilibili.actions.addToQueue");
+  const loginLabel =
+    loginPhase === "running" ? t("bilibili.login.waitingScan") : t("bilibili.login.qrLogin");
   return (
-    <Group justify="space-between" wrap="nowrap">
+    <HeaderActions section="bilibili">
       <Group gap="xs" wrap="nowrap">
-        <Title order={3}>{t("bilibili.title")}</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-      </Group>
-      <Group gap="xs" wrap="nowrap">
-        <Button
-          leftSection={<IconPlayerPlay size={16} />}
-          loading={submitting}
-          disabled={submitDisabled}
-          onClick={onSubmit}
-        >
-          {t("bilibili.actions.addToQueue")}
-        </Button>
         {loggedIn ? (
           <Button
+            size="compact-md"
             variant="light"
             color="green"
             leftSection={<IconCircleCheck size={16} />}
@@ -50,18 +44,26 @@ export function BilibiliPageHeader({
           </Button>
         ) : (
           <Button
+            size="compact-md"
             variant="light"
             leftSection={<IconQrcode size={16} />}
             loading={loginPhase === "starting"}
             disabled={loginPhase !== "idle"}
             onClick={onBeginLogin}
           >
-            {loginPhase === "running"
-              ? t("bilibili.login.waitingScan")
-              : t("bilibili.login.qrLogin")}
+            {loginLabel}
           </Button>
         )}
+        <Button
+          size="compact-md"
+          leftSection={<IconPlayerPlay size={16} />}
+          loading={submitting}
+          disabled={submitDisabled}
+          onClick={onSubmit}
+        >
+          {submitLabel}
+        </Button>
       </Group>
-    </Group>
+    </HeaderActions>
   );
 }

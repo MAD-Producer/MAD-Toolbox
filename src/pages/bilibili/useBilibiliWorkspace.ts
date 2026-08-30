@@ -6,8 +6,11 @@ import type { TaskIntent, TaskSeed } from "../../contracts/types";
 import { t } from "../../locale";
 import { bilibiliPreview, bilibiliSubmit, type PreviewResult } from "./api";
 import { defaultBilibiliForm, type BilibiliFormState } from "./form";
+import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { useBilibiliLoginStore } from "../../stores/bilibili-login";
+
+const BILIBILI_FORM_STORAGE_KEY = "bilibili.form";
 
 export interface BilibiliPageProps {
   active: boolean;
@@ -32,7 +35,9 @@ export function useBilibiliWorkspace({
   onRetain,
   onSubmitted
 }: BilibiliPageProps) {
-  const [form, setForm] = useState<BilibiliFormState>(defaultBilibiliForm);
+  const [form, setForm] = useState<BilibiliFormState>(() =>
+    loadStoredForm(BILIBILI_FORM_STORAGE_KEY, defaultBilibiliForm)
+  );
   const [advancedOpen, advanced] = useDisclosure(false);
   const [expertText, setExpertTextState] = useState<string | null>(null);
   const [draftRevision, setDraftRevision] = useState(0);
@@ -60,7 +65,6 @@ export function useBilibiliWorkspace({
     setForm((current) => ({ ...current, ...patch }));
   };
 
-  // 输出目录默认统一到 系统「下载」/MADToolbox；程序预填不算用户编辑，不推进草稿版本
   useEffect(() => {
     let canceled = false;
     void resolveDefaultOutputDirectory().then((directory) => {
@@ -73,6 +77,11 @@ export function useBilibiliWorkspace({
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const { url, ...persisted } = form;
+    saveStoredForm(BILIBILI_FORM_STORAGE_KEY, persisted);
+  }, [form]);
 
   const setExpertText = (value: string | null) => {
     reviseDraft();
@@ -88,7 +97,6 @@ export function useBilibiliWorkspace({
         ...defaultBilibiliForm,
         ...(seed.task.intent.data as Partial<BilibiliFormState>)
       };
-      // 复用配置只还原参数
       if (seed.purpose === "reuse") restored.url = "";
       setForm(restored);
     } else {
@@ -103,7 +111,6 @@ export function useBilibiliWorkspace({
     onSeedConsumed?.();
   }, [seed, onSeedConsumed]);
 
-  // 每次进入页面都重新读取落盘登录态：覆盖「上次会话已登录」「关窗后后台扫码完成」等场景
   useEffect(() => {
     if (active) void refreshLoginStatus();
   }, [active, refreshLoginStatus]);
@@ -175,7 +182,6 @@ export function useBilibiliWorkspace({
     }
   };
 
-  // 草稿变更后沿用上一次预览直到新结果整体替换，避免「…」与命令交替导致高度抖动
   const preview = previewState?.result ?? null;
   const previewError = previewState?.error ?? null;
 

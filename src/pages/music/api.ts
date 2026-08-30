@@ -1,7 +1,3 @@
-/**
- * music 后端契约的类型化 invoke 封装——页面与 store 不裸写 invoke 字符串。
- */
-
 import { invoke } from "@tauri-apps/api/core";
 import type { RunResult } from "../../contracts/job";
 import type { MusicdlCliOptions, MusicFormState } from "./configuration";
@@ -72,7 +68,6 @@ export function musicdlSessionRelease(sessionId: string): Promise<void> {
   return invoke<void>("musicdl_session_release", { sessionId });
 }
 
-/** form 为页面表单快照，仅落库到任务 intent，供任务中心「复用此配置」还原参数。 */
 export function musicdlDownload(
   sessionId: string,
   indices: number[],

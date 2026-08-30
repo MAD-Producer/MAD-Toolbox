@@ -1,8 +1,9 @@
-import { Button, Group, Title } from "@mantine/core";
+import { Button, Group } from "@mantine/core";
 import { IconInfoCircle, IconListDetails, IconPlayerPlay } from "@tabler/icons-react";
-import type { ProbeKind } from "./api";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
+import { HeaderActions, HeaderIconButton } from "../../components/layout/HeaderActions";
 import { t } from "../../locale";
+import type { ProbeKind } from "./api";
 
 interface NetworkVideoPageHeaderProps {
   probing: ProbeKind | null;
@@ -25,40 +26,41 @@ export function NetworkVideoPageHeader({
   dependencyLabels,
   onOpenDependencies
 }: NetworkVideoPageHeaderProps) {
+  const submitLabel = t("network.submit");
+  const formatsLabel = t("network.probe.formatsButton");
+  const metadataLabel = t("network.probe.metadataButton");
   return (
-    <Group justify="space-between" wrap="nowrap">
+    <HeaderActions section="network">
       <Group gap="xs" wrap="nowrap">
-        <Title order={3}>{t("network.title")}</Title>
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-      </Group>
-      <Group gap="xs" wrap="nowrap">
+        <HeaderIconButton
+          label={formatsLabel}
+          variant="default"
+          loading={probing === "formats"}
+          disabled={probeDisabled}
+          onClick={() => void onProbe("formats")}
+        >
+          <IconListDetails size={20} />
+        </HeaderIconButton>
+        <HeaderIconButton
+          label={metadataLabel}
+          variant="default"
+          loading={probing === "metadata"}
+          disabled={probeDisabled}
+          onClick={() => void onProbe("metadata")}
+        >
+          <IconInfoCircle size={20} />
+        </HeaderIconButton>
         <Button
+          size="compact-md"
           leftSection={<IconPlayerPlay size={16} />}
           loading={submitting}
           disabled={submitDisabled}
           onClick={onSubmit}
         >
-          {t("network.submit")}
-        </Button>
-        <Button
-          variant="default"
-          leftSection={<IconListDetails size={16} />}
-          loading={probing === "formats"}
-          disabled={probeDisabled}
-          onClick={() => void onProbe("formats")}
-        >
-          {t("network.probe.formatsButton")}
-        </Button>
-        <Button
-          variant="default"
-          leftSection={<IconInfoCircle size={16} />}
-          loading={probing === "metadata"}
-          disabled={probeDisabled}
-          onClick={() => void onProbe("metadata")}
-        >
-          {t("network.probe.metadataButton")}
+          {submitLabel}
         </Button>
       </Group>
-    </Group>
+    </HeaderActions>
   );
 }

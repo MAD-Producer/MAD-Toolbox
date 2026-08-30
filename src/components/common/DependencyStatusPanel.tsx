@@ -14,10 +14,6 @@ interface DependencyStatusPanelProps {
   onInstall: (dependency: DependencyStatus) => void;
 }
 
-/**
- * 状态列表：默认折叠只显示汇总徽标，展开逐工具三行（名称/版本/路径）；
- * 缺失且可装的工具在列表项右侧（列表外）提供一键安装；安装引导卡由 DependencyInstallCards 承担。
- */
 export function DependencyStatusPanel({
   dependencies,
   loading,
@@ -60,7 +56,6 @@ export function DependencyStatusPanel({
           const installable =
             !dependency.available && Boolean(toolInstallCommands[dependency.tool]);
           return (
-            // stretch：安装按钮随内容卡片拉满整行高度，与左侧卡片边缘对齐
             <FieldWithActions
               key={dependency.tool}
               align="stretch"
@@ -87,7 +82,7 @@ export function DependencyStatusPanel({
                 )
               }
             >
-              <Card withBorder padding="sm">
+              <Card withBorder radius="calc(var(--mantine-radius-md) + 4px)" padding="sm">
                 <Stack gap={2}>
                   <Group justify="space-between" wrap="nowrap">
                     <Group gap="xs" wrap="nowrap">

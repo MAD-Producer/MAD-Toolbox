@@ -6,6 +6,8 @@ import { useTasksStore } from "../stores/tasks";
 import type { ToolName } from "../contracts/dependency";
 import type { TaskEnvelope, TaskSeed } from "../contracts/types";
 import { setAppLanguage, syncNativeWindowTheme } from "./api";
+import { checkForUpdate } from "../pages/settings/api";
+import { useUpdateStore } from "../stores/update";
 import { AppShell } from "../components/layout/AppShell";
 import { SplashScreen } from "../components/layout/SplashScreen";
 import {
@@ -56,7 +58,6 @@ function workspaceIdForRoute(route: AppRoute): WorkspaceId | null {
   return null;
 }
 
-/** 各功能页的核心依赖：缺失时页头显示红色警示并跳转设置的依赖页。 */
 const FEATURE_DEPENDENCIES: Record<WorkspaceId, readonly ToolName[]> = {
   bilibili: ["bbdown"],
   network: ["yt-dlp"],
@@ -92,20 +93,23 @@ export default function App() {
     void initMusicSession();
   }, [initBilibiliLogin, initMusicSession, initTasksStore]);
 
-  // 设置页顶栏「返回」的目标：记住进入设置前的最后一个主分区（覆盖重跑、依赖跳转等所有入口）
+  useEffect(() => {
+    checkForUpdate()
+      .then((result) => {
+        if (result.updateAvailable) useUpdateStore.getState().setUpdate(result);
+      })
+      .catch((error) => console.warn("startup update check failed:", error));
+  }, []);
+
   useEffect(() => {
     if (route.section !== "settings") setLastMainSection(route.section);
   }, [route.section]);
 
-  // 原生窗口主题（标题栏颜色）跟随主题选择：auto 时解除固定由系统驱动，
-  // 页面内容侧则由 Mantine 依据 prefers-color-scheme 自行解析
   const { colorScheme } = useMantineColorScheme();
   useEffect(() => {
     void syncNativeWindowTheme(colorScheme);
   }, [colorScheme]);
 
-  // 首屏只等前端挂载：依赖检测启动即发起但在后台进行，完成后各界面
-  // （缺失徽标、依赖页、警示通知）自行刷新，不阻塞进入主界面
   useEffect(() => {
     setBooted(true);
     if (!isStartupTipsDismissedToday()) setTipsOpened(true);
@@ -127,7 +131,6 @@ export default function App() {
     (dependency) => dependency.required && !dependency.available
   ).length;
 
-  // 检测结果就绪前 dependencyMap 为空，此时不显示缺失警示，避免启动瞬间误闪
   const dependenciesReady = backend.dependencies.length > 0;
   const missingLabelsFor = (feature: WorkspaceId) =>
     dependenciesReady
@@ -140,7 +143,11 @@ export default function App() {
     setRoute({ section: "settings", page: "dependencies" });
   };
 
-  // 启动后首次检测完成时提醒一次；会话内（含手动重检后）不再重复
+  const openUpdateSettings = () => {
+    setLastSettingsPage("about");
+    setRoute({ section: "settings", page: "about" });
+  };
+
   const dependencyNotifiedRef = useRef(false);
   useEffect(() => {
     if (backend.loadingDependencies || !dependenciesReady || dependencyNotifiedRef.current) return;
@@ -164,7 +171,6 @@ export default function App() {
     });
   };
 
-  // 语言切换（设置页）：乐观更新 UI 并持久化到后端，后端随即同步其消息语言
   const changeLanguage = (choice: LanguageChoice) => {
     setLanguageChoice(choice);
     void setAppLanguage(choice)
@@ -219,7 +225,6 @@ export default function App() {
     }
   };
 
-  // 任务中心「再次运行/复用此配置」共用：跳到任务创建页并以任务参数重置工作区草稿
   const seedTaskIntoWorkspace = (task: TaskEnvelope, purpose: TaskSeed["purpose"]) => {
     const target = routeForTask(task);
     const targetWorkspace = workspaceIdForRoute(target);
@@ -346,7 +351,6 @@ export default function App() {
     }
   ];
 
-  // L2 导航已全部内联到页面：媒体页与设置页均为页头通栏页签导航（L2TabNav）
   const secondaryItems: readonly never[] = [];
 
   if (!booted) return <SplashScreen />;
@@ -360,6 +364,7 @@ export default function App() {
         onNavigatePrimary={navigatePrimary}
         onNavigateSecondary={navigateSecondary}
         onBackFromSettings={() => navigatePrimary(lastMainSection)}
+        onOpenUpdatePage={openUpdateSettings}
         navigationStatuses={{
           ...(activeTaskCount > 0
             ? {
@@ -383,7 +388,6 @@ export default function App() {
       >
         <WorkspaceSessionHost activeWorkspace={activeWorkspace} workspaces={workspaces} />
         {activeWorkspace === null ? (
-          // key 仅为 section 级：设置子页切换时不重挂载 Shell，SegmentedControl 激活段得以平滑淡入淡出
           <div key={route.section} className="workspace-enter">
             {renderNonWorkspacePage()}
           </div>

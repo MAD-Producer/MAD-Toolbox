@@ -1,7 +1,3 @@
-/* 关于页底部 slogan hero 的装饰样式。 */
-
-/* 渐变文字：须用 background-image，background 简写会重置 background-clip
-   使 clip:text 失效 */
 .quote-hero-mark {
   font-weight: 700;
   background-image: linear-gradient(
@@ -14,8 +10,6 @@
   color: transparent;
 }
 
-/* 锥形细线：椭圆腰线两端薄中段厚；Mantine 无 --mantine-color-border 变体，
-   写错变量名会静默透明 */
 .quote-hero-taper {
   display: inline-block;
   width: 240px;

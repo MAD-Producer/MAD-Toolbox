@@ -1,4 +1,4 @@
-import { SegmentedControl, Stack, Text } from "@mantine/core";
+import { Badge, Divider, SegmentedControl, Stack } from "@mantine/core";
 import { notifications } from "../../lib/notifications";
 import { DependencyInstallCards } from "../../components/common/DependencyInstallCards";
 import { DependencyStatusPanel } from "../../components/common/DependencyStatusPanel";
@@ -6,6 +6,7 @@ import type { DependencyStatus } from "../../contracts/dependency";
 import { isWindows } from "../../lib/platform";
 import { t } from "../../locale";
 import { installDependency, type AppSettings } from "./api";
+import { SettingsRow, SettingsSectionCard } from "./SettingsBlocks";
 
 interface DependenciesSettingsPageProps {
   settings: AppSettings;
@@ -54,29 +55,41 @@ export function DependenciesSettingsPage({
   };
 
   return (
-    <Stack gap="md">
-      <div>
-        <Text fw={500}>{t("settings.deps.sourceTitle")}</Text>
-        <Text size="xs" c="dimmed">
-          {t("settings.deps.sourceHint")}
-        </Text>
-        <SegmentedControl
-          mt="sm"
-          w={320}
-          radius="md"
-          value={settings.dependencyPreference}
-          onChange={(value) => void changePreference(value)}
-          data={[
-            { value: "bundled", label: t("settings.deps.preferBundled") },
-            {
-              value: "system",
-              label: isWindows
-                ? t("settings.deps.preferSystemWindows")
-                : t("settings.deps.preferSystemOther")
-            }
-          ]}
-        />
-      </div>
+    <Stack gap="lg">
+      <SettingsSectionCard>
+        <SettingsRow
+          title={t("settings.deps.sourceTitle")}
+          description={t("settings.deps.sourceHint")}
+        >
+          <SegmentedControl
+            radius="md"
+            value={settings.dependencyPreference}
+            onChange={(value) => void changePreference(value)}
+            data={[
+              { value: "bundled", label: t("settings.deps.preferBundled") },
+              {
+                value: "system",
+                label: isWindows
+                  ? t("settings.deps.preferSystemWindows")
+                  : t("settings.deps.preferSystemOther")
+              }
+            ]}
+          />
+        </SettingsRow>
+        <Divider />
+        <SettingsRow
+          title={t("settings.deps.distributionTitle")}
+          description={t("settings.deps.distributionHint")}
+        >
+          <Badge
+            variant="transparent"
+            color={distributionMode === "Full" ? "green" : "yellow"}
+            size="lg"
+          >
+            {distributionMode}
+          </Badge>
+        </SettingsRow>
+      </SettingsSectionCard>
       <DependencyStatusPanel
         dependencies={dependencies}
         loading={loading}

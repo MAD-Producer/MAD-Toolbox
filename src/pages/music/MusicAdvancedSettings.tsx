@@ -1,4 +1,5 @@
-import { Group, Stack, Text, Textarea } from "@mantine/core";
+import { Group, NumberInput, Stack, Text, Textarea } from "@mantine/core";
+import { FieldRow } from "../../components/common/FieldRow";
 import { t } from "../../locale";
 import type { MusicFormPatch, MusicFormState } from "./configuration";
 
@@ -9,7 +10,15 @@ interface MusicAdvancedSettingsProps {
 
 export function MusicAdvancedSettings({ form, onChange }: MusicAdvancedSettingsProps) {
   return (
-    <Stack gap="sm">
+    <Stack gap="md">
+      <FieldRow label={t("music.threadCount.label")} hint={t("music.threadCount.description")}>
+        <NumberInput
+          min={1}
+          max={50}
+          value={form.threadCount}
+          onChange={(value) => onChange({ threadCount: typeof value === "number" ? value : 5 })}
+        />
+      </FieldRow>
       <Text size="xs" c="dimmed">
         {t("music.advanced.hint")}
       </Text>

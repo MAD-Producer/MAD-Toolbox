@@ -13,6 +13,7 @@ import {
   type PreviewResult
 } from "./api";
 import { defaultMediaForm, type MediaFormState } from "./form";
+import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import {
@@ -41,6 +42,8 @@ interface RevisionedPreview {
   result: PreviewResult | null;
   error: string | null;
 }
+
+const MEDIA_FORM_STORAGE_KEY = "media.form";
 
 export interface MediaWorkspaceModel {
   active: boolean;
@@ -84,10 +87,12 @@ export function useMediaWorkspace({
 }: UseMediaWorkspaceOptions): MediaWorkspaceModel {
   const pageConfig = MEDIA_PAGE_CONFIG[page];
   const [inputs, setInputsState] = useState<string[]>([]);
-  const [operation, setOperationState] = useState<MediaPageOperation>(
-    () => pageConfig.operations[0]
+  const [form, setForm] = useState<MediaFormState>(() =>
+    loadStoredForm(MEDIA_FORM_STORAGE_KEY, defaultMediaForm)
   );
-  const [form, setForm] = useState<MediaFormState>(defaultMediaForm);
+  const [operation, setOperationState] = useState<MediaPageOperation>(() =>
+    pageConfig.operations.includes(form.operation) ? form.operation : pageConfig.operations[0]
+  );
   const [encoders, setEncoders] = useState<string[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [expertText, setExpertTextState] = useState<string | null>(null);
@@ -100,13 +105,11 @@ export function useMediaWorkspace({
   const inspectionRequestRef = useRef(0);
   previewStateRef.current = previewState;
 
-  // 切换工作流即更换草稿：page 变化时在渲染期重置全部表单状态（无中间脏帧）
   const [draftPage, setDraftPage] = useState(page);
   if (draftPage !== page) {
     setDraftPage(page);
     setInputsState([]);
     setOperationState(pageConfig.operations[0]);
-    // 输出目录是跨工作流共享的默认值，切换草稿时保留
     setForm({ ...defaultMediaForm, outputDirectory: form.outputDirectory });
     setAdvancedOpen(false);
     setExpertTextState(null);
@@ -121,7 +124,6 @@ export function useMediaWorkspace({
     onRetain?.();
   };
 
-  // 输出目录默认统一到 系统「下载」/MADToolbox；程序预填不算用户编辑，不推进草稿版本
   useEffect(() => {
     let canceled = false;
     void resolveDefaultOutputDirectory().then((directory) => {
@@ -134,6 +136,11 @@ export function useMediaWorkspace({
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const { input, ...persisted } = form;
+    saveStoredForm(MEDIA_FORM_STORAGE_KEY, { ...persisted, operation });
+  }, [form, operation]);
 
   const update = (patch: Partial<MediaFormState>) => {
     reviseDraft();
@@ -232,7 +239,6 @@ export function useMediaWorkspace({
 
   const addPaths = async (paths: string[]) => {
     if (paths.length === 0) return;
-    // PR 与字幕抽取按提交语义包含字幕文件，其余场景过滤
     const includeSubtitles = isPr || operation === "subtitle-extract";
     try {
       const files = await mediaScanInputs(paths, includeSubtitles);
@@ -323,7 +329,6 @@ export function useMediaWorkspace({
   const availableAudioCodecs = AUDIO_CODECS.filter(
     (codec) => codec === "copy" || encoders.length === 0 || encoders.includes(codec)
   );
-  // 草稿变更后沿用上一次预览直到新结果整体替换，避免「…」与命令交替导致高度抖动
   const preview = previewState?.result ?? null;
   const previewError = previewState?.error ?? null;
 

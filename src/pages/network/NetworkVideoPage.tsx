@@ -1,6 +1,7 @@
-import { Badge, Stack, Text } from "@mantine/core";
-import { CollapsibleSection } from "../../components/common/CollapsibleSection";
+import { Badge, Box, Card, Stack } from "@mantine/core";
+import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
 import { t } from "../../locale";
+import { SettingsSection } from "../../components/common/SettingsSection";
 import { NetworkVideoAdvancedFields } from "./NetworkVideoAdvancedFields";
 import { NetworkVideoCommandPanel } from "./NetworkVideoCommandPanel";
 import { NetworkVideoDownloadFields } from "./NetworkVideoDownloadFields";
@@ -12,67 +13,69 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
   const workspace = useNetworkVideoWorkspace(props);
 
   return (
-    <Stack gap="md" p="md">
-      <NetworkVideoPageHeader
-        probing={workspace.probing}
-        probeDisabled={!workspace.form.url.trim() || workspace.expertMode}
-        submitting={workspace.submitting}
-        submitDisabled={!workspace.expertMode && !workspace.preview}
-        onSubmit={() => void workspace.submit()}
-        onProbe={workspace.probe}
-        dependencyLabels={props.dependencyLabels}
-        onOpenDependencies={props.onOpenDependencies}
-      />
-
-      <Stack gap="sm">
-        <NetworkVideoDownloadFields
-          form={workspace.form}
-          disabled={workspace.expertMode}
-          onUpdate={workspace.update}
-          onPickOutputDirectory={workspace.pickOutputDirectory}
-          globalProxy={props.globalProxy}
-        />
-      </Stack>
-
-      <CollapsibleSection
-        title={
-          <>
-            <Text size="sm" fw={500}>
-              {t("network.advanced")}
-            </Text>
-            {workspace.expertMode && (
-              <Badge size="xs" variant="light" color="orange">
-                {t("network.expertBadge")}
-              </Badge>
-            )}
-          </>
-        }
-        opened={workspace.advancedOpen}
-        onToggle={workspace.toggleAdvanced}
-      >
-        <Stack gap="sm">
-          <NetworkVideoCommandPanel
-            expertText={workspace.expertText}
-            preview={workspace.preview}
-            previewError={workspace.previewError}
-            onEnterExpert={workspace.enterExpert}
-            onExitExpert={() => workspace.setExpertText(null)}
-            onExpertTextChange={workspace.setExpertText}
-            withDivider
+    <Box mih="100%">
+      <Stack gap="md" p="lg">
+        {props.active && (
+          <NetworkVideoPageHeader
+            probing={workspace.probing}
+            probeDisabled={!workspace.form.url.trim() || workspace.expertMode}
+            submitting={workspace.submitting}
+            submitDisabled={!workspace.expertMode && !workspace.preview}
+            onSubmit={() => void workspace.submit()}
+            onProbe={workspace.probe}
+            dependencyLabels={props.dependencyLabels}
+            onOpenDependencies={props.onOpenDependencies}
           />
-          <NetworkVideoAdvancedFields
+        )}
+
+        <SettingsSection>
+          <NetworkVideoDownloadFields
             form={workspace.form}
             disabled={workspace.expertMode}
             onUpdate={workspace.update}
+            onPickOutputDirectory={workspace.pickOutputDirectory}
+            globalProxy={props.globalProxy}
           />
-        </Stack>
-      </CollapsibleSection>
+        </SettingsSection>
+
+        <SettingsSection
+          icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
+          title={t("network.advanced")}
+          action={
+            workspace.expertMode ? (
+              <Badge size="xs" variant="light" color="orange">
+                {t("network.expertBadge")}
+              </Badge>
+            ) : null
+          }
+          opened={workspace.advancedOpen}
+          onToggle={workspace.toggleAdvanced}
+        >
+          <Stack gap="md">
+            <Card withBorder padding="md" radius="md">
+              <NetworkVideoCommandPanel
+                expertText={workspace.expertText}
+                preview={workspace.preview}
+                previewError={workspace.previewError}
+                onEnterExpert={workspace.enterExpert}
+                onExitExpert={() => workspace.setExpertText(null)}
+                onExpertTextChange={workspace.setExpertText}
+              />
+            </Card>
+            <NetworkVideoAdvancedFields
+              form={workspace.form}
+              disabled={workspace.expertMode}
+              onUpdate={workspace.update}
+            />
+          </Stack>
+        </SettingsSection>
+      </Stack>
 
       <NetworkVideoProbeDialog
         active={workspace.active}
         result={workspace.probeResult}
         onClose={() => workspace.setProbeResult(null)}
       />
-    </Stack>
+    </Box>
   );
 }

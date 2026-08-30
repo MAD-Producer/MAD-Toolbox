@@ -1,9 +1,3 @@
-/* 动效集中地：keyframes、入场/退场、加载与旋转循环。 */
-
-/* 刻意不跟随 prefers-reduced-motion：WebView2 会把 Windows 性能设置映射为
-   reduce，曾致本文件动效静默失效；均为轻量微动效，保持常开 */
-
-/* 顶栏运行中图标的描边循环（颜色规则 .top-nav-task-running 在 shell.css） */
 .top-nav-task-running .tabler-icon path {
   stroke-dasharray: 64;
   animation: top-nav-icon-draw 2.4s cubic-bezier(0.45, 0, 0.2, 1) infinite;
@@ -22,7 +16,6 @@
   }
 }
 
-/* 首屏加载器：波浪式起伏，逐点延迟 100ms 形成接力节奏 */
 .dots-loader {
   display: inline-flex;
   gap: 8px;
@@ -49,7 +42,6 @@
   }
 }
 
-/* 工作区切换入场；display:none 重新可见时动画重放 */
 @keyframes workspace-enter {
   from {
     opacity: 0;
@@ -65,8 +57,6 @@
   animation: workspace-enter 180ms ease-out;
 }
 
-/* 任务卡删除：右移滑走 + 高度折叠，grid 1fr→0fr 实现未知高度收拢；
-   时长须与 TasksPage 的 DELETE_ANIMATION_MS 一致 */
 .task-card-slot {
   display: grid;
   grid-template-rows: 1fr;

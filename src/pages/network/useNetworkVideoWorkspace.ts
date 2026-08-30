@@ -11,8 +11,11 @@ import {
   type ProbeKind
 } from "./api";
 import { defaultNetworkForm, type NetworkFormState } from "./form";
+import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
+
+const NETWORK_FORM_STORAGE_KEY = "network.form";
 
 export interface NetworkVideoPageProps {
   active: boolean;
@@ -22,7 +25,6 @@ export interface NetworkVideoPageProps {
   onSubmitted?: () => void;
   dependencyLabels?: string[];
   onOpenDependencies?: () => void;
-  /** 设置页的全局代理；留空提交时代理即经环境变量下发 */
   globalProxy?: string | null;
 }
 
@@ -44,7 +46,9 @@ export function useNetworkVideoWorkspace({
   onRetain,
   onSubmitted
 }: NetworkVideoPageProps) {
-  const [form, setForm] = useState<NetworkFormState>(defaultNetworkForm);
+  const [form, setForm] = useState<NetworkFormState>(() =>
+    loadStoredForm(NETWORK_FORM_STORAGE_KEY, defaultNetworkForm)
+  );
   const [advancedOpen, advanced] = useDisclosure(false);
   const [expertText, setExpertTextState] = useState<string | null>(null);
   const [draftRevision, setDraftRevision] = useState(0);
@@ -68,7 +72,6 @@ export function useNetworkVideoWorkspace({
     setForm((current) => ({ ...current, ...patch }));
   };
 
-  // 输出目录默认统一到 系统「下载」/MADToolbox；程序预填不算用户编辑，不推进草稿版本
   useEffect(() => {
     let canceled = false;
     void resolveDefaultOutputDirectory().then((directory) => {
@@ -81,6 +84,11 @@ export function useNetworkVideoWorkspace({
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const { url, ...persisted } = form;
+    saveStoredForm(NETWORK_FORM_STORAGE_KEY, persisted);
+  }, [form]);
 
   const setExpertText = (value: string | null) => {
     reviseDraft();
@@ -96,7 +104,6 @@ export function useNetworkVideoWorkspace({
         ...defaultNetworkForm,
         ...(seed.task.intent.data as Partial<NetworkFormState>)
       };
-      // 复用配置只还原参数，url 是每次任务不同的输入，留空待填
       if (seed.purpose === "reuse") restored.url = "";
       setForm(restored);
     } else {
@@ -193,7 +200,6 @@ export function useNetworkVideoWorkspace({
     if (typeof directory === "string") update({ outputDirectory: directory });
   };
 
-  // 草稿变更后沿用上一次预览直到新结果整体替换，避免「…」与命令交替导致高度抖动
   const preview = previewState?.result ?? null;
   const previewError = previewState?.error ?? null;
 

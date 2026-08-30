@@ -35,5 +35,12 @@ $Config = if ($Edition -eq "Full") {
 } else {
   "src-tauri\tauri.windows.lite.conf.json"
 }
-npx tauri build --target x86_64-pc-windows-msvc --config $Config @TauriArgs
+
+# CI 注入 TAURI_SIGNING_PRIVATE_KEY 时追加 updater overlay，产出 NSIS 安装包的
+# .sig 签名；本地无密钥的普通构建完全不受影响
+if (-not [string]::IsNullOrEmpty($env:TAURI_SIGNING_PRIVATE_KEY)) {
+  npx tauri build --target x86_64-pc-windows-msvc --config $Config --config src-tauri\tauri.updater.conf.json @TauriArgs
+} else {
+  npx tauri build --target x86_64-pc-windows-msvc --config $Config @TauriArgs
+}
 if ($LASTEXITCODE -ne 0) { throw "Tauri build failed" }

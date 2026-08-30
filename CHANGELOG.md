@@ -2,6 +2,20 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+# 1.2.0
+
+- feat: 全新的UI前端设计，让更多用户快速聚焦于目标
+- feat: app全局的样式更统一
+- feat: 首页新增下载图标，当存在新版本时会显示在首页设置图标右边
+- fix: 修复了手动检测到更新时切换页面可更新状态消失的问题
+- fix: 将BilibiliPage的可选画质选项变为下拉菜单，避免用户输入无法被解析
+- delete: BilibiliPage高级设置中去掉了长尾参数的选项
+
+## 1.1.0
+
+- feat: 新增应用内下载功能，支持GitHub和MAD Producer双源下载
+- fix: 修复了提交任务后页面参数全部恢复默认值的问题
+
 ## 1.0.1
 
 - fix: 修复了Music Page音乐源右侧 `{count}` 等变量未解析的问题

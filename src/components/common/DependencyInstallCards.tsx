@@ -36,10 +36,6 @@ interface DependencyInstallCardsProps {
 
 const tooltipEvents = { hover: true, focus: true, touch: false } as const;
 
-/**
- * 缺失依赖的安装引导卡：仅渲染 !available 且有安装命令的工具；
- * musicdl 卡附带 pip 镜像配置（自 Music 页安装引导迁入）。
- */
 export function DependencyInstallCards({ dependencies }: DependencyInstallCardsProps) {
   const missing = dependencies.filter((item) => !item.available && toolInstallCommands[item.tool]);
   if (missing.length === 0) return null;
@@ -49,7 +45,12 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
       {missing.map((dependency) => {
         const command = toolInstallCommands[dependency.tool] as string;
         return (
-          <Card key={dependency.tool} withBorder padding="md">
+          <Card
+            key={dependency.tool}
+            withBorder
+            radius="calc(var(--mantine-radius-md) + 4px)"
+            padding="md"
+          >
             <Stack gap="xs">
               <Group gap="xs">
                 <Text fw={500}>{dependency.label}</Text>

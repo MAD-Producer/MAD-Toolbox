@@ -15,8 +15,7 @@ export function WorkspaceFrame({ navigation, children }: WorkspaceFrameProps) {
         minHeight: 0,
         display: "grid",
         gridTemplateColumns: navigation ? "134px minmax(0, 1fr)" : "minmax(0, 1fr)",
-        // 面板四周留白（顶部紧贴顶栏不留额外 gap），在 chrome 底色上向中间缩进形成层级
-        margin: "0 16px 16px"
+        margin: "0 16px"
       }}
     >
       {navigation ? (
@@ -26,8 +25,7 @@ export function WorkspaceFrame({ navigation, children }: WorkspaceFrameProps) {
           style={{
             minHeight: 0,
             overflowY: "auto",
-            borderRight: "1px solid var(--mantine-color-default-border)",
-            background: "var(--mantine-color-default-hover)"
+            borderRight: "1px solid var(--mantine-color-default-border)"
           }}
         >
           {navigation}

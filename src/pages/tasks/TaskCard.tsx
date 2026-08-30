@@ -1,10 +1,3 @@
-/**
- * 任务卡片：左边界与状态图标按任务状态着色。
- * 收起时只显示标题行（状态 + 名称 + 取消/日志/诊断/输出位置/删除）与状态进度条；
- * 展开后显示完整命令、置顶/重跑等上下文操作和失败日志尾部（§8 已定）。
- * 完整日志走 [打开日志]（shell 打开，壳不做查看器）。
- */
-
 import {
   ActionIcon,
   Button,
@@ -133,7 +126,6 @@ export function TaskCard({
     }
   };
 
-  // 打开失败（权限/文件缺失）必须有可见反馈，否则按钮形似无响应
   const notifyOpenError = (what: string) => (error: unknown) => {
     notifications.show({
       message: t("tasks.openFailed", { what, error: String(error) }),
@@ -154,11 +146,9 @@ export function TaskCard({
       return;
     }
     if (task.feature === "media") {
-      // 媒体任务输出的是具体文件，在所在目录中定位该文件
       revealItemInDir(path).catch(notifyOpenError(t("tasks.outputLocation")));
       return;
     }
-    // 下载类任务的输出路径是目录：补平台分隔符，让文件管理器直接进入目录内部
     const separator = isWindows ? "\\" : "/";
     const directory = path.endsWith("\\") || path.endsWith("/") ? path : path + separator;
     openPath(directory).catch(notifyOpenError(t("tasks.outputLocation")));

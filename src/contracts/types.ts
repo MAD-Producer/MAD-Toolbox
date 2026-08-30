@@ -1,9 +1,3 @@
-/**
- * 任务系统契约的 TS 镜像（架构文档 §4.2）。
- * Rust 侧真相源：src-tauri/src/core/task/types.rs。
- * 接口稳定后评估 tauri-specta 自动生成，替代本文件的手工维护。
- */
-
 export type Feature = "bilibili" | "network" | "media" | "music";
 
 export type Pool = "download" | "local";
