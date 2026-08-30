@@ -13,6 +13,7 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             let data_dir = core::settings::app_data_dir(&handle).map_err(std::io::Error::other)?;
+            core::update::cleanup_staged_installer(&handle);
             core::language::apply_language(core::settings::load_app_settings(&handle).language);
             let _ = core::settings::unified_output_directory(&handle);
             let _ = features::music::sessions::cleanup_orphaned_sessions(&handle);

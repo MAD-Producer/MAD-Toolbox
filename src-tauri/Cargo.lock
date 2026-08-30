@@ -2327,6 +2327,7 @@ dependencies = [
  "chrono",
  "encoding_rs",
  "libc",
+ "minisign-verify",
  "qrcode",
  "reqwest",
  "rusqlite",
