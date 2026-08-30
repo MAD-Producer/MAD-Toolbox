@@ -45,6 +45,11 @@ Underlying tools:
 
 To get started with MAD Toolbox, simply download the latest release from [Releases](https://github.com/MAD-Producer/MAD-Toolbox/releases/).
 
+Daily installable snapshots of `main` are available from the
+[Nightly Build](https://github.com/MAD-Producer/MAD-Toolbox/releases/tag/nightly) pre-release when
+the branch has changed. Nightly builds are intended for testing and are not offered through the
+in-app updater.
+
 MAD Toolbox currently supports the following platforms:
 
 | Platform | OS Version | Architecture | Distribution Types |

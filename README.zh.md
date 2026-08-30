@@ -48,6 +48,9 @@
 
 开始使用 MAD Toolbox，只需在 [Release](https://github.com/MAD-Producer/MAD-Toolbox/releases/) 下载最新发行版即可。
 
+`main` 分支发生变更时，每日构建的可安装快照会发布到
+[Nightly Build](https://github.com/MAD-Producer/MAD-Toolbox/releases/tag/nightly) 预发行版。Nightly 仅用于测试，不会通过应用内更新推送。
+
 MAD Toolbox 目前支持以下平台：
 
 | 平台    | 系统版本  | 架构      | 提供的分发类型         |

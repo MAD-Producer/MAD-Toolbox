@@ -1,0 +1,240 @@
+name: Nightly build
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 19 * * *"
+
+concurrency:
+  group: nightly-build
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Check for changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.plan.outputs.should_build }}
+      target_sha: ${{ steps.plan.outputs.target_sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - id: plan
+        name: Compare main with nightly
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_sha=$(git rev-parse HEAD)
+          previous_sha=$(git rev-list -n 1 nightly 2>/dev/null || true)
+
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$target_sha" != "$previous_sha" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "Nightly already points to $target_sha; skipping an unchanged scheduled build."
+          fi
+
+  build:
+    name: ${{ matrix.platform }} ${{ matrix.edition }}
+    needs: prepare
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows x64
+            platform_id: windows
+            runner: windows-2022
+            rust_target: x86_64-pc-windows-msvc
+            edition: Full
+            build_script: tauri:build:full
+          - platform: Windows x64
+            platform_id: windows
+            runner: windows-2022
+            rust_target: x86_64-pc-windows-msvc
+            edition: Lite
+            build_script: tauri:build:lite
+          - platform: macOS Apple Silicon
+            platform_id: macos
+            runner: macos-15
+            rust_target: aarch64-apple-darwin
+            edition: Full
+            build_script: tauri:build:full
+          - platform: macOS Apple Silicon
+            platform_id: macos
+            runner: macos-15
+            rust_target: aarch64-apple-darwin
+            edition: Lite
+            build_script: tauri:build:lite
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Confirm Apple Silicon runner
+        if: matrix.platform_id == 'macos'
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.rust_target }}
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: nightly-${{ matrix.platform_id }}-${{ matrix.edition }}
+
+      - name: Install frontend packages
+        run: npm ci
+
+      - name: Check frontend formatting
+        run: npm run format:check
+
+      - name: Build Windows installer
+        if: matrix.platform_id == 'windows'
+        run: npm run ${{ matrix.build_script }} -- win --ci
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+      - name: Build macOS image
+        if: matrix.platform_id == 'macos'
+        run: npm run ${{ matrix.build_script }} -- mac --ci
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+      - name: Verify Windows installer
+        if: matrix.platform_id == 'windows'
+        shell: pwsh
+        run: |
+          $Installers = @(Get-ChildItem -LiteralPath "src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis" -Filter "*.exe" -File)
+          if ($Installers.Count -ne 1) {
+            throw "Expected exactly one Windows installer, found $($Installers.Count)."
+          }
+          Get-FileHash -LiteralPath $Installers[0].FullName -Algorithm SHA256
+
+      - name: Verify macOS image
+        if: matrix.platform_id == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle_directory="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
+          images=("$bundle_directory"/*.dmg)
+          test -f "${images[0]}"
+          test "${#images[@]}" -eq 1
+          hdiutil verify "${images[0]}"
+
+      - name: Upload Windows installer
+        if: matrix.platform_id == 'windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-${{ matrix.platform_id }}-${{ matrix.edition }}
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload macOS image
+        if: matrix.platform_id == 'macos'
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-${{ matrix.platform_id }}-${{ matrix.edition }}
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Update nightly release
+    needs: [prepare, build]
+    if: needs.prepare.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_SHA: ${{ needs.prepare.outputs.target_sha }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Download installers
+        uses: actions/download-artifact@v8
+        with:
+          pattern: nightly-*
+          path: staging
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          copy_single() {
+            local directory="$1" pattern="$2" output="$3"
+            local files=()
+            mapfile -t files < <(find "$directory" -type f -name "$pattern")
+            if [ "${#files[@]}" -ne 1 ]; then
+              echo "::error::Expected one $pattern file in $directory, found ${#files[@]}."
+              exit 1
+            fi
+            cp "${files[0]}" "dist/$output"
+          }
+
+          copy_single staging/nightly-windows-Full '*.exe' MAD.Toolbox_nightly_x64-Full-setup.exe
+          copy_single staging/nightly-windows-Lite '*.exe' MAD.Toolbox_nightly_x64-Lite-setup.exe
+          copy_single staging/nightly-macos-Full '*.dmg' MAD.Toolbox_nightly_aarch64-Full.dmg
+          copy_single staging/nightly-macos-Lite '*.dmg' MAD.Toolbox_nightly_aarch64-Lite.dmg
+          (cd dist && sha256sum *.exe *.dmg > SHA256SUMS.txt)
+
+          short_sha=${TARGET_SHA:0:7}
+          printf '%s\n\n%s\n\n%s\n' \
+            'Automated installable snapshot of the `main` branch.' \
+            "Commit: [${short_sha}](https://github.com/${GITHUB_REPOSITORY}/commit/${TARGET_SHA})" \
+            'This pre-release is intended for testing and is not offered through the in-app updater.' \
+            > release-notes.md
+
+      - name: Move nightly tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git tag --force nightly "$TARGET_SHA"
+          git push origin refs/tags/nightly --force
+
+      - name: Update nightly release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view nightly --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit nightly \
+              --title "Nightly Build" \
+              --prerelease \
+              --notes-file release-notes.md \
+              --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create nightly \
+              --title "Nightly Build" \
+              --prerelease \
+              --notes-file release-notes.md \
+              --repo "$GITHUB_REPOSITORY"
+          fi
+          gh release upload nightly dist/* --clobber --repo "$GITHUB_REPOSITORY"
