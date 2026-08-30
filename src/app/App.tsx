@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useMantineColorScheme } from "@mantine/core";
+import { listen } from "@tauri-apps/api/event";
 import { notifications } from "../lib/notifications";
 import { useBackend } from "../hooks/useBackend";
 import { useTasksStore } from "../stores/tasks";
@@ -99,6 +100,19 @@ export default function App() {
         if (result.updateAvailable) useUpdateStore.getState().setUpdate(result);
       })
       .catch((error) => console.warn("startup update check failed:", error));
+  }, []);
+
+  useEffect(() => {
+    const promise = listen<{ received: number; total: number | null }>(
+      "update-download-progress",
+      (event) => {
+        const { received, total } = event.payload;
+        useUpdateStore.getState().setDownloadProgress(received, total);
+      }
+    );
+    return () => {
+      void promise.then((unlisten) => unlisten());
+    };
   }, []);
 
   useEffect(() => {

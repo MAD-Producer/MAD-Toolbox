@@ -10,7 +10,6 @@ import {
   Text,
   Tooltip
 } from "@mantine/core";
-import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   IconBrandGithub,
@@ -19,7 +18,7 @@ import {
   IconRefresh,
   IconWorld
 } from "@tabler/icons-react";
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import { useUpdateStore } from "../../stores/update";
 import organizationLogo from "../../assets/organization_logo.png";
@@ -118,23 +117,12 @@ function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) 
 export function AboutSettingsPage() {
   const [checking, setChecking] = useState(false);
   const [source, setSource] = useState<DownloadSource>("github");
-  const [downloading, setDownloading] = useState(false);
-  const [progress, setProgress] = useState<number | null>(null);
   const update = useUpdateStore((state) => state.update);
+  const downloading = useUpdateStore((state) => state.downloading);
+  const progress = useUpdateStore((state) => state.progress);
   const setUpdate = useUpdateStore((state) => state.setUpdate);
-
-  useEffect(() => {
-    const promise = listen<{ received: number; total: number | null }>(
-      "update-download-progress",
-      (event) => {
-        const { received, total } = event.payload;
-        setProgress(total && total > 0 ? Math.floor((received / total) * 100) : null);
-      }
-    );
-    return () => {
-      void promise.then((unlisten) => unlisten());
-    };
-  }, []);
+  const startDownload = useUpdateStore((state) => state.startDownload);
+  const finishDownload = useUpdateStore((state) => state.finishDownload);
 
   async function handleCheckUpdate() {
     setChecking(true);
@@ -142,7 +130,6 @@ export function AboutSettingsPage() {
       const result = await checkForUpdate();
       if (result.updateAvailable) {
         setUpdate(result);
-        setProgress(null);
         notifications.show({
           message: t("settings.about.updateFound", { version: result.latestVersion }),
           color: "green"
@@ -159,16 +146,14 @@ export function AboutSettingsPage() {
   }
 
   async function handleDownloadUpdate() {
-    if (!update) return;
-    setDownloading(true);
-    setProgress(null);
+    if (!update || downloading) return;
+    startDownload();
     try {
       await installUpdate(source === "mirror");
     } catch (error) {
       notifications.show({ message: String(error), color: "red" });
     } finally {
-      setDownloading(false);
-      setProgress(null);
+      finishDownload();
     }
   }
 

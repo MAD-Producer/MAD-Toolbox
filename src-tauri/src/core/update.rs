@@ -1,37 +1,36 @@
-//! 应用更新：check_for_update 拉 GitHub 最新 Release 比较版本（启动静默检查 + 设置页展示），
-//! install_update 经 tauri-plugin-updater 下载验签并就地安装，支持镜像源与设置页代理。
+//! 应用更新：check_for_update 拉取更新清单比较版本（启动静默检查 + 设置页展示），
+//! Windows 安装包流式写盘并增量验签，macOS 继续由 tauri-plugin-updater 就地安装。
 
-use reqwest::header::ACCEPT;
-use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter, Url};
+use serde::Serialize;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager, Url};
 use tauri_plugin_updater::UpdaterExt;
+
+#[cfg(not(target_os = "windows"))]
+use std::sync::atomic::AtomicU64;
+#[cfg(not(target_os = "windows"))]
+use std::sync::Mutex;
+#[cfg(not(target_os = "windows"))]
+use std::time::Instant;
 
 use super::deps::bundled_binary;
 use super::settings::load_app_settings;
 
-const RELEASES_LATEST_URL: &str =
-    "https://api.github.com/repos/MAD-Producer/MAD-Toolbox/releases/latest";
 const MANIFEST_URL: &str =
     "https://github.com/MAD-Producer/MAD-Toolbox/releases/latest/download/latest-%EDITION%.json";
-/// MAD Producer 官方镜像：代理 GitHub 直链，供无法直连 GitHub 的用户手动切换
+const RELEASE_URL_PREFIX: &str = "https://github.com/MAD-Producer/MAD-Toolbox/releases/tag/v";
+/// MAD Producer 官方镜像：代理 GitHub 直链
 const MIRROR_PREFIX: &str = "https://store.madproducer.cn/";
-/// 未认证 GitHub API 限流 60 次/时/IP，仅手动触发足够；超时覆盖连接到响应读完
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// 清单请求超时；下载阶段在 check 后单独放宽
 const UPDATER_TIMEOUT: Duration = Duration::from_secs(30);
 /// 安装包下载不设整体超时（镜像源较慢），仅放宽到 1 小时兜底
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(3600);
 /// 进度事件最小间隔，避免大文件下载时事件洪泛
 const PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(500);
-
-#[derive(Deserialize)]
-struct GithubRelease {
-    tag_name: String,
-    html_url: String,
-}
+#[cfg(target_os = "windows")]
+const STAGED_INSTALLER_NAME: &str = "MAD-Toolbox-update.exe";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -49,20 +48,6 @@ struct UpdateDownloadProgress {
     total: Option<u64>,
 }
 
-/// 解析失败返回 None，调用方按无更新处理，避免格式意外时误报。
-fn parse_version(text: &str) -> Option<(u64, u64, u64)> {
-    let mut segments = text
-        .trim()
-        .trim_start_matches(['v', 'V'])
-        .split(|character| character == '-' || character == '+')
-        .next()?
-        .split('.');
-    let major = segments.next()?.parse().ok()?;
-    let minor = segments.next()?.parse().ok()?;
-    let patch = segments.next()?.parse().ok()?;
-    (segments.next().is_none()).then_some((major, minor, patch))
-}
-
 /// 安装版本检测：Full 捆绑 ffmpeg 等 sidecar，Lite 只带 BBDown。
 /// 只查应用安装目录/资源目录，系统 PATH 上的 ffmpeg 不影响判定。
 fn installed_edition(app: &AppHandle) -> &'static str {
@@ -73,70 +58,198 @@ fn installed_edition(app: &AppHandle) -> &'static str {
     }
 }
 
+fn manifest_endpoints(app: &AppHandle, prefer_mirror: bool) -> Result<Vec<Url>, String> {
+    let github = MANIFEST_URL.replace("%EDITION%", installed_edition(app));
+    let mirror = format!("{MIRROR_PREFIX}{github}");
+    let endpoints = if prefer_mirror {
+        [mirror, github]
+    } else {
+        [github, mirror]
+    };
+    endpoints
+        .into_iter()
+        .map(|endpoint| {
+            endpoint
+                .parse()
+                .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())
+        })
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn updater_public_key(app: &AppHandle) -> Result<&str, String> {
+    app.config()
+        .plugins
+        .0
+        .get("updater")
+        .and_then(|config| config.get("pubkey"))
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "updater public key is missing".to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn decode_base64_text(value: &str) -> Result<String, String> {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+
+    let bytes = STANDARD.decode(value).map_err(|error| error.to_string())?;
+    String::from_utf8(bytes).map_err(|error| error.to_string())
+}
+
+#[cfg(target_os = "windows")]
+async fn remove_file_if_exists(path: &std::path::Path) -> Result<(), String> {
+    match tokio::fs::remove_file(path).await {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+#[cfg(target_os = "windows")]
+async fn download_and_launch_windows(
+    app: &AppHandle,
+    download_url: &Url,
+    encoded_signature: &str,
+) -> Result<(), String> {
+    use minisign_verify::{PublicKey, Signature};
+    use tokio::io::AsyncWriteExt;
+
+    let public_key = PublicKey::decode(&decode_base64_text(updater_public_key(app)?)?)
+        .map_err(|error| error.to_string())?;
+    let signature = Signature::decode(&decode_base64_text(encoded_signature)?)
+        .map_err(|error| error.to_string())?;
+    let mut verifier = public_key
+        .verify_stream(&signature)
+        .map_err(|error| error.to_string())?;
+
+    let mut client_builder = reqwest::Client::builder()
+        .user_agent(format!("MAD-Toolbox/{}", app.package_info().version))
+        .timeout(DOWNLOAD_TIMEOUT);
+    if let Some(proxy) = load_app_settings(app).proxy {
+        let proxy = reqwest::Proxy::all(proxy.as_str())
+            .map_err(|_| rust_i18n::t!("backend.update.invalidProxy").to_string())?;
+        client_builder = client_builder.proxy(proxy);
+    }
+    let client = client_builder.build().map_err(|error| error.to_string())?;
+    let mut response = client
+        .get(download_url.clone())
+        .send()
+        .await
+        .and_then(reqwest::Response::error_for_status)
+        .map_err(|error| error.to_string())?;
+    let total = response.content_length();
+
+    let staging_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| error.to_string())?
+        .join("update");
+    tokio::fs::create_dir_all(&staging_dir)
+        .await
+        .map_err(|error| error.to_string())?;
+    let installer_path = staging_dir.join(STAGED_INSTALLER_NAME);
+    let partial_path = installer_path.with_extension("exe.part");
+    remove_file_if_exists(&partial_path).await?;
+    remove_file_if_exists(&installer_path).await?;
+
+    let result = async {
+        let mut file = tokio::fs::File::create(&partial_path)
+            .await
+            .map_err(|error| error.to_string())?;
+        let mut received = 0_u64;
+        let mut last_emit = std::time::Instant::now();
+        while let Some(chunk) = response.chunk().await.map_err(|error| error.to_string())? {
+            file.write_all(&chunk)
+                .await
+                .map_err(|error| error.to_string())?;
+            verifier.update(&chunk);
+            received += chunk.len() as u64;
+            if last_emit.elapsed() >= PROGRESS_EMIT_INTERVAL {
+                last_emit = std::time::Instant::now();
+                let _ = app.emit(
+                    "update-download-progress",
+                    UpdateDownloadProgress { received, total },
+                );
+            }
+        }
+        file.flush().await.map_err(|error| error.to_string())?;
+        file.sync_all().await.map_err(|error| error.to_string())?;
+        drop(file);
+        verifier.finalize().map_err(|error| error.to_string())?;
+        tokio::fs::rename(&partial_path, &installer_path)
+            .await
+            .map_err(|error| error.to_string())?;
+        let _ = app.emit(
+            "update-download-progress",
+            UpdateDownloadProgress {
+                received,
+                total: total.or(Some(received)),
+            },
+        );
+        std::process::Command::new(&installer_path)
+            .args(["/P", "/R", "/UPDATE"])
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        Ok(())
+    }
+    .await;
+
+    if result.is_err() {
+        let _ = remove_file_if_exists(&partial_path).await;
+        let _ = remove_file_if_exists(&installer_path).await;
+    }
+    result
+}
+
+pub(crate) fn cleanup_staged_installer(app: &AppHandle) {
+    #[cfg(target_os = "windows")]
+    if let Ok(directory) = app.path().app_cache_dir() {
+        let installer = directory.join("update").join(STAGED_INSTALLER_NAME);
+        let _ = std::fs::remove_file(&installer);
+        let _ = std::fs::remove_file(installer.with_extension("exe.part"));
+    }
+}
+
 #[tauri::command]
 pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, String> {
-    let current = env!("CARGO_PKG_VERSION").to_string();
-    let mut builder = reqwest::Client::builder()
-        .user_agent(format!("MAD-Toolbox/{current}"))
-        .timeout(REQUEST_TIMEOUT);
-    // GitHub 直连在部分地区不可达：沿用设置页全局代理（下载器同款语义）
+    let current = app.package_info().version.to_string();
+    let update_available = Arc::new(AtomicBool::new(false));
+    let comparator_result = Arc::clone(&update_available);
+    let mut builder = app
+        .updater_builder()
+        .endpoints(manifest_endpoints(&app, false)?)
+        .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
+        .version_comparator(move |current, release| {
+            comparator_result.store(release.version > current, Ordering::Relaxed);
+            true
+        })
+        .timeout(UPDATER_TIMEOUT);
     if let Some(proxy) = load_app_settings(&app).proxy {
-        let proxy = reqwest::Proxy::all(proxy.as_str())
+        let proxy = proxy
+            .parse()
             .map_err(|_| rust_i18n::t!("backend.update.invalidProxy").to_string())?;
         builder = builder.proxy(proxy);
     }
-    let client = builder.build().map_err(|error| {
-        rust_i18n::t!("backend.update.requestInitFailed", error = error).to_string()
+    let updater = builder.build().map_err(|error| {
+        rust_i18n::t!("backend.update.manifestFailed", error = error).to_string()
     })?;
-    let response = client
-        .get(RELEASES_LATEST_URL)
-        .header(ACCEPT, "application/vnd.github+json")
-        .send()
+    let release = updater
+        .check()
         .await
-        .map_err(|_| rust_i18n::t!("backend.update.githubUnreachable").to_string())?;
-    let release: GithubRelease = response
-        .error_for_status()
-        .map_err(|error| match error.status() {
-            Some(status) => {
-                rust_i18n::t!("backend.update.githubRejected", status = status).to_string()
-            }
-            None => rust_i18n::t!("backend.update.githubUnreachable").to_string(),
-        })?
-        .json()
-        .await
-        .map_err(|_| rust_i18n::t!("backend.update.releaseParseFailed").to_string())?;
-    let update_available = parse_version(&release.tag_name)
-        .zip(parse_version(&current))
-        .is_some_and(|(latest, current)| latest > current);
+        .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
+        .ok_or_else(|| rust_i18n::t!("backend.update.releaseParseFailed").to_string())?;
     Ok(UpdateCheck {
-        latest_version: release
-            .tag_name
-            .trim()
-            .trim_start_matches(['v', 'V'])
-            .to_string(),
-        update_available,
-        release_url: release.html_url,
+        latest_version: release.version.clone(),
+        update_available: update_available.load(Ordering::Relaxed),
+        release_url: format!("{RELEASE_URL_PREFIX}{}", release.version),
         current_version: current,
     })
 }
 
 #[tauri::command]
 pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<String, String> {
-    let edition = installed_edition(&app);
-    let endpoint = if use_mirror {
-        format!(
-            "{MIRROR_PREFIX}{}",
-            MANIFEST_URL.replace("%EDITION%", edition)
-        )
-    } else {
-        MANIFEST_URL.replace("%EDITION%", edition)
-    };
-    let endpoint: Url = endpoint
-        .parse()
-        .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
     let mut builder = app
         .updater_builder()
-        .endpoints(vec![endpoint])
+        .endpoints(manifest_endpoints(&app, use_mirror)?)
         .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .timeout(UPDATER_TIMEOUT);
     if let Some(proxy) = load_app_settings(&app).proxy {
@@ -161,80 +274,71 @@ pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<S
     }
     update.timeout = Some(DOWNLOAD_TIMEOUT);
 
-    // Tauri 命令的 future 需要 Send：进度状态用原子量/锁共享；结束时补发一次最终进度
-    let received = Arc::new(AtomicU64::new(0));
-    let total: Arc<Mutex<Option<u64>>> = Arc::new(Mutex::new(None));
-    let last_emit = Arc::new(Mutex::new(Instant::now()));
-    let progress_app = app.clone();
-    let on_chunk = {
-        let received = Arc::clone(&received);
-        let total = Arc::clone(&total);
-        let last_emit = Arc::clone(&last_emit);
-        move |chunk: usize, content_length: Option<u64>| {
-            received.fetch_add(chunk as u64, Ordering::Relaxed);
-            if let Some(length) = content_length {
-                *total.lock().unwrap() = Some(length);
+    #[cfg(target_os = "windows")]
+    {
+        download_and_launch_windows(&app, &update.download_url, &update.signature)
+            .await
+            .map_err(|error| {
+                rust_i18n::t!("backend.update.downloadFailed", error = error).to_string()
+            })?;
+        app.exit(0);
+        Ok(update.version.clone())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Tauri 命令的 future 需要 Send：进度状态用原子量/锁共享；结束时补发一次最终进度
+        let received = Arc::new(AtomicU64::new(0));
+        let total: Arc<Mutex<Option<u64>>> = Arc::new(Mutex::new(None));
+        let last_emit = Arc::new(Mutex::new(Instant::now()));
+        let progress_app = app.clone();
+        let on_chunk = {
+            let received = Arc::clone(&received);
+            let total = Arc::clone(&total);
+            let last_emit = Arc::clone(&last_emit);
+            move |chunk: usize, content_length: Option<u64>| {
+                received.fetch_add(chunk as u64, Ordering::Relaxed);
+                if let Some(length) = content_length {
+                    *total.lock().unwrap() = Some(length);
+                }
+                let mut last_emit = last_emit.lock().unwrap();
+                if last_emit.elapsed() >= PROGRESS_EMIT_INTERVAL {
+                    *last_emit = Instant::now();
+                    let _ = progress_app.emit(
+                        "update-download-progress",
+                        UpdateDownloadProgress {
+                            received: received.load(Ordering::Relaxed),
+                            total: *total.lock().unwrap(),
+                        },
+                    );
+                }
             }
-            let mut last_emit = last_emit.lock().unwrap();
-            if last_emit.elapsed() >= PROGRESS_EMIT_INTERVAL {
-                *last_emit = Instant::now();
-                let _ = progress_app.emit(
+        };
+        let finish_app = app.clone();
+        let on_finish = {
+            let received = Arc::clone(&received);
+            let total = Arc::clone(&total);
+            move || {
+                let _ = finish_app.emit(
                     "update-download-progress",
                     UpdateDownloadProgress {
                         received: received.load(Ordering::Relaxed),
-                        total: *total.lock().unwrap(),
+                        total: total
+                            .lock()
+                            .unwrap()
+                            .or(Some(received.load(Ordering::Relaxed))),
                     },
                 );
             }
-        }
-    };
-    let finish_app = app.clone();
-    let on_finish = {
-        let received = Arc::clone(&received);
-        let total = Arc::clone(&total);
-        move || {
-            let _ = finish_app.emit(
-                "update-download-progress",
-                UpdateDownloadProgress {
-                    received: received.load(Ordering::Relaxed),
-                    total: total
-                        .lock()
-                        .unwrap()
-                        .or(Some(received.load(Ordering::Relaxed))),
-                },
-            );
-        }
-    };
-    update
-        .download_and_install(on_chunk, on_finish)
-        .await
-        .map_err(|error| {
-            rust_i18n::t!("backend.update.downloadFailed", error = error).to_string()
-        })?;
-    // Windows：install 已退出应用并交由 NSIS passive 安装器接管（装完自动重启应用）；
-    // macOS：就地替换 .app 后需要重启进程（tauri 核心 API，等价 process 插件的 relaunch）
-    #[cfg(not(target_os = "windows"))]
-    app.request_restart();
-    Ok(update.version.clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::parse_version;
-
-    #[test]
-    fn parses_semver_tag_with_prefix_and_suffix() {
-        assert_eq!(parse_version("v0.10.1"), Some((0, 10, 1)));
-        assert_eq!(parse_version("1.2.3"), Some((1, 2, 3)));
-        assert_eq!(parse_version("v1.2.3-beta.1"), Some((1, 2, 3)));
-        assert_eq!(parse_version("v1.2.3+build.7"), Some((1, 2, 3)));
-    }
-
-    #[test]
-    fn rejects_malformed_tags() {
-        assert_eq!(parse_version("v1.2"), None);
-        assert_eq!(parse_version("main"), None);
-        assert_eq!(parse_version("v1.2.x"), None);
-        assert_eq!(parse_version(""), None);
+        };
+        update
+            .download_and_install(on_chunk, on_finish)
+            .await
+            .map_err(|error| {
+                rust_i18n::t!("backend.update.downloadFailed", error = error).to_string()
+            })?;
+        // macOS：就地替换 .app 后需要重启进程（tauri 核心 API，等价 process 插件的 relaunch）
+        app.request_restart();
+        Ok(update.version.clone())
     }
 }
