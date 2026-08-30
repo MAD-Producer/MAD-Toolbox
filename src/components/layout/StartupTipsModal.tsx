@@ -71,7 +71,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           <ScrollArea h="100%" type="never">
             <Stack gap="sm" pt="sm" px="xl">
               <Group gap="xs">
-                <ThemeIcon variant="light" color="orange" size="lg">
+                <ThemeIcon variant="transparent" color="blue" size="lg">
                   <IconQrcode size={18} />
                 </ThemeIcon>
                 <Text fw={600}>{t("startup.bilibiliQuality.title")}</Text>
@@ -92,7 +92,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           <ScrollArea h="100%" type="never">
             <Stack gap="sm" pt="sm" px="xl">
               <Group gap="xs">
-                <ThemeIcon variant="light" color="orange" size="lg">
+                <ThemeIcon variant="transparent" color="blue" size="lg">
                   <IconNetwork size={18} />
                 </ThemeIcon>
                 <Text fw={600}>{t("startup.proxy.title")}</Text>
@@ -113,7 +113,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           <ScrollArea h="100%" type="never">
             <Stack gap="sm" pt="sm" px="xl">
               <Group gap="xs">
-                <ThemeIcon variant="light" color="orange" size="lg">
+                <ThemeIcon variant="transparent" color="blue" size="lg">
                   <IconFileMusic size={18} />
                 </ThemeIcon>
                 <Text fw={600}>{t("startup.flac.title")}</Text>

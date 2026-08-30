@@ -264,6 +264,8 @@ export function AboutSettingsPage() {
             w={480}
             h="auto"
             flex="0 0 auto"
+            mx="lg"
+            my="lg"
           />
           <Stack gap="xl">
             {TEAM_LINKS.map((link) => (

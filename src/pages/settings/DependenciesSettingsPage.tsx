@@ -81,7 +81,11 @@ export function DependenciesSettingsPage({
           title={t("settings.deps.distributionTitle")}
           description={t("settings.deps.distributionHint")}
         >
-          <Badge variant="light" color={distributionMode === "Full" ? "green" : "yellow"} size="lg">
+          <Badge
+            variant="transparent"
+            color={distributionMode === "Full" ? "green" : "yellow"}
+            size="lg"
+          >
             {distributionMode}
           </Badge>
         </SettingsRow>
