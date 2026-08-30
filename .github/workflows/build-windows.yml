@@ -49,8 +49,8 @@ jobs:
       - name: Check frontend formatting
         run: npm run format:check
 
-      - name: Build unsigned NSIS installer
-        run: npm run ${{ matrix.build_script }} -- win --no-sign --ci
+      - name: Build NSIS installer
+        run: npm run ${{ matrix.build_script }} -- win --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
