@@ -3,13 +3,15 @@
  * 搜索结果由应用级 music session store 常驻保存，页面隐藏不会中断后端事件监听。
  */
 
-import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
+import { Alert, Box, Card, Group, Loader, Stack, Text } from "@mantine/core";
+import { IconAdjustmentsHorizontal, IconListDetails } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CollapsibleSection } from "../../components/common/CollapsibleSection";
+import { SettingsSection } from "../../components/common/SettingsSection";
+import { L2TabNav } from "../../components/common/L2TabNav";
 import { t } from "../../locale";
 import { MusicAdvancedSettings } from "./MusicAdvancedSettings";
 import { MusicCommandPanel } from "./MusicCommandPanel";
@@ -304,94 +306,104 @@ export function MusicPage({
   const previewError = previewResult?.error ?? null;
 
   return (
-    <Stack gap="md" p="md">
-      <MusicPageHeader
-        mode={form.mode}
-        runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
-        runDisabled={runDisabled}
-        onRun={() => void run()}
-        searching={sessionPhase === "searching" || sessionPhase === "canceling"}
-        stopping={sessionPhase === "canceling"}
-        onStopSearch={() => void stopSearch()}
-        denoise={denoise}
-        onDenoiseChange={setDenoise}
-        dependencyLabels={dependencyLabels}
-        onOpenDependencies={onOpenDependencies}
-      />
-      <MusicConfigurationPanel
-        form={form}
-        onChange={updateForm}
-        onPickOutputDirectory={() => void pickOutputDirectory()}
-        globalProxy={globalProxy}
-      />
-      <MusicSourcePicker sources={form.sources} onChange={(sources) => updateForm({ sources })} />
-      <CollapsibleSection
-        title={
-          <Text size="sm" fw={500}>
-            {t("music.advanced.title")}
-          </Text>
-        }
-        opened={advancedOpen}
-        onToggle={advancedToggle.toggle}
-      >
-        <Stack gap="sm">
-          <MusicCommandPanel
-            preview={preview}
-            previewError={previewError}
-            sessionPhase={sessionPhase}
-            sourceCount={form.sources.length}
-            withDivider
+    <Box mih="100%">
+      <Stack gap="md" p="lg">
+        <MusicPageHeader
+          mode={form.mode}
+          runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
+          runDisabled={runDisabled}
+          onRun={() => void run()}
+          searching={sessionPhase === "searching" || sessionPhase === "canceling"}
+          stopping={sessionPhase === "canceling"}
+          onStopSearch={() => void stopSearch()}
+          denoise={denoise}
+          onDenoiseChange={setDenoise}
+          dependencyLabels={dependencyLabels}
+          onOpenDependencies={onOpenDependencies}
+        />
+        <L2TabNav
+          items={[
+            { page: "search", label: t("music.mode.search") },
+            { page: "playlist", label: t("music.mode.playlist") }
+          ]}
+          value={form.mode}
+          onChange={(mode) => updateForm({ mode })}
+          aria-label={t("music.mode.aria")}
+        />
+        <SettingsSection>
+          <MusicConfigurationPanel
+            form={form}
+            onChange={updateForm}
+            onPickOutputDirectory={() => void pickOutputDirectory()}
+            globalProxy={globalProxy}
           />
-          <MusicAdvancedSettings form={form} onChange={updateForm} />
-        </Stack>
-      </CollapsibleSection>
-      {displayedError ? (
-        <Alert color="red" icon={<IconAlertTriangle size={16} />} title={t("music.errorTitle")}>
-          {displayedError}
-        </Alert>
-      ) : null}
-      {/* 结果卡片常驻：未搜索时引导，搜索中显示加载，就绪后展示结果 */}
-      <CollapsibleSection
-        title={
-          <Text size="sm" fw={500}>
-            {t("music.results.title")}
-            {searchResponse && (
-              <Text span size="xs" c="dimmed" ml={8}>
+        </SettingsSection>
+        <MusicSourcePicker sources={form.sources} onChange={(sources) => updateForm({ sources })} />
+        <SettingsSection
+          icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
+          title={t("music.advanced.title")}
+          opened={advancedOpen}
+          onToggle={advancedToggle.toggle}
+        >
+          <Stack gap="md">
+            <Card withBorder padding="md" radius="md">
+              <MusicCommandPanel
+                preview={preview}
+                previewError={previewError}
+                sessionPhase={sessionPhase}
+                sourceCount={form.sources.length}
+              />
+            </Card>
+            <MusicAdvancedSettings form={form} onChange={updateForm} />
+          </Stack>
+        </SettingsSection>
+        {displayedError ? (
+          <Alert color="red" icon={<IconAlertTriangle size={16} />} title={t("music.errorTitle")}>
+            {displayedError}
+          </Alert>
+        ) : null}
+        {/* 结果卡片常驻：未搜索时引导，搜索中显示加载，就绪后展示结果 */}
+        <SettingsSection
+          icon={<IconListDetails size={20} stroke={1.8} />}
+          title={t("music.results.title")}
+          action={
+            searchResponse ? (
+              <Text size="xs" c="dimmed">
                 {t("music.results.count", { count: searchResponse.results.length })}
               </Text>
-            )}
-          </Text>
-        }
-        opened={resultsOpen}
-        onToggle={resultsHandlers.toggle}
-      >
-        {searchResponse ? (
-          <MusicSearchResults
-            response={searchResponse}
-            selected={selected}
-            queuedIndices={queuedIndices}
-            sessionPhase={sessionPhase}
-            taskSubmitting={taskSubmitting}
-            denoise={denoise}
-            onSelectedChange={setSelected}
-            onDownload={() => void downloadSelected()}
-            onEndSession={() => void endSearchSession()}
-          />
-        ) : sessionPhase === "starting" ||
-          sessionPhase === "searching" ||
-          sessionPhase === "canceling" ? (
-          <Group gap="sm" justify="center" py="lg">
-            <Loader size="xs" />
-            <Text size="sm" c="dimmed">
-              {t("music.searchingHint")}
+            ) : null
+          }
+          opened={resultsOpen}
+          onToggle={resultsHandlers.toggle}
+        >
+          {searchResponse ? (
+            <MusicSearchResults
+              response={searchResponse}
+              selected={selected}
+              queuedIndices={queuedIndices}
+              sessionPhase={sessionPhase}
+              taskSubmitting={taskSubmitting}
+              denoise={denoise}
+              onSelectedChange={setSelected}
+              onDownload={() => void downloadSelected()}
+              onEndSession={() => void endSearchSession()}
+            />
+          ) : sessionPhase === "starting" ||
+            sessionPhase === "searching" ||
+            sessionPhase === "canceling" ? (
+            <Group gap="sm" justify="center" py="lg">
+              <Loader size="xs" />
+              <Text size="sm" c="dimmed">
+                {t("music.searchingHint")}
+              </Text>
+            </Group>
+          ) : (
+            <Text size="sm" c="dimmed" ta="center" py="lg">
+              {t("music.emptyResultsHint")}
             </Text>
-          </Group>
-        ) : (
-          <Text size="sm" c="dimmed" ta="center" py="lg">
-            {t("music.emptyResultsHint")}
-          </Text>
-        )}
-      </CollapsibleSection>
-    </Stack>
+          )}
+        </SettingsSection>
+      </Stack>
+    </Box>
   );
 }

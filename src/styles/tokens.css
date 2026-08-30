@@ -1,10 +1,13 @@
 :root {
-  --app-surface-chrome: var(--mantine-color-gray-1);
+  /* 全局统一白底（CC Switch 语言）：元素层级不再靠底色反差，
+     交给容器描边 + 悬浮变灰表达 */
+  --app-surface-chrome: var(--mantine-color-white);
   --app-surface-workspace: var(--mantine-color-default);
 
-  /* 顶栏 L1 导航激活格：亮色白底浮起（带投影），暗色纯黑高亮（浅灰过白刺眼） */
-  --app-nav-active-bg: #fff;
-  --app-nav-active-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  /* 顶栏 L1 导航激活格：白底下白药丸不可见，改灰底药丸（与悬浮同灰），
+     激活色由图标变蓝承担；暗色纯黑高亮（浅灰过亮刺眼） */
+  --app-nav-active-bg: var(--mantine-color-gray-2);
+  --app-nav-active-shadow: none;
   --app-nav-active-icon: var(--mantine-color-blue-filled);
   --app-nav-hover-bg: var(--mantine-color-gray-2);
 

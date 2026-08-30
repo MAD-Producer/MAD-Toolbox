@@ -1,7 +1,5 @@
-import { ActionIcon, Badge, Group, List, ScrollArea, Text } from "@mantine/core";
+import { ActionIcon, Group, List, ScrollArea, Text } from "@mantine/core";
 import { IconFile, IconX } from "@tabler/icons-react";
-import { useState } from "react";
-import { CollapsibleSection } from "../../components/common/CollapsibleSection";
 import { t } from "../../locale";
 
 interface MediaFileListProps {
@@ -19,50 +17,39 @@ function parentDir(path: string): string {
   return index === -1 ? "" : path.slice(0, index);
 }
 
+/** 文件清单：位于「媒体文件」分节卡片内部，计数徽标由外层卡片头部承担 */
 export function MediaFileList({ inputs, onRemove }: MediaFileListProps) {
-  const [open, setOpen] = useState(true);
-
   return (
-    <CollapsibleSection
-      title={
-        <Badge variant="light" color="gray">
-          {t("media.fileCount", { count: inputs.length })}
-        </Badge>
-      }
-      opened={open}
-      onToggle={() => setOpen((value) => !value)}
-    >
-      <ScrollArea.Autosize mah={280}>
-        <List spacing="xs" center>
-          {inputs.map((path) => (
-            <List.Item
-              key={path}
-              icon={<IconFile size={16} style={{ color: "var(--mantine-color-dimmed)" }} />}
-            >
-              <Group justify="space-between" wrap="nowrap" gap="xs">
-                <Text size="sm" truncate style={{ minWidth: 0 }}>
-                  <Text span fw={500} inherit>
-                    {fileName(path)}
-                  </Text>
-                  <Text span size="xs" c="dimmed">
-                    {" "}
-                    {parentDir(path)}
-                  </Text>
+    <ScrollArea.Autosize mah={280}>
+      <List spacing="xs" center>
+        {inputs.map((path) => (
+          <List.Item
+            key={path}
+            icon={<IconFile size={16} style={{ color: "var(--mantine-color-dimmed)" }} />}
+          >
+            <Group justify="space-between" wrap="nowrap" gap="xs">
+              <Text size="sm" truncate style={{ minWidth: 0 }}>
+                <Text span fw={500} inherit>
+                  {fileName(path)}
                 </Text>
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  size="sm"
-                  aria-label={t("media.removeFileAria", { name: fileName(path) })}
-                  onClick={() => onRemove(path)}
-                >
-                  <IconX size={13} />
-                </ActionIcon>
-              </Group>
-            </List.Item>
-          ))}
-        </List>
-      </ScrollArea.Autosize>
-    </CollapsibleSection>
+                <Text span size="xs" c="dimmed">
+                  {" "}
+                  {parentDir(path)}
+                </Text>
+              </Text>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label={t("media.removeFileAria", { name: fileName(path) })}
+                onClick={() => onRemove(path)}
+              >
+                <IconX size={13} />
+              </ActionIcon>
+            </Group>
+          </List.Item>
+        ))}
+      </List>
+    </ScrollArea.Autosize>
   );
 }

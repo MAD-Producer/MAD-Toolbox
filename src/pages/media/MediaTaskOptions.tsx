@@ -1,6 +1,12 @@
-import { Group, Switch } from "@mantine/core";
-import { t } from "../../locale";
+import { SwitchTileGrid } from "../../components/common/FieldRow";
+import { t, type TranslationKey } from "../../locale";
 import type { MediaFormState } from "./form";
+
+const TASK_OPTION_SWITCHES: ReadonlyArray<[keyof MediaFormState, TranslationKey]> = [
+  ["mapAll", "media.options.mapAll"],
+  ["preserveMetadata", "media.options.preserveMetadata"],
+  ["overwrite", "media.options.overwrite"]
+];
 
 interface MediaTaskOptionsProps {
   form: MediaFormState;
@@ -10,25 +16,15 @@ interface MediaTaskOptionsProps {
 
 export function MediaTaskOptions({ form, disabled, onUpdate }: MediaTaskOptionsProps) {
   return (
-    <Group gap="lg">
-      <Switch
-        label={t("media.options.mapAll")}
-        checked={form.mapAll}
-        onChange={(event) => onUpdate({ mapAll: event.currentTarget.checked })}
-        disabled={disabled}
-      />
-      <Switch
-        label={t("media.options.preserveMetadata")}
-        checked={form.preserveMetadata}
-        onChange={(event) => onUpdate({ preserveMetadata: event.currentTarget.checked })}
-        disabled={disabled}
-      />
-      <Switch
-        label={t("media.options.overwrite")}
-        checked={form.overwrite}
-        onChange={(event) => onUpdate({ overwrite: event.currentTarget.checked })}
-        disabled={disabled}
-      />
-    </Group>
+    <SwitchTileGrid
+      items={TASK_OPTION_SWITCHES.map(([key, labelKey]) => ({
+        key,
+        label: t(labelKey),
+        checked: form[key] as boolean,
+        onToggle: (checked) => onUpdate({ [key]: checked })
+      }))}
+      columns={3}
+      disabled={disabled}
+    />
   );
 }

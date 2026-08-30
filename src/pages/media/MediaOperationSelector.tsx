@@ -1,4 +1,5 @@
 import { Select } from "@mantine/core";
+import { FieldRow } from "../../components/common/FieldRow";
 import { MEDIA_OPERATION_OPTIONS, type MediaPageOperation } from "./workflow";
 import { t } from "../../locale";
 
@@ -18,15 +19,16 @@ export function MediaOperationSelector({
   if (operations.length <= 1) return null;
 
   return (
-    <Select
-      label={t("media.operationLabel")}
-      data={MEDIA_OPERATION_OPTIONS.filter((option) => operations.includes(option.value)).map(
-        ({ value, labelKey }) => ({ value, label: t(labelKey) })
-      )}
-      value={value}
-      onChange={(nextValue) => nextValue && onChange(nextValue as MediaPageOperation)}
-      disabled={disabled}
-      allowDeselect={false}
-    />
+    <FieldRow label={t("media.operationLabel")}>
+      <Select
+        data={MEDIA_OPERATION_OPTIONS.filter((option) => operations.includes(option.value)).map(
+          ({ value, labelKey }) => ({ value, label: t(labelKey) })
+        )}
+        value={value}
+        onChange={(nextValue) => nextValue && onChange(nextValue as MediaPageOperation)}
+        disabled={disabled}
+        allowDeselect={false}
+      />
+    </FieldRow>
   );
 }

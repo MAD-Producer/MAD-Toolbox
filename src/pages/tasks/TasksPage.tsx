@@ -1,15 +1,22 @@
 /**
- * 新任务中心（样板最小版）：读全局任务 store，任务卡片列表。
+ * 任务中心：读全局任务 store，任务卡片列表。
  * 池定义一次性拉取；占用数从任务事件推导（§8：不新增实时同步接口）。
- * 标题下方带边框汇总容器：上层当日三种状态统计，下层并发池逐行指示条；
- * 往日任务收进「历史任务」折叠区。
+ * CC Switch 风格分节：概览卡（统计块 + 并发池指示）、当日任务与历史任务折叠卡。
  */
 
-import { Badge, Box, Button, Card, Group, Stack, Text, Title } from "@mantine/core";
-import { IconTrash } from "@tabler/icons-react";
+import { Badge, Box, Button, Group, Stack, Text, Title } from "@mantine/core";
+import {
+  IconActivity,
+  IconAlertTriangle,
+  IconCalendarEvent,
+  IconCircleCheck,
+  IconHistory,
+  IconTrash
+} from "@tabler/icons-react";
+import type { ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import { useEffect, useMemo, useState } from "react";
-import { CollapsibleSection } from "../../components/common/CollapsibleSection";
+import { SettingsSection } from "../../components/common/SettingsSection";
 import { PoolIndicator } from "./PoolIndicator";
 import { TaskCard } from "./TaskCard";
 import { fetchPoolDefinitions, type PoolDefinition } from "./api";
@@ -26,16 +33,38 @@ interface TasksPageProps {
 /** 删除滑出动画时长，须与 animations.css 中 task-card-slot 的 transition 一致 */
 const DELETE_ANIMATION_MS = 280;
 
-function HeroStat({ label, value, color }: { label: string; value: number; color: string }) {
+/** CC Switch 式统计块：图标 + 灰色小标签，下方加粗大数字 */
+function StatTile({
+  icon,
+  label,
+  value,
+  color
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+  color: string;
+}) {
   return (
-    <Group gap="xs" wrap="nowrap" align="center">
-      <Text size="lg" fw={600} lh={1}>
-        {label}
-      </Text>
-      <Text fw={800} c={value === 0 ? "dimmed" : color} lh={1} style={{ fontSize: 28 }}>
+    <Box
+      p="md"
+      style={{
+        border: "1px solid var(--mantine-color-default-border)",
+        borderRadius: "var(--mantine-radius-md)"
+      }}
+    >
+      <Group gap="xs" wrap="nowrap" align="center">
+        <Box c="var(--mantine-color-dimmed)" style={{ display: "flex" }} lh={0}>
+          {icon}
+        </Box>
+        <Text size="sm" c="dimmed">
+          {label}
+        </Text>
+      </Group>
+      <Text fw={800} c={value === 0 ? "dimmed" : color} lh={1} mt="sm" style={{ fontSize: 28 }}>
         {value}
       </Text>
-    </Group>
+    </Box>
   );
 }
 
@@ -122,83 +151,90 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   );
 
   return (
-    <Stack gap="md" p="md">
-      <Title order={3}>{t("nav.tasks")}</Title>
-      <Card withBorder padding="lg">
-        <Stack gap="md" align="center">
-          <Group justify="center" gap="12%" w="100%" wrap="nowrap">
-            <HeroStat label={t("tasks.status.running")} value={hero.active} color="blue" />
-            <HeroStat
-              label={t("tasks.status.interrupted")}
-              value={hero.interrupted}
-              color="yellow"
-            />
-            <HeroStat label={t("tasks.stat.finished")} value={hero.finished} color="green" />
-          </Group>
-          <Box w="100%">
+    <Box mih="100%">
+      <Stack gap="md" p="lg">
+        <Title order={3}>{t("nav.tasks")}</Title>
+
+        <SettingsSection>
+          <Stack gap="md">
+            <Group grow align="stretch">
+              <StatTile
+                icon={<IconActivity size={16} />}
+                label={t("tasks.status.running")}
+                value={hero.active}
+                color="blue"
+              />
+              <StatTile
+                icon={<IconAlertTriangle size={16} />}
+                label={t("tasks.status.interrupted")}
+                value={hero.interrupted}
+                color="yellow"
+              />
+              <StatTile
+                icon={<IconCircleCheck size={16} />}
+                label={t("tasks.stat.finished")}
+                value={hero.finished}
+                color="green"
+              />
+            </Group>
             <PoolIndicator
               definitions={definitions}
               occupancy={(pool) => poolOccupancy(state, pool)}
             />
-          </Box>
-        </Stack>
-      </Card>
-      {sorted.length === 0 ? (
-        <Text c="dimmed" size="sm">
-          {t("tasks.empty")}
-        </Text>
-      ) : (
-        <>
-          {today.length > 0 && (
-            <CollapsibleSection
-              title={
-                <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={500}>
-                    {t("tasks.today")}
-                  </Text>
+          </Stack>
+        </SettingsSection>
+
+        {sorted.length === 0 ? (
+          <Text c="dimmed" size="sm">
+            {t("tasks.empty")}
+          </Text>
+        ) : (
+          <>
+            {today.length > 0 && (
+              <SettingsSection
+                icon={<IconCalendarEvent size={20} stroke={1.8} />}
+                title={t("tasks.today")}
+                action={
                   <Badge variant="light" color="gray">
                     {today.length}
                   </Badge>
-                </Group>
-              }
-              opened={todayOpen}
-              onToggle={() => setTodayOpen((value) => !value)}
-            >
-              <Stack gap="xs">{today.map(renderCard)}</Stack>
-            </CollapsibleSection>
-          )}
-          {history.length > 0 && (
-            <CollapsibleSection
-              title={
-                <Group gap="xs" wrap="nowrap">
-                  <Text size="sm" fw={500}>
-                    {t("tasks.history")}
-                  </Text>
-                  <Badge variant="light" color="gray">
-                    {history.length}
-                  </Badge>
-                </Group>
-              }
-              opened={historyOpen}
-              onToggle={() => setHistoryOpen((value) => !value)}
-              action={
-                <Button
-                  size="compact-xs"
-                  variant="transparent"
-                  color="red"
-                  className="history-clear-all"
-                  leftSection={<IconTrash size={14} />}
-                  onClick={() => deleteTasks(history.map((tk) => tk.id))}
-                >
-                  {t("tasks.deleteAll")}
-                </Button>
-              }
-            >
-              <Stack gap="xs">{history.map(renderCard)}</Stack>
-            </CollapsibleSection>
-          )}
-        </>
-      )}
-    </Stack>
+                }
+                opened={todayOpen}
+                onToggle={() => setTodayOpen((value) => !value)}
+              >
+                <Stack gap="xs">{today.map(renderCard)}</Stack>
+              </SettingsSection>
+            )}
+            {history.length > 0 && (
+              <SettingsSection
+                icon={<IconHistory size={20} stroke={1.8} />}
+                title={t("tasks.history")}
+                action={
+                  <>
+                    <Badge variant="light" color="gray">
+                      {history.length}
+                    </Badge>
+                    <Button
+                      size="compact-xs"
+                      variant="transparent"
+                      color="red"
+                      className="history-clear-all"
+                      leftSection={<IconTrash size={14} />}
+                      onClick={() => deleteTasks(history.map((tk) => tk.id))}
+                    >
+                      {t("tasks.deleteAll")}
+                    </Button>
+                  </>
+                }
+                opened={historyOpen}
+                onToggle={() => setHistoryOpen((value) => !value)}
+              >
+                <Stack gap="xs">{history.map(renderCard)}</Stack>
+              </SettingsSection>
+            )}
+          </>
+        )}
+      </Stack>
+    </Box>
   );
 }
