@@ -5,7 +5,7 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, Url};
+use tauri::{AppHandle, Emitter, Url};
 use tauri_plugin_updater::UpdaterExt;
 
 #[cfg(not(target_os = "windows"))]
@@ -14,6 +14,8 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Mutex;
 #[cfg(not(target_os = "windows"))]
 use std::time::Instant;
+#[cfg(target_os = "windows")]
+use tauri::Manager;
 
 use super::deps::bundled_binary;
 use super::settings::load_app_settings;
@@ -200,14 +202,17 @@ async fn download_and_launch_windows(
     result
 }
 
+#[cfg(target_os = "windows")]
 pub(crate) fn cleanup_staged_installer(app: &AppHandle) {
-    #[cfg(target_os = "windows")]
     if let Ok(directory) = app.path().app_cache_dir() {
         let installer = directory.join("update").join(STAGED_INSTALLER_NAME);
         let _ = std::fs::remove_file(&installer);
         let _ = std::fs::remove_file(installer.with_extension("exe.part"));
     }
 }
+
+#[cfg(not(target_os = "windows"))]
+pub(crate) fn cleanup_staged_installer(_app: &AppHandle) {}
 
 #[tauri::command]
 pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, String> {
