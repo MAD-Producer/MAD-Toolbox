@@ -6,7 +6,8 @@
   --app-nav-active-bg: var(--mantine-color-white);
   --app-nav-active-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   --app-nav-active-icon: var(--mantine-color-blue-filled);
-  --app-nav-hover-bg: var(--mantine-color-gray-2);
+  --app-nav-hover-bg: var(--mantine-color-gray-3);
+  --app-update-icon-color: var(--mantine-color-green-6);
 
   --app-seg-active-bg: #fff;
   --app-seg-hover-bg: var(--mantine-color-gray-1);
@@ -30,6 +31,7 @@
   --app-nav-active-bg: var(--mantine-color-dark-5);
   --app-nav-active-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   --app-nav-hover-bg: rgba(255, 255, 255, 0.07);
+  --app-update-icon-color: var(--mantine-color-green-7);
 
   --app-seg-active-bg: var(--mantine-color-dark-4);
   --app-seg-hover-bg: rgba(0, 0, 0, 0.35);

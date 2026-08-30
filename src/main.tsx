@@ -6,7 +6,6 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/carousel/styles.css";
 import "./styles/tokens.css";
-import "./styles/fonts.css";
 import "./styles/shell.css";
 import "./styles/controls.css";
 import "./styles/animations.css";

@@ -19,7 +19,7 @@ export function SettingsShell({
   children
 }: SettingsShellProps) {
   return (
-    <Stack gap="lg" p="md">
+    <Stack gap="lg" p="lg">
       <L2TabNav
         items={SETTINGS_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
           page: id,

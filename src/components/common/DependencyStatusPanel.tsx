@@ -82,7 +82,7 @@ export function DependencyStatusPanel({
                 )
               }
             >
-              <Card withBorder padding="sm">
+              <Card withBorder radius="calc(var(--mantine-radius-md) + 4px)" padding="sm">
                 <Stack gap={2}>
                   <Group justify="space-between" wrap="nowrap">
                     <Group gap="xs" wrap="nowrap">

@@ -1,11 +1,12 @@
 import { ActionIcon, Box, Group, Indicator, Title, Tooltip } from "@mantine/core";
-import { IconArrowLeft, IconSettings } from "@tabler/icons-react";
+import { IconArrowLeft, IconCircleArrowDown, IconSettings } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
 import type { L1NavigationItem, L2NavigationItem } from "../../app/navigation";
 import type { AppRoute } from "../../app/route";
 import { t } from "../../locale";
+import { useUpdateStore } from "../../stores/update";
 import { AppBrand } from "./AppBrand";
-import { HeaderActionsProvider } from "./HeaderActions";
+import { HeaderActionsProvider, headerTooltipProps } from "./HeaderActions";
 import { LeftNavigation } from "./LeftNavigation";
 import { TopNavigation } from "./TopNavigation";
 import type { NavigationStatus } from "./TopNavigation";
@@ -21,6 +22,7 @@ interface AppShellProps {
   onNavigatePrimary: (section: AppSection) => void;
   onNavigateSecondary: (page: SecondaryPage) => void;
   onBackFromSettings: () => void;
+  onOpenUpdatePage?: () => void;
   navigationStatuses?: Partial<Record<AppSection, NavigationStatus>>;
   children: ReactNode;
 }
@@ -31,44 +33,65 @@ function secondaryPage(route: AppRoute): SecondaryPage | null {
 
 function HeaderSettingsButton({
   status,
-  onNavigate
+  onNavigate,
+  onOpenUpdate
 }: {
   status?: NavigationStatus;
   onNavigate: (section: AppSection) => void;
+  onOpenUpdate?: () => void;
 }) {
   const label = t("shell.settings");
+  const update = useUpdateStore((state) => state.update);
+  const updateLabel = update
+    ? t("settings.about.updateFound", { version: update.latestVersion })
+    : null;
   return (
-    <Tooltip
-      label={status ? `${label} · ${status.label}` : label}
-      position="bottom"
-      withArrow
-      arrowSize={5}
-      offset={4}
-      openDelay={300}
-      closeDelay={100}
-      events={{ hover: true, focus: true, touch: false }}
-      styles={{ tooltip: { padding: "3px 7px", fontSize: 11, lineHeight: 1.2 } }}
-    >
-      <Indicator
-        disabled={!status || status.count === 0}
-        label={status && status.count > 99 ? "99+" : status?.count}
-        color={status?.color}
-        size={16}
-        offset={3}
+    <Group gap={4} wrap="nowrap">
+      <Tooltip
+        label={status ? `${label} · ${status.label}` : label}
+        position="bottom"
+        withArrow
+        arrowSize={5}
+        offset={4}
+        openDelay={300}
+        closeDelay={100}
+        events={{ hover: true, focus: true, touch: false }}
+        styles={{ tooltip: { padding: "3px 7px", fontSize: 11, lineHeight: 1.2 } }}
       >
-        <ActionIcon
-          className="app-header-icon"
-          size="36px"
-          radius="md"
-          variant="transparent"
-          color="gray"
-          aria-label={status ? `${label}，${status.label}` : label}
-          onClick={() => onNavigate("settings")}
+        <Indicator
+          disabled={!status || status.count === 0}
+          label={status && status.count > 99 ? "99+" : status?.count}
+          color={status?.color}
+          size={16}
+          offset={3}
         >
-          <IconSettings size={20} stroke={1.7} />
-        </ActionIcon>
-      </Indicator>
-    </Tooltip>
+          <ActionIcon
+            className="app-header-icon"
+            size="36px"
+            radius="md"
+            variant="transparent"
+            color="gray"
+            aria-label={status ? `${label}，${status.label}` : label}
+            onClick={() => onNavigate("settings")}
+          >
+            <IconSettings size={20} stroke={1.7} />
+          </ActionIcon>
+        </Indicator>
+      </Tooltip>
+      {update && onOpenUpdate && (
+        <Tooltip {...headerTooltipProps} label={updateLabel}>
+          <ActionIcon
+            variant="transparent"
+            color="green"
+            style={{ color: "var(--app-update-icon-color)" }}
+            aria-label={updateLabel ?? undefined}
+            onClick={onOpenUpdate}
+          >
+            <IconCircleArrowDown size={20} stroke={1.7} />
+          </ActionIcon>
+        </Tooltip>
+      )}
+    </Group>
   );
 }
 
@@ -79,6 +102,7 @@ export function AppShell({
   onNavigatePrimary,
   onNavigateSecondary,
   onBackFromSettings,
+  onOpenUpdatePage,
   navigationStatuses,
   children
 }: AppShellProps) {
@@ -132,6 +156,7 @@ export function AppShell({
                   <HeaderSettingsButton
                     status={navigationStatuses?.settings}
                     onNavigate={onNavigatePrimary}
+                    onOpenUpdate={onOpenUpdatePage}
                   />
                 </Group>
               </Box>

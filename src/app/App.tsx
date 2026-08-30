@@ -7,6 +7,7 @@ import type { ToolName } from "../contracts/dependency";
 import type { TaskEnvelope, TaskSeed } from "../contracts/types";
 import { setAppLanguage, syncNativeWindowTheme } from "./api";
 import { checkForUpdate } from "../pages/settings/api";
+import { useUpdateStore } from "../stores/update";
 import { AppShell } from "../components/layout/AppShell";
 import { SplashScreen } from "../components/layout/SplashScreen";
 import {
@@ -95,11 +96,7 @@ export default function App() {
   useEffect(() => {
     checkForUpdate()
       .then((result) => {
-        if (!result.updateAvailable) return;
-        notifications.show({
-          color: "green",
-          message: t("app.updateAvailableNotice", { version: result.latestVersion })
-        });
+        if (result.updateAvailable) useUpdateStore.getState().setUpdate(result);
       })
       .catch((error) => console.warn("startup update check failed:", error));
   }, []);
@@ -144,6 +141,11 @@ export default function App() {
   const openDependencySettings = () => {
     setLastSettingsPage("dependencies");
     setRoute({ section: "settings", page: "dependencies" });
+  };
+
+  const openUpdateSettings = () => {
+    setLastSettingsPage("about");
+    setRoute({ section: "settings", page: "about" });
   };
 
   const dependencyNotifiedRef = useRef(false);
@@ -362,6 +364,7 @@ export default function App() {
         onNavigatePrimary={navigatePrimary}
         onNavigateSecondary={navigateSecondary}
         onBackFromSettings={() => navigatePrimary(lastMainSection)}
+        onOpenUpdatePage={openUpdateSettings}
         navigationStatuses={{
           ...(activeTaskCount > 0
             ? {

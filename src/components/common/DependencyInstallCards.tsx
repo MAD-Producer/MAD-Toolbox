@@ -45,7 +45,12 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
       {missing.map((dependency) => {
         const command = toolInstallCommands[dependency.tool] as string;
         return (
-          <Card key={dependency.tool} withBorder padding="md">
+          <Card
+            key={dependency.tool}
+            withBorder
+            radius="calc(var(--mantine-radius-md) + 4px)"
+            padding="md"
+          >
             <Stack gap="xs">
               <Group gap="xs">
                 <Text fw={500}>{dependency.label}</Text>

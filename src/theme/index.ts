@@ -5,6 +5,10 @@ export const theme = createTheme({
   primaryColor: "blue",
   primaryShade: { light: 6, dark: 6 },
   defaultRadius: "md",
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  fontFamilyMonospace:
+    'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
   colors: {
     blue,
     dark
