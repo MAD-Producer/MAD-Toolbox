@@ -9,11 +9,6 @@ interface MediaDropzoneProps {
   onDropPaths: (paths: string[]) => void;
 }
 
-/**
- * 视觉沿用 Mantine Dropzone 的设计语言，但拖放事件走 Tauri 的 onDragDropEvent：
- * WebView 内 HTML5 drop 被 Tauri 原生层拦截，且 File 对象不含真实路径，
- * 后端执行需要路径，只有原生拖放能同时给出文件与目录的路径。
- */
 export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const dropRef = useRef(onDropPaths);
@@ -23,7 +18,6 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
   });
 
   useEffect(() => {
-    // 纯浏览器预览时没有 Tauri internals，此时只保留点击选择
     if (!("__TAURI_INTERNALS__" in window)) return;
 
     let disposed = false;
@@ -66,7 +60,6 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
         textAlign: "center",
         cursor: "pointer",
         borderRadius: "var(--mantine-radius-md)",
-        // 常态即粗虚线标识落点，拖拽悬停时高亮为主色
         border: `3px dashed ${
           dragActive ? "var(--mantine-primary-color-filled)" : "var(--mantine-color-default-border)"
         }`,

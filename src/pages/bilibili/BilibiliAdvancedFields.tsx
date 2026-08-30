@@ -1,10 +1,9 @@
 import {
+  MultiSelect,
   PasswordInput,
   SegmentedControl,
   Select,
   Stack,
-  Text,
-  Textarea,
   TextInput
 } from "@mantine/core";
 import { FieldRow, OptionGroup, SwitchTileGrid } from "../../components/common/FieldRow";
@@ -28,6 +27,29 @@ const API_OPTIONS: ReadonlyArray<{ value: BilibiliFormState["api"]; label: strin
   { value: "app", label: "APP" }
 ];
 
+const QUALITY_OPTIONS: ReadonlyArray<{ value: string; labelKey: TranslationKey }> = [
+  { value: "8K 超高清", labelKey: "bilibili.quality.127" },
+  { value: "杜比视界", labelKey: "bilibili.quality.126" },
+  { value: "HDR 真彩", labelKey: "bilibili.quality.125" },
+  { value: "4K 超清", labelKey: "bilibili.quality.120" },
+  { value: "1080P 高帧率", labelKey: "bilibili.quality.116" },
+  { value: "1080P 高码率", labelKey: "bilibili.quality.112" },
+  { value: "1080P 高清", labelKey: "bilibili.quality.80" },
+  { value: "720P 高帧率", labelKey: "bilibili.quality.74" },
+  { value: "720P 高清", labelKey: "bilibili.quality.64" },
+  { value: "480P 清晰", labelKey: "bilibili.quality.32" },
+  { value: "360P 流畅", labelKey: "bilibili.quality.16" },
+  { value: "240P 流畅", labelKey: "bilibili.quality.6" },
+  { value: "144P 流畅", labelKey: "bilibili.quality.5" }
+];
+
+function parseQualityPriority(raw: string): string[] {
+  return raw
+    .split(/[,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 type SwitchItem = [keyof BilibiliFormState, TranslationKey];
 type ValueItem = [keyof BilibiliFormState, TranslationKey, string];
 
@@ -42,7 +64,8 @@ const ENGINE_SWITCHES: ReadonlyArray<SwitchItem> = [
   ["useMp4box", "bilibili.advanced.useMp4box"],
   ["useAria2c", "bilibili.advanced.useAria2c"],
   ["skipMux", "bilibili.advanced.skipMux"],
-  ["multiThread", "bilibili.advanced.multiThread"]
+  ["multiThread", "bilibili.advanced.multiThread"],
+  ["debug", "bilibili.advanced.debug"]
 ];
 
 const ENGINE_VALUES: ReadonlyArray<ValueItem> = [
@@ -145,11 +168,14 @@ export function BilibiliAdvancedFields({ form, disabled, onUpdate }: BilibiliAdv
           />
         </FieldRow>
         <FieldRow label={t("bilibili.fields.qualityPriority")}>
-          <TextInput
+          <MultiSelect
+            data={QUALITY_OPTIONS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
             placeholder={t("bilibili.fields.qualityPriorityPlaceholder")}
-            value={form.qualityPriority}
-            onChange={(event) => onUpdate({ qualityPriority: event.currentTarget.value })}
+            value={parseQualityPriority(form.qualityPriority)}
+            onChange={(values) => onUpdate({ qualityPriority: values.join(",") })}
             disabled={disabled}
+            searchable
+            clearable
           />
         </FieldRow>
         <FieldRow label={t("bilibili.fields.encodingPriority")}>
@@ -192,26 +218,6 @@ export function BilibiliAdvancedFields({ form, disabled, onUpdate }: BilibiliAdv
       <OptionGroup title={t("bilibili.group.output")}>
         <SwitchTileGrid items={toTileItems(OUTPUT_SWITCHES, form, onUpdate)} disabled={disabled} />
         <ValueRows form={form} items={OUTPUT_VALUES} disabled={disabled} onUpdate={onUpdate} />
-      </OptionGroup>
-
-      <OptionGroup title={t("bilibili.group.extras")}>
-        <SwitchTileGrid
-          items={toTileItems([["debug", "bilibili.advanced.debug"]], form, onUpdate)}
-          disabled={disabled}
-        />
-        <div>
-          <Textarea
-            aria-label={t("bilibili.advanced.extraArgs")}
-            autosize
-            minRows={2}
-            value={form.extraArgs}
-            onChange={(event) => onUpdate({ extraArgs: event.currentTarget.value })}
-            disabled={disabled}
-          />
-          <Text size="xs" c="dimmed" mt={4}>
-            {t("bilibili.advanced.extraArgsHint")}
-          </Text>
-        </div>
       </OptionGroup>
     </Stack>
   );

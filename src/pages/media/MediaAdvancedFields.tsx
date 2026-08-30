@@ -8,7 +8,6 @@ import {
 import { t, type TranslationKey } from "../../locale";
 import type { MediaFormState } from "./form";
 
-// 高级开关按分类拆组；faststart 沿用 ffmpeg 参数原名字面量，不设翻译键
 type AdvancedSwitch = {
   key: keyof MediaFormState;
   labelKey?: TranslationKey;

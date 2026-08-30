@@ -17,7 +17,6 @@ function parentDir(path: string): string {
   return index === -1 ? "" : path.slice(0, index);
 }
 
-/** 文件清单：位于「媒体文件」分节卡片内部，计数徽标由外层卡片头部承担 */
 export function MediaFileList({ inputs, onRemove }: MediaFileListProps) {
   return (
     <ScrollArea.Autosize mah={280}>

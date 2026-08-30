@@ -38,7 +38,6 @@ export function MusicPageHeader({
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
         <Tooltip label={t("music.denoise.label")}>
           <Paper radius="md" withBorder px="xs" py={6}>
-            {/*恰好不会引起标题位移*/}
             <Group gap="xs" wrap="nowrap">
               <IconMistOff size={18} />
               <Switch

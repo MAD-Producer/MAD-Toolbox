@@ -234,7 +234,6 @@ export function AboutSettingsPage() {
                 justify="space-between"
                 style={{
                   width: updateBarWidth ?? undefined,
-                  // 宽度不够容纳控件时按内容撑开，避免挤压变形
                   minWidth: "max-content"
                 }}
               >

@@ -13,6 +13,7 @@ import {
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
+  IconArrowBackUp,
   IconDeviceDesktop,
   IconBookDownload,
   IconFolderOpen,
@@ -29,11 +30,9 @@ import type { AppSettings } from "./api";
 interface GeneralSettingsPageProps {
   settings: AppSettings;
   onSave: (settings: AppSettings) => Promise<AppSettings>;
-  /** 语言切换即时生效（与主题一致，不走保存按钮）：乐观更新 UI 并持久化到后端 */
   onSetLanguage: (choice: LanguageChoice) => void;
 }
 
-/** 主题选项的「图标 + 文案」标签：inline-flex 随 label 的 text-align:center 整体居中 */
 function themeOptionLabel(icon: ReactNode, text: string) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -48,7 +47,6 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
   const [directory, setDirectory] = useState(settings.defaultOutputDirectory || "");
   const [proxy, setProxy] = useState(settings.proxy || "");
   const [saving, setSaving] = useState(false);
-  // 乐观展示当前语言选择；后端持久化由 onSetLanguage 异步完成并经 settings 回流校正
   const [language, setLanguage] = useState<LanguageChoice>(settings.language ?? "auto");
 
   useEffect(() => {
@@ -91,16 +89,29 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
         <FieldWithActions
           mt="sm"
           actions={
-            <Tooltip label={t("common.selectDirectory")}>
-              <ActionIcon
-                variant="default"
-                size="input-sm"
-                aria-label={t("settings.general.selectOutputDirectory")}
-                onClick={() => void pickDirectory()}
-              >
-                <IconFolderOpen size={16} stroke={1.7} />
-              </ActionIcon>
-            </Tooltip>
+            <>
+              <Tooltip label={t("common.restoreDefault")}>
+                <ActionIcon
+                  variant="default"
+                  size="input-sm"
+                  disabled={!directory}
+                  aria-label={t("common.restoreDefault")}
+                  onClick={() => setDirectory("")}
+                >
+                  <IconArrowBackUp size={16} stroke={1.7} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label={t("common.selectDirectory")}>
+                <ActionIcon
+                  variant="default"
+                  size="input-sm"
+                  aria-label={t("settings.general.selectOutputDirectory")}
+                  onClick={() => void pickDirectory()}
+                >
+                  <IconFolderOpen size={16} stroke={1.7} />
+                </ActionIcon>
+              </Tooltip>
+            </>
           }
         >
           <TextInput
@@ -173,7 +184,6 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
           data={[
             {
               value: "zh",
-              // 语言选项用各语言的自称（endonym）书写，不随界面语言变化
               label: themeOptionLabel(<IconLanguage size={15} stroke={1.7} />, "简体中文")
             },
             {

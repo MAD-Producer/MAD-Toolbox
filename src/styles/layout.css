@@ -1,14 +1,13 @@
-/* 禁用过度滚动：html/body 阻止窗口级回弹/滚动链，main 阻止工作区内滚动溢出到整页 */
 html,
 body {
   overscroll-behavior: none;
 }
 
 main {
-  scrollbar-width: none; /* 标准写法（Firefox 系） */
+  scrollbar-width: none;
   overscroll-behavior: none;
 }
 
 main::-webkit-scrollbar {
-  display: none; /* WebView2/Chromium */
+  display: none;
 }

@@ -1,9 +1,3 @@
-/**
- * Media 表单状态 = 后端 MediaIntent 的 TS 镜像（真相源：src-tauri/src/features/media/types.rs）。
- * `input` 单文件字段由提交时逐文件填充；页面另持 inputs 列表。
- * pr-compatible 是页面级操作选项，提交走专用 command，不进 MediaIntent。
- */
-
 export type MediaOperation =
   | "remux"
   | "transcode"

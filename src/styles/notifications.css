@@ -1,7 +1,3 @@
-/* 通知外观（配合 lib/notifications.ts 注入的类型类）：
-   主题色浅底 + 同色系图标 + 文本 + 右侧关闭按钮的三段式水平布局，
-   底部一条与驻留时长同步的倒计时条。未列出的类型回退到 info。
-   底色/图标色取 Mantine 的 -light / -light-color 变量，浅深主题自动切换。 */
 .app-notification--success {
   --app-notification-bg: var(--mantine-color-green-light);
   --app-notification-icon: var(--mantine-color-green-light-color);
@@ -22,17 +18,12 @@
   --app-notification-icon: var(--mantine-color-blue-light-color);
 }
 
-/* 选择器带属性选择器抬一档特异性，覆盖 Mantine 默认的白/深灰卡片底色 */
 [data-mantine-color-scheme="light"] .app-notification,
 [data-mantine-color-scheme="dark"] .app-notification {
   background-color: var(--app-notification-bg);
   padding-inline-start: var(--mantine-spacing-xs);
 }
 
-/* 文字色取 tokens.css 的 --app-notification-title/-text（亮暗成对定义） */
-
-/* 图标容器：Mantine 默认给 28px 圆形底（filled 语义色），与浅色底不协调，
-   改为与通知条同底色（视觉上圆盘消失，仅剩图标本身） */
 .app-notification .app-notification-icon {
   background-color: var(--app-notification-bg);
   color: var(--app-notification-icon);
@@ -46,8 +37,6 @@
   color: var(--app-notification-text);
 }
 
-/* 倒计时条：贴通知底边，右端随时间向左收回，时长与 autoClose 同步
-   （--app-notification-lifetime 由 lib/notifications.ts 按类型注入） */
 .app-notification--timed {
   position: relative;
 }

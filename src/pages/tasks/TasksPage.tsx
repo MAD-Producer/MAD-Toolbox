@@ -1,9 +1,3 @@
-/**
- * 任务中心：读全局任务 store，任务卡片列表。
- * 池定义一次性拉取；占用数从任务事件推导（§8：不新增实时同步接口）。
- * CC Switch 风格分节：概览卡（统计块 + 并发池指示）、当日任务与历史任务折叠卡。
- */
-
 import { Badge, Box, Button, Group, Stack, Text, Title } from "@mantine/core";
 import {
   IconActivity,
@@ -30,10 +24,8 @@ interface TasksPageProps {
   onReuse: (task: TaskEnvelope) => void;
 }
 
-/** 删除滑出动画时长，须与 animations.css 中 task-card-slot 的 transition 一致 */
 const DELETE_ANIMATION_MS = 280;
 
-/** CC Switch 式统计块：图标 + 灰色小标签，下方加粗大数字 */
 function StatTile({
   icon,
   label,
@@ -77,7 +69,6 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   const [definitions, setDefinitions] = useState<PoolDefinition[]>([]);
   const [todayOpen, setTodayOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // 删除动画期间标记待删卡片：先滑走再调后端，失败则撤销标记
   const [exiting, setExiting] = useState<ReadonlySet<string>>(() => new Set());
 
   useEffect(() => {

@@ -17,6 +17,7 @@ import { MediaInspectionDialog } from "./MediaInspectionDialog";
 import { MediaOperationSelector } from "./MediaOperationSelector";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
 import { FieldRow } from "../../components/common/FieldRow";
+import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { MediaTaskOptions } from "./MediaTaskOptions";
 import { MediaTimeRangeFields } from "./MediaTimeRangeFields";
 import { t } from "../../locale";
@@ -27,11 +28,6 @@ interface MediaWorkspaceProps extends MediaWorkspacePageProps {
   onOpenDependencies?: () => void;
 }
 
-/**
- * 媒体工作流区（单一常驻工作区）：通栏页签导航（L2TabNav）位于标题行之下，
- * CC Switch 风格分节卡片依次为「媒体文件」「输出与处理」「高级参数」；
- * 表单草稿由 useMediaWorkspace 在 page 变化时于渲染期重置。
- */
 export function MediaWorkspace({
   page,
   onNavigatePage,
@@ -79,7 +75,6 @@ export function MediaWorkspace({
           aria-label={t("media.workflowAria")}
         />
 
-        {/* 拖放区直接铺在画布上，不加「媒体文件」分节标题 */}
         <MediaDropzone onPickFiles={workspace.addFiles} onDropPaths={workspace.addPaths} />
         {workspace.inputs.length > 0 && (
           <Stack gap="xs">
@@ -105,6 +100,7 @@ export function MediaWorkspace({
                 disabled={workspace.expertMode}
                 onChange={(outputDirectory) => workspace.update({ outputDirectory })}
                 onBrowse={workspace.pickOutputDirectory}
+                resolveDefault={resolveDefaultOutputDirectory}
               />
             </FieldRow>
 

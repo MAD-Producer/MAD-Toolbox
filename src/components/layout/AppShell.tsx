@@ -19,7 +19,6 @@ interface AppShellProps {
   secondaryItems: readonly L2NavigationItem[];
   onNavigatePrimary: (section: AppSection) => void;
   onNavigateSecondary: (page: SecondaryPage) => void;
-  /** 设置页接管顶栏为「返回 + 页标题」页头时的返回目标 */
   onBackFromSettings: () => void;
   navigationStatuses?: Partial<Record<AppSection, NavigationStatus>>;
   children: ReactNode;
@@ -29,7 +28,6 @@ function secondaryPage(route: AppRoute): SecondaryPage | null {
   return "page" in route ? route.page : null;
 }
 
-/** 顶栏标题右侧的设置入口：独立于 L1 导航，点击后顶栏切换为设置页专属页头 */
 function HeaderSettingsButton({
   status,
   onNavigate
@@ -86,7 +84,6 @@ export function AppShell({
   const activeSecondaryPage = secondaryPage(route);
   const hasSecondaryNavigation = secondaryItems.length > 0 && activeSecondaryPage !== null;
 
-  // 设置页为页面级界面：顶栏不再出现主导航，换为「返回 + 页标题」页头
   const settingsHeader = route.section === "settings";
 
   return (
@@ -141,7 +138,6 @@ export function AppShell({
               onNavigate={onNavigatePrimary}
               statuses={navigationStatuses}
             />
-            {/* 第三列留空：右侧入口（主题/GitHub/官网）已并入设置页，保留空列维持导航居中 */}
           </Box>
         )}
       </Box>

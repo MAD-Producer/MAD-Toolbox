@@ -1,5 +1,3 @@
-/* 应用框架静态皮肤：顶栏导航、应用标题、全局表面底色。动效见 animations.css。 */
-
 .app-chrome {
   background: var(--app-surface-chrome);
 }
@@ -8,7 +6,6 @@
   background: var(--app-surface-workspace);
 }
 
-/* Sinter 字体文件暂缺，先由 Arial 承接 */
 .app-title {
   font-family: "Sinter", Arial, sans-serif;
   font-size: 22px;
@@ -17,8 +14,6 @@
   color: var(--app-title-color);
 }
 
-/* 顶栏 L1 导航：整格即按钮（高亮区 = 可点击区），宽度由 header 网格均分，
-   图标随视口 900–1920px 缩放 */
 .top-nav-item {
   flex: 1;
   display: flex;
@@ -49,7 +44,6 @@
   color: var(--app-nav-active-icon);
 }
 
-/* 与 .top-nav-item-active 同特异性，靠先后顺序覆盖，勿挪到它前面 */
 .top-nav-task-running {
   color: var(--mantine-color-green-light-color);
 }

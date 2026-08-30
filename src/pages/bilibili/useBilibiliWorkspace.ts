@@ -65,7 +65,6 @@ export function useBilibiliWorkspace({
     setForm((current) => ({ ...current, ...patch }));
   };
 
-  // 输出目录默认统一到 系统「下载」/MADToolbox；程序预填不算用户编辑，不推进草稿版本
   useEffect(() => {
     let canceled = false;
     void resolveDefaultOutputDirectory().then((directory) => {
@@ -98,7 +97,6 @@ export function useBilibiliWorkspace({
         ...defaultBilibiliForm,
         ...(seed.task.intent.data as Partial<BilibiliFormState>)
       };
-      // 复用配置只还原参数
       if (seed.purpose === "reuse") restored.url = "";
       setForm(restored);
     } else {
@@ -113,7 +111,6 @@ export function useBilibiliWorkspace({
     onSeedConsumed?.();
   }, [seed, onSeedConsumed]);
 
-  // 每次进入页面都重新读取落盘登录态：覆盖「上次会话已登录」「关窗后后台扫码完成」等场景
   useEffect(() => {
     if (active) void refreshLoginStatus();
   }, [active, refreshLoginStatus]);
@@ -185,7 +182,6 @@ export function useBilibiliWorkspace({
     }
   };
 
-  // 草稿变更后沿用上一次预览直到新结果整体替换，避免「…」与命令交替导致高度抖动
   const preview = previewState?.result ?? null;
   const previewError = previewState?.error ?? null;
 

@@ -1,7 +1,7 @@
 import { Select, Stack, TextInput } from "@mantine/core";
 import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
-import { browserCookieOptions } from "../../lib/platform";
+import { browserCookieOptions, resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import type { NetworkFormState } from "./form";
 
@@ -10,7 +10,6 @@ interface NetworkVideoDownloadFieldsProps {
   disabled: boolean;
   onUpdate: (patch: Partial<NetworkFormState>) => void;
   onPickOutputDirectory: () => Promise<void>;
-  /** 设置页的全局代理；已设置时作为占位提示，留空提交即使用它 */
   globalProxy?: string | null;
 }
 
@@ -50,6 +49,7 @@ export function NetworkVideoDownloadFields({
           disabled={disabled}
           onChange={(outputDirectory) => onUpdate({ outputDirectory })}
           onBrowse={onPickOutputDirectory}
+          resolveDefault={resolveDefaultOutputDirectory}
         />
       </FieldRow>
       <FieldRow label={t("network.fields.proxy")}>

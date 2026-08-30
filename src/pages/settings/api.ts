@@ -1,7 +1,3 @@
-/**
- * 设置页后端契约的类型化 invoke 封装：应用设置、依赖检测/安装与更新检查为跨 feature 应用级命令。
- */
-
 import { invoke } from "@tauri-apps/api/core";
 import type { DependencyStatus, ToolName } from "../../contracts/dependency";
 
@@ -9,7 +5,6 @@ export interface AppSettings {
   defaultOutputDirectory: string | null;
   dependencyPreference: "bundled" | "system";
   proxy: string | null;
-  /** 界面与后端消息语言；auto = 跟随系统（zh 系 → 中文，其余 → 英文） */
   language: "auto" | "zh" | "en";
 }
 
@@ -32,7 +27,6 @@ export function checkForUpdate(): Promise<UpdateCheck> {
   return invoke<UpdateCheck>("check_for_update");
 }
 
-/** 经 tauri-plugin-updater 下载验签并安装更新；useMirror 时经 store.madproducer.cn 镜像下载 */
 export function installUpdate(useMirror: boolean): Promise<void> {
   return invoke<void>("install_update", { useMirror });
 }

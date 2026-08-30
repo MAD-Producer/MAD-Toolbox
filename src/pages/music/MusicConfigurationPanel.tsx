@@ -1,6 +1,7 @@
 import { NumberInput, Stack, Textarea, TextInput } from "@mantine/core";
 import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
+import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import type { MusicFormPatch, MusicFormState } from "./configuration";
 
@@ -8,15 +9,16 @@ interface MusicConfigurationPanelProps {
   form: MusicFormState;
   onChange: (patch: MusicFormPatch) => void;
   onPickOutputDirectory: () => void;
-  /** 设置页的全局代理；已设置时作为占位提示，留空提交即使用它 */
   globalProxy?: string | null;
+  defaultOutputDirectory?: string | null;
 }
 
 export function MusicConfigurationPanel({
   form,
   onChange,
   onPickOutputDirectory,
-  globalProxy
+  globalProxy,
+  defaultOutputDirectory
 }: MusicConfigurationPanelProps) {
   return (
     <Stack gap="md">
@@ -46,6 +48,11 @@ export function MusicConfigurationPanel({
           placeholder={t("music.outputDirectory.placeholder")}
           onChange={(outputDirectory) => onChange({ outputDirectory })}
           onBrowse={async () => onPickOutputDirectory()}
+          resolveDefault={
+            defaultOutputDirectory
+              ? () => Promise.resolve(defaultOutputDirectory)
+              : resolveDefaultOutputDirectory
+          }
         />
       </FieldRow>
       <FieldRow label={t("music.searchSize.label")} hint={t("music.searchSize.description")}>

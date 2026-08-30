@@ -41,7 +41,6 @@ export function MusicSourcePicker({ sources, onChange }: MusicSourcePickerProps)
           </Text>
           {MUSIC_SOURCE_GROUPS.map(([groupKey, entries]) => (
             <div key={groupKey}>
-              {/* 与依赖安装引导一致的「文字 + 横线延展右边界」分组头，替代弱化的浅色小字 */}
               <Divider mb="sm" label={<Text size="sm">{t(groupKey)}</Text>} labelPosition="left" />
               <Group gap={6}>
                 {entries.map(([source, labelKey]) => (

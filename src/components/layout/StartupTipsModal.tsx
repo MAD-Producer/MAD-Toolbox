@@ -29,7 +29,6 @@ function localDateKey(): string {
   ).padStart(2, "0")}`;
 }
 
-/** 「今日不再提醒」只在当天生效，次日启动再次弹出 */
 export function isStartupTipsDismissedToday(): boolean {
   try {
     return localStorage.getItem(DISMISSED_AT_KEY) === localDateKey();
@@ -43,15 +42,10 @@ interface StartupTipsModalProps {
   onClose: () => void;
 }
 
-/**
- * 启动提示：三页轮播，翻页箭头与操作按钮固定在底部一行。
- * 「今日不再提醒」仅在末页可见可点，用户必须翻到末页才能当天免打扰。
- */
 export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
   const [embla, setEmbla] = useState<EmblaCarouselType | null>(null);
   const [slide, setSlide] = useState(0);
 
-  // Modal 关闭时内容卸载，但打开动画期间容器宽度可能尚未就绪，须 reInit 才能正确测量滑动宽度
   useEffect(() => {
     if (opened) embla?.reInit();
   }, [opened, embla]);
@@ -59,9 +53,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
   const dismissForToday = () => {
     try {
       localStorage.setItem(DISMISSED_AT_KEY, localDateKey());
-    } catch {
-      // localStorage 不可用（隐私模式等）时退化为仅本次关闭
-    }
+    } catch {}
     onClose();
   };
 
@@ -136,8 +128,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           </ScrollArea>
         </Carousel.Slide>
       </Carousel>
-      {/* 底部控制行：左右圆角矩形翻页箭头分居两侧，「今日不再提醒」居中且仅末页可见。
-          visibility 占位保证翻页时控制行高度不跳。 */}
+
       <Group justify="space-between" align="center" mt="xs">
         <ActionIcon
           variant="default"

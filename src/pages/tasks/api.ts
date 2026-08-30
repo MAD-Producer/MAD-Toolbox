@@ -1,7 +1,3 @@
-/**
- * 任务系统后端契约的类型化 invoke 封装——任务命令属于任务系统本身，不属于任何单一 feature。
- */
-
 import { invoke } from "@tauri-apps/api/core";
 import type { Pool, TaskEnvelope } from "../../contracts/types";
 

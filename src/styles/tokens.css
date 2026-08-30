@@ -1,31 +1,22 @@
 :root {
-  /* 全局统一白底（CC Switch 语言）：元素层级不再靠底色反差，
-     交给容器描边 + 悬浮变灰表达 */
   --app-surface-chrome: var(--mantine-color-white);
   --app-surface-workspace: var(--mantine-color-default);
 
-  /* 顶栏 L1 导航激活格：白底下白药丸不可见，改灰底药丸（与悬浮同灰），
-     激活色由图标变蓝承担；暗色纯黑高亮（浅灰过亮刺眼） */
   --app-nav-active-bg: var(--mantine-color-gray-2);
   --app-nav-active-shadow: none;
   --app-nav-active-icon: var(--mantine-color-blue-filled);
   --app-nav-hover-bg: var(--mantine-color-gray-2);
 
-  /* SegmentedControl 激活段底色；L2 页签非激活段悬浮底色（向激活底靠拢） */
   --app-seg-active-bg: #fff;
   --app-seg-hover-bg: var(--mantine-color-gray-1);
 
-  /* L2 页签蓝底激活段上的警示计数：两主题均取亮黄（yellow-4）保证可读 */
   --app-tab-count-active: var(--mantine-color-yellow-4);
 
-  /* 顶栏应用标题：暗色换浅一档的蓝保证文字对比 */
   --app-title-color: var(--mantine-color-blue-filled);
 
-  /* 关于页「MADer」渐变文字两端：暗色改用更浅色阶保证对比度 */
   --app-quote-gradient-from: var(--mantine-color-blue-6);
   --app-quote-gradient-to: var(--mantine-color-cyan-4);
 
-  /* 通知条文字（底色与图标色由类型类映射 Mantine 语义变量，见 notifications.css） */
   --app-notification-title: var(--mantine-color-gray-8);
   --app-notification-text: var(--mantine-color-gray-7);
 }
@@ -73,11 +64,9 @@
   --mantine-color-orange-light-hover: #502d16;
   --mantine-color-orange-light-color: var(--mantine-color-orange-4);
 
-  /* 灰系浅色变体：公式结果近乎纯黑无法用作底色，改用边框级深灰 + 近白文字 */
   --mantine-color-gray-light: var(--mantine-color-dark-4);
   --mantine-color-gray-light-hover: var(--mantine-color-dark-3);
   --mantine-color-gray-light-color: var(--mantine-color-dark-0);
 
-  /* 主色悬停方向：暗色下提亮到 blue-5，而非按 shade+1 公式降到 blue-7 变深 */
   --mantine-color-blue-filled-hover: var(--mantine-color-blue-5);
 }

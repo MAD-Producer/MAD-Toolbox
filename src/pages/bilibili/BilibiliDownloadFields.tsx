@@ -1,6 +1,7 @@
 import { Stack, TextInput } from "@mantine/core";
 import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
+import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import type { BilibiliFormState } from "./form";
 
@@ -43,6 +44,7 @@ export function BilibiliDownloadFields({
           placeholder={t("bilibili.fields.outputPlaceholder")}
           onChange={(outputDirectory) => onUpdate({ outputDirectory })}
           onBrowse={onPickOutputDirectory}
+          resolveDefault={resolveDefaultOutputDirectory}
         />
       </FieldRow>
     </Stack>

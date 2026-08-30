@@ -1,8 +1,3 @@
-/**
- * Music 页面只编排表单、搜索会话与任务提交；具体界面由 Music 前缀组件负责。
- * 搜索结果由应用级 music session store 常驻保存，页面隐藏不会中断后端事件监听。
- */
-
 import { Alert, Box, Card, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconAdjustmentsHorizontal, IconListDetails } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
@@ -72,7 +67,6 @@ interface MusicPageProps {
   dependency: DependencyStatus | null;
   pythonDependency: DependencyStatus | null;
   defaultOutputDirectory: string | null;
-  /** 设置页的全局代理；已设置时作为占位提示，留空提交即使用它 */
   globalProxy: string | null;
   onPlaylist: (request: MusicdlPlaylistRequest, form: MusicFormState) => Promise<SubmitResult>;
   onDownload: (
@@ -144,7 +138,6 @@ export function MusicPage({
       fillDefault(defaultOutputDirectory);
       return;
     }
-    // 设置未指定时统一回落到 系统「下载」/MADToolbox
     let canceled = false;
     void resolveDefaultOutputDirectory().then((directory) => {
       if (!canceled && directory) fillDefault(directory);
@@ -163,14 +156,10 @@ export function MusicPage({
     localStorage.setItem(MUSIC_DENOISE_STORAGE_KEY, denoise ? "1" : "0");
   }, [denoise]);
 
-  // 搜索结果到达时自动展开结果卡片
   useEffect(() => {
     if (searchResponse) resultsHandlers.open();
   }, [searchResponse, resultsHandlers.open]);
 
-  // 任务中心「复用此配置」：按任务落库的表单快照还原参数；
-  // keyword/playlistUrl 是每次任务不同的输入，留空待填。
-  // 旧任务的 intent 无快照，退化为仅还原模式（playlist→歌单、download→搜索）。
   useEffect(() => {
     if (!seed) return;
     setPreviewResult(null);
@@ -243,9 +232,7 @@ export function MusicPage({
     try {
       await startSearch(createMusicSearchRequest(form, prepared.cli));
       setSelected([]);
-    } catch {
-      // Store 保留旧 ready 会话并承载错误文本。
-    }
+    } catch {}
   };
 
   const downloadSelected = async () => {
@@ -336,6 +323,7 @@ export function MusicPage({
             onChange={updateForm}
             onPickOutputDirectory={() => void pickOutputDirectory()}
             globalProxy={globalProxy}
+            defaultOutputDirectory={defaultOutputDirectory}
           />
         </SettingsSection>
         <MusicSourcePicker sources={form.sources} onChange={(sources) => updateForm({ sources })} />
@@ -362,7 +350,7 @@ export function MusicPage({
             {displayedError}
           </Alert>
         ) : null}
-        {/* 结果卡片常驻：未搜索时引导，搜索中显示加载，就绪后展示结果 */}
+
         <SettingsSection
           icon={<IconListDetails size={20} stroke={1.8} />}
           title={t("music.results.title")}
