@@ -39,7 +39,6 @@ export const DEFAULT_MUSIC_SOURCES = [
   "QianqianMusicClient"
 ] as const;
 
-/** [客户端值, 名称键]：品牌名两语言同值入键，保持元组类型统一（渲染处 t()） */
 export const MUSIC_SOURCE_GROUPS: ReadonlyArray<
   readonly [TranslationKey, ReadonlyArray<readonly [string, TranslationKey]>]
 > = [

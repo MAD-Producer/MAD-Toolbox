@@ -41,8 +41,6 @@ function notifyTerminal(state: JobState, hadVisibleQr: boolean) {
 }
 
 export const useBilibiliLoginStore = create<BilibiliLoginStore>((set, get) => {
-  // completed 表示后端已校验并写入 BBDown.data，可直接置为已登录；
-  // failed/canceled 时旧的本地 Cookie 仍可能有效（如换号扫码中途放弃），重新查询落盘状态
   const applyTerminal = (state: JobState) => {
     set({ phase: "idle", jobId: null, qrDataUrl: null });
     if (state.state === "completed") set({ loggedIn: true });
@@ -139,15 +137,11 @@ export const useBilibiliLoginStore = create<BilibiliLoginStore>((set, get) => {
       return startPromise;
     },
 
-    // 查询落盘登录态（BBDown.data + 在线校验）；失败静默按未登录处理，
-    // 依赖缺失等可操作错误由依赖徽标与扫码按钮本身呈现
     refresh: () =>
       bilibiliLoginStatus()
         .then((loggedIn) => set({ loggedIn }))
         .catch(() => set({ loggedIn: false })),
 
-    // 关闭二维码弹窗 = 放弃本次登录：立即复位，页面不再卡在「等待扫码」。
-    // 后台轮询至多 180s 自行超时；若用户关窗前已扫码，凭证仍会正常写入（只是无 UI 回执）。
     dismissQr: () => set({ phase: "idle", jobId: null, qrDataUrl: null })
   };
 });

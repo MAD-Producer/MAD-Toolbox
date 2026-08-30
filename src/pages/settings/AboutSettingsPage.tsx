@@ -1,15 +1,14 @@
 import {
   ActionIcon,
   Button,
-  Card,
+  Box,
   Divider,
   Group,
   Image,
   SegmentedControl,
   Stack,
   Text,
-  Tooltip,
-  type CardProps
+  Tooltip
 } from "@mantine/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -20,14 +19,16 @@ import {
   IconRefresh,
   IconWorld
 } from "@tabler/icons-react";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
+import { useUpdateStore } from "../../stores/update";
 import organizationLogo from "../../assets/organization_logo.png";
 import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 import { t, type TranslationKey } from "../../locale";
 import { checkForUpdate, installUpdate, type UpdateCheck } from "./api";
+import { SettingsRow, SettingsSectionCard } from "./SettingsBlocks";
 
 type DownloadSource = "github" | "mirror";
 
@@ -81,7 +82,7 @@ interface AboutListRowProps {
 function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) {
   return (
     <FieldWithActions
-      px="md"
+      px="lg"
       py="sm"
       actions={
         href && (
@@ -114,35 +115,13 @@ function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) 
   );
 }
 
-function AboutSection({
-  title,
-  cardProps,
-  children
-}: {
-  title: string;
-  cardProps?: CardProps;
-  children: ReactNode;
-}) {
-  return (
-    <Stack gap="xs">
-      <Text size="sm" fw={600}>
-        {title}
-      </Text>
-      <Card withBorder {...(cardProps ?? { p: 0 })}>
-        {children}
-      </Card>
-    </Stack>
-  );
-}
-
 export function AboutSettingsPage() {
   const [checking, setChecking] = useState(false);
-  const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [source, setSource] = useState<DownloadSource>("github");
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
-  const checkButtonRef = useRef<HTMLButtonElement>(null);
-  const [updateBarWidth, setUpdateBarWidth] = useState<number | null>(null);
+  const update = useUpdateStore((state) => state.update);
+  const setUpdate = useUpdateStore((state) => state.setUpdate);
 
   useEffect(() => {
     const promise = listen<{ received: number; total: number | null }>(
@@ -162,7 +141,6 @@ export function AboutSettingsPage() {
     try {
       const result = await checkForUpdate();
       if (result.updateAvailable) {
-        setUpdateBarWidth(checkButtonRef.current?.offsetWidth ?? null);
         setUpdate(result);
         setProgress(null);
         notifications.show({
@@ -170,6 +148,7 @@ export function AboutSettingsPage() {
           color: "green"
         });
       } else {
+        setUpdate(null);
         notifications.show({ message: t("settings.about.upToDate"), color: "green" });
       }
     } catch (error) {
@@ -195,108 +174,98 @@ export function AboutSettingsPage() {
 
   return (
     <Stack gap="lg">
-      <AboutSection title={t("settings.about.title")} cardProps={{ p: 24 }}>
-        <Group justify="space-between" align="center" wrap="nowrap">
-          <Group gap="lg" wrap="nowrap" align="center">
-            <Image src={appIcon} alt="MAD Toolbox" h={64} w="auto" radius="sm" flex="0 0 auto" />
-            <Stack gap={8}>
-              <Text className="app-title" fz="xl">
-                MAD Toolbox
-              </Text>
-              <Text size="sm" fw={700}>
-                v{packageInfo.version}
-              </Text>
-            </Stack>
-          </Group>
-          <Group gap="sm" wrap="nowrap">
-            <Button
-              variant="transparent"
-              color="gray"
-              className="about-action"
-              leftSection={<IconWorld size={16} />}
-              onClick={() => void openUrl(TOOLBOX_URL)}
-            >
-              Website
-            </Button>
-            <Button
-              variant="transparent"
-              color="gray"
-              className="about-action"
-              leftSection={<IconBrandGithub size={16} />}
-              onClick={() => void openUrl(GITHUB_URL)}
-            >
-              GitHub
-            </Button>
-            {update ? (
-              <Group
-                gap={0}
-                wrap="nowrap"
-                justify="space-between"
-                style={{
-                  width: updateBarWidth ?? undefined,
-                  // 宽度不够容纳控件时按内容撑开，避免挤压变形
-                  minWidth: "max-content"
-                }}
-              >
-                <Tooltip
-                  label={
-                    downloading
-                      ? progress !== null
-                        ? t("settings.about.downloadingProgress", { percent: progress })
-                        : t("settings.about.downloading")
-                      : t("settings.about.updateToVersion", { version: update.latestVersion })
-                  }
-                  opened={downloading || undefined}
-                  position="bottom"
-                >
-                  <ActionIcon
-                    size="input-sm"
-                    variant="filled"
-                    color="green"
-                    loading={downloading}
-                    aria-label={t("settings.about.updateToVersion", {
-                      version: update.latestVersion
-                    })}
-                    onClick={() => void handleDownloadUpdate()}
-                  >
-                    <IconDownload size={16} stroke={1.7} />
-                  </ActionIcon>
-                </Tooltip>
-                <SegmentedControl
-                  size="xs"
-                  value={source}
-                  onChange={(value) => setSource(value as DownloadSource)}
-                  disabled={downloading}
-                  data={[
-                    { value: "github", label: t("settings.about.sourceGithub") },
-                    { value: "mirror", label: t("settings.about.sourceMirror") }
-                  ]}
-                />
-              </Group>
-            ) : (
+      <SettingsSectionCard title={t("settings.about.title")}>
+        <Box p="lg">
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <Group gap="lg" wrap="nowrap" align="center">
+              <Image src={appIcon} alt="MAD Toolbox" h={64} w="auto" radius="sm" flex="0 0 auto" />
+              <Stack gap={8}>
+                <Text className="app-title">MAD Toolbox</Text>
+                <Text size="sm" fw={600}>
+                  v{packageInfo.version}
+                </Text>
+              </Stack>
+            </Group>
+            <Group gap="sm" wrap="nowrap">
               <Button
-                ref={checkButtonRef}
-                leftSection={<IconRefresh size={16} />}
-                loading={checking}
-                onClick={() => void handleCheckUpdate()}
+                variant="transparent"
+                color="gray"
+                className="about-action"
+                leftSection={<IconWorld size={16} />}
+                onClick={() => void openUrl(TOOLBOX_URL)}
               >
-                {t("settings.about.checkUpdate")}
+                {t("settings.about.website")}
               </Button>
-            )}
+              <Button
+                variant="transparent"
+                color="gray"
+                className="about-action"
+                leftSection={<IconBrandGithub size={16} />}
+                onClick={() => void openUrl(GITHUB_URL)}
+              >
+                GitHub
+              </Button>
+              {update ? (
+                <Group gap="sm" wrap="nowrap">
+                  <Tooltip
+                    label={
+                      downloading
+                        ? progress !== null
+                          ? t("settings.about.downloadingProgress", { percent: progress })
+                          : t("settings.about.downloading")
+                        : t("settings.about.updateToVersion", { version: update.latestVersion })
+                    }
+                    opened={downloading || undefined}
+                    position="bottom"
+                  >
+                    <ActionIcon
+                      size="input-sm"
+                      variant="filled"
+                      color="green"
+                      loading={downloading}
+                      aria-label={t("settings.about.updateToVersion", {
+                        version: update.latestVersion
+                      })}
+                      onClick={() => void handleDownloadUpdate()}
+                    >
+                      <IconDownload size={16} stroke={1.7} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <SegmentedControl
+                    size="xs"
+                    value={source}
+                    onChange={(value) => setSource(value as DownloadSource)}
+                    disabled={downloading}
+                    data={[
+                      { value: "github", label: t("settings.about.sourceGithub") },
+                      { value: "mirror", label: t("settings.about.sourceMirror") }
+                    ]}
+                  />
+                </Group>
+              ) : (
+                <Button
+                  leftSection={<IconRefresh size={16} />}
+                  loading={checking}
+                  onClick={() => void handleCheckUpdate()}
+                >
+                  {t("settings.about.checkUpdate")}
+                </Button>
+              )}
+            </Group>
           </Group>
-        </Group>
-      </AboutSection>
+        </Box>
+      </SettingsSectionCard>
 
-      <AboutSection title={t("settings.about.team")}>
-        <Group justify="space-between" align="center" wrap="nowrap" px="xl" py="xl" gap="lg">
+      <SettingsSectionCard title={t("settings.about.team")}>
+        <Group justify="space-between" align="center" wrap="nowrap" p="lg" gap="lg">
           <Image
             src={organizationLogo}
             alt="MAD Producer Studio"
             w={480}
             h="auto"
-            mx="lg"
-            my="xl"
             flex="0 0 auto"
+            mx="lg"
+            my="lg"
           />
           <Stack gap="xl">
             {TEAM_LINKS.map((link) => (
@@ -313,25 +282,25 @@ export function AboutSettingsPage() {
             ))}
           </Stack>
         </Group>
-      </AboutSection>
+      </SettingsSectionCard>
 
-      <AboutSection title={t("settings.about.credits")}>
+      <SettingsSectionCard title={t("settings.about.credits")}>
         {CREDITS.map((item, index) => (
           <Fragment key={item.name}>
             {index > 0 && <Divider />}
             <AboutListRow primary={item.name} secondary={t(item.noteKey)} href={item.url} />
           </Fragment>
         ))}
-      </AboutSection>
+      </SettingsSectionCard>
 
-      <AboutSection title={t("settings.about.legal")}>
-        <AboutListRow
-          primary={t("settings.about.copyright")}
-          secondary="Copyright © 2026 MAD Producer Studio"
+      <SettingsSectionCard title={t("settings.about.legal")}>
+        <SettingsRow
+          title={t("settings.about.copyright")}
+          description="Copyright © 2026 MAD Producer Studio"
         />
         <Divider />
-        <AboutListRow primary={t("settings.about.license")} secondary="MIT License" />
-      </AboutSection>
+        <SettingsRow title={t("settings.about.license")} description="MIT License" />
+      </SettingsSectionCard>
 
       <Stack align="center" gap="xs" mt="xl">
         <Text fs="italic" ta="center" fz={22} lh={1.8} c="dimmed">

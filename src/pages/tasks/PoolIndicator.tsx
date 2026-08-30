@@ -1,9 +1,3 @@
-/**
- * 池占用指示条（架构文档 §8）：每池一行（名称 + 计数 + 通栏矩形条），
- * 填充表示占用比例，未满绿色、满载红色。占用数由前端从任务事件推导，
- * 不依赖后端实时同步接口。
- */
-
 import { Box, Group, Stack, Text } from "@mantine/core";
 import type { Pool } from "../../contracts/types";
 import { t, type TranslationKey } from "../../locale";

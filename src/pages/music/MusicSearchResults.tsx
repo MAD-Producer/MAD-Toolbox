@@ -196,7 +196,7 @@ export function MusicSearchResults({
                       {result.album ? ` · ${result.album}` : ""}
                     </Text>
                   </Table.Td>
-                  {/* 列宽从 140 加宽到 230，为开启去杂时的体积估算留位 */}
+
                   <Table.Td w={230}>
                     <Group gap="xs" wrap="nowrap">
                       {estimate ? (

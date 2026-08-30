@@ -1,7 +1,3 @@
-/**
- * network 后端契约的类型化 invoke 封装。
- */
-
 import { invoke } from "@tauri-apps/api/core";
 import type { TaskIntent } from "../../contracts/types";
 

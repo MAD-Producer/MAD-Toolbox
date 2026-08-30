@@ -1,7 +1,3 @@
-/**
- * bilibili 后端契约的类型化 invoke 封装——页面不裸写 invoke 字符串。
- */
-
 import { invoke } from "@tauri-apps/api/core";
 import type { RunResult } from "../../contracts/job";
 import type { TaskIntent } from "../../contracts/types";

@@ -1,9 +1,3 @@
-/**
- * bilibili 表单状态 = 后端 BilibiliIntent 的 TS 镜像
- * （真相源：src-tauri/src/features/bilibili/types.rs）。
- * 默认值与 Rust Default 一致：开关全 false = 不传 flag = BBDown 自身默认行为。
- */
-
 export type BilibiliApi = "web" | "tv" | "app" | "intl";
 export type BilibiliMode =
   "video" | "video-only" | "audio" | "cover" | "subtitle" | "danmaku" | "info";
@@ -48,7 +42,6 @@ export interface BilibiliFormState {
   epHost: string;
   area: string;
   configFile: string;
-  extraArgs: string;
 }
 
 export const defaultBilibiliForm: BilibiliFormState = {
@@ -90,6 +83,5 @@ export const defaultBilibiliForm: BilibiliFormState = {
   host: "",
   epHost: "",
   area: "",
-  configFile: "",
-  extraArgs: ""
+  configFile: ""
 };

@@ -6,7 +6,6 @@ interface DependencyMissingBadgeProps {
   onOpen?: () => void;
 }
 
-/** 功能页标题旁的依赖缺失警示：红边红字无填充，点击跳转设置的依赖页。 */
 export function DependencyMissingBadge({ labels, onOpen }: DependencyMissingBadgeProps) {
   if (!labels?.length || !onOpen) return null;
   return (

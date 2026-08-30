@@ -1,8 +1,3 @@
-/**
- * network（yt-dlp）表单状态 = 后端 NetworkIntent 的 TS 镜像
- * （真相源：src-tauri/src/features/network/types.rs）。
- */
-
 export type NetworkMode = "video" | "audio" | "thumbnail" | "subtitles";
 
 export interface NetworkFormState {

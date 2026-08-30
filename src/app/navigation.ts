@@ -23,7 +23,6 @@ export interface L2NavigationItem<
   icon?: TablerIcon;
 }
 
-// 设置不属于 L1 导航：入口在顶栏标题右侧（AppShell），为独立设置界面预留
 export const L1_NAVIGATION = [
   { section: "tasks", labelKey: "nav.tasks", icon: IconListCheck },
   { section: "bilibili", labelKey: "nav.bilibili", icon: IconBrandBilibili },
