@@ -174,6 +174,16 @@ pub(crate) async fn bbdown_login_status(working_dir: &Path) -> Result<bool, Stri
     Ok(validate_bbdown_cookie(&client, &cookie).await.is_ok())
 }
 
+pub(crate) fn bbdown_logout(working_dir: &Path) -> Result<(), String> {
+    match std::fs::remove_file(working_dir.join("BBDown.data")) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => {
+            Err(rust_i18n::t!("backend.bilibili.login.logout_failed", error = error).to_string())
+        }
+    }
+}
+
 async fn generate_bbdown_qr(client: &Client) -> Result<(String, String), String> {
     let response = client
         .get(BBDOWN_QR_GENERATE_URL)

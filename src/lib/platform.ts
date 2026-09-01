@@ -19,29 +19,6 @@ export const platformLabel = isWindows ? "Windows x64" : "Apple Silicon";
 export function fileManagerName(): string {
   return isWindows ? t("platform.fileManager") : "Finder";
 }
-export function browserCookieOptions() {
-  return isWindows
-    ? [
-        { value: "", label: t("platform.noBrowserCookie") },
-        { value: "edge", label: "Microsoft Edge" },
-        { value: "chrome", label: "Google Chrome" },
-        { value: "firefox", label: "Firefox" },
-        { value: "brave", label: "Brave" },
-        { value: "vivaldi", label: "Vivaldi" },
-        { value: "opera", label: "Opera" },
-        { value: "chromium", label: "Chromium" }
-      ]
-    : [
-        { value: "", label: t("platform.noBrowserCookie") },
-        { value: "chrome", label: "Google Chrome" },
-        { value: "safari", label: "Safari" },
-        { value: "firefox", label: "Firefox" },
-        { value: "brave", label: "Brave" },
-        { value: "vivaldi", label: "Vivaldi" },
-        { value: "opera", label: "Opera" },
-        { value: "chromium", label: "Chromium" }
-      ];
-}
 export const defaultOutputPlaceholder = isWindows
   ? "C:\\Users\\name\\Downloads"
   : "/Users/name/Downloads";

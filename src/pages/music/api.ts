@@ -14,6 +14,7 @@ export interface MusicdlSearchRequest {
   clientsThreadings: Record<string, unknown>;
   searchRules: Record<string, unknown>;
   outputDirectory: string | null;
+  cookiesFile: string | null;
   searchSizePerSource: number;
 }
 
@@ -25,6 +26,7 @@ export interface MusicdlPlaylistRequest {
   clientsThreadings: Record<string, unknown>;
   searchRules: Record<string, unknown>;
   outputDirectory: string | null;
+  cookiesFile: string | null;
   downsample: boolean;
 }
 

@@ -24,7 +24,7 @@ pub const REGISTRY: &[ParamMeta] = &[
     meta("format", "-f"),
     meta("audioFormat", "--audio-format"),
     meta("subtitleLanguages", "--sub-langs"),
-    meta("cookiesBrowser", "--cookies-from-browser"),
+    meta("cookiesFile", "--cookies"),
     meta("playlistItems", "-I"),
     meta("retries", "--retries"),
     meta("concurrentFragments", "--concurrent-fragments"),

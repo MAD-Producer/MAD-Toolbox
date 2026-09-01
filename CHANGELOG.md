@@ -2,6 +2,11 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+# 1.2.1
+
+- feat: BBDown登录状态支持主动注销
+- fix: 显示指定 cookie 文件路径来绕过现代浏览器防护功能
+
 # 1.2.0
 
 - feat: 全新的UI前端设计，让更多用户快速聚焦于目标
@@ -9,6 +14,7 @@ All notable changes to MAD Toolbox are documented here.
 - feat: 首页新增下载图标，当存在新版本时会显示在首页设置图标右边
 - fix: 修复了手动检测到更新时切换页面可更新状态消失的问题
 - fix: 将BilibiliPage的可选画质选项变为下拉菜单，避免用户输入无法被解析
+- feat: Bilibili 已登录按钮支持清除本机 BBDown 登录状态
 - delete: BilibiliPage高级设置中去掉了长尾参数的选项
 
 ## 1.1.0

@@ -1,13 +1,9 @@
 //! network（yt-dlp）adapter：意图 → argv 纯函数，移植自旧前端 buildYtDlpArgs。
-//! 也是"工具特有失败兜底归 adapter"（§2）的落点：
-//! 主跑不带浏览器 Cookie；输出命中"需登录"特征且用户选了浏览器时，
-//! 由失败顾问给出带 `--cookies-from-browser` 的重试计划，枢纽在同一任务内重试一次。
 
 use super::registry;
 use super::types::{NetworkIntent, NetworkMode};
 use crate::core::adapter::AdapterPlan;
 use crate::core::task::types::{CwdPolicy, Pool, TaskIntent, TaskProgress};
-use crate::core::task::RetryPlan;
 
 /// commands.rs 解析好的运行时上下文（工具路径解析不属于纯函数翻译）。
 #[derive(Debug, Clone, Default)]
@@ -65,7 +61,7 @@ fn plan_form(intent: &NetworkIntent, ctx: &NetworkCtx) -> Result<AdapterPlan, Ad
     if url.is_empty() {
         return Err(AdapterError::MissingUrl);
     }
-    let argv = build_argv(intent, ctx, false);
+    let argv = build_argv(intent, ctx);
     let argv_redacted = redact_argv(&argv);
     // 输出目录即工作目录：yt-dlp 未配置 -P 时按 cwd 落盘，同时作为"打开输出位置"锚点
     let cwd = if intent.output_directory.trim().is_empty() {
@@ -112,45 +108,6 @@ fn plan_manual(argv: &[String], ctx: &NetworkCtx) -> Result<AdapterPlan, Adapter
     })
 }
 
-/// 失败兜底的重试计划（§2）：用户选了浏览器才有兜底；重试 argv = 主 argv + 浏览器 Cookie。
-pub fn retry_plan(intent: &TaskIntent, ctx: &NetworkCtx) -> Option<RetryPlan> {
-    let TaskIntent::Form(data) = intent else {
-        return None;
-    };
-    let form: NetworkIntent = serde_json::from_value(data.clone()).ok()?;
-    let browser = form.cookies_browser.trim();
-    if browser.is_empty() || form.url.trim().is_empty() {
-        return None;
-    }
-    let argv = build_argv(&form, ctx, true);
-    let argv_redacted = redact_argv(&argv);
-    Some(RetryPlan {
-        argv,
-        argv_redacted,
-        note: rust_i18n::t!(
-            "backend.network.adapter.retry_with_browser_cookie",
-            browser = browser
-        )
-        .to_string(),
-    })
-}
-
-/// yt-dlp 输出中"需要登录/机器人检查"的特征行（自 lib.rs 回迁的 yt-dlp 专属知识）。
-pub(crate) fn browser_cookie_fallback_requested(line: &str) -> bool {
-    let normalized = line.to_ascii_lowercase().replace('’', "'");
-    [
-        "sign in to confirm",
-        "confirm you're not a bot",
-        "use --cookies-from-browser",
-        "use --cookies",
-    ]
-    .iter()
-    .any(|marker| normalized.contains(marker))
-}
-
-/// 供 TaskSpec 的解析器：命中特征行时发射 "needs-browser-cookies" 信号，失败顾问据此决定重试。
-pub const NEEDS_BROWSER_COOKIES_SIGNAL: &str = "needs-browser-cookies";
-
 /// 解析 yt-dlp 进度行：`[download]  45.2% of 10.55MiB at 2.35MiB/s ETA 00:03`。
 /// 非 `[download] xx%` 形态（Destination/fragment 等）返回 None。
 /// `\r` 刷新的多次更新共处一行时取最后一段——stream_lines 只按 `\n` 切分。
@@ -172,11 +129,7 @@ pub(crate) fn parse_progress(line: &str) -> Option<TaskProgress> {
     })
 }
 
-fn build_argv(
-    intent: &NetworkIntent,
-    ctx: &NetworkCtx,
-    include_browser_cookies: bool,
-) -> Vec<String> {
+fn build_argv(intent: &NetworkIntent, ctx: &NetworkCtx) -> Vec<String> {
     let mut argv: Vec<String> = Vec::new();
     if let Some(deno) = ctx.deno_path.as_deref().filter(|p| !p.is_empty()) {
         argv.push("--js-runtimes".into());
@@ -190,12 +143,10 @@ fn build_argv(
         }
     };
     push_value("--proxy", &intent.proxy);
+    push_value("--cookies", &intent.cookies_file);
     push_value("-P", &intent.output_directory);
     push_value("-o", &intent.output_template);
     push_value("-f", &intent.format);
-    if include_browser_cookies {
-        push_value("--cookies-from-browser", &intent.cookies_browser);
-    }
     push_value("-I", &intent.playlist_items);
 
     argv.push("--retries".into());
@@ -271,8 +222,7 @@ pub enum ProbeKind {
     Metadata,
 }
 
-/// 查询 argv：复用表单翻译，剥离下载模式 flag，追加查询 flag。
-/// 用户选了浏览器则直接携带 Cookie（查询短平快，不做失败重试仪式）；不注入 ffmpeg（无合流）。
+/// 查询 argv：复用表单翻译，剥离下载模式 flag，追加查询 flag；不注入 ffmpeg（无合流）。
 pub fn probe_argv(
     intent: &TaskIntent,
     ctx: &NetworkCtx,
@@ -293,7 +243,7 @@ pub fn probe_argv(
         deno_path: ctx.deno_path.clone(),
         ffmpeg_location: None,
     };
-    let mut argv = build_argv(&form, &probe_ctx, true);
+    let mut argv = build_argv(&form, &probe_ctx);
     match kind {
         ProbeKind::Formats => argv.push("--list-formats".into()),
         ProbeKind::Metadata => {

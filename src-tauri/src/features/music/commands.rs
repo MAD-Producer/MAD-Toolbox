@@ -4,7 +4,7 @@
 //! - 下载/歌单 = 作业：产出 TaskSpec 进任务系统。
 
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde::Serialize;
@@ -25,7 +25,7 @@ use crate::core::process::spawn_tree;
 use crate::core::query::{JobState, RunResult};
 use crate::core::settings::{load_app_settings, unified_output_directory};
 use crate::core::task::types::{Feature, Pool, TaskIntent, TaskProgress};
-use crate::core::task::{LineParser, ParsedSignal, TaskHub, TaskSpec};
+use crate::core::task::{LineParser, TaskHub, TaskSpec};
 
 /// adapter 逐首下载时输出 `musicdl-progress: 3/20`，据此驱动任务卡进度条。
 fn download_progress_parser() -> LineParser {
@@ -43,13 +43,13 @@ fn download_progress_parser() -> LineParser {
         if total == 0 || done > total {
             return Vec::new();
         }
-        vec![ParsedSignal::Progress(TaskProgress {
+        vec![TaskProgress {
             percent: Some(done as f64 / total as f64 * 100.0),
             detail: Some(
                 rust_i18n::t!("backend.music.progressCount", done = done, total = total)
                     .to_string(),
             ),
-        })]
+        }]
     })
 }
 
@@ -60,6 +60,7 @@ pub(crate) struct TaskSubmitResult {
 }
 
 /// 表单快照中可承载登录凭证的字段：落库 intent 前清空（与 bilibili sanitize_intent 同一推论）。
+/// "cookies" 是旧版本的明文 Cookie 字段，保留以兜住升级用户的存量本地表单。
 const FORM_SNAPSHOT_SENSITIVE_FIELDS: &[&str] = &["cookies", "rawInit", "rawRequests"];
 
 fn sanitized_form_snapshot(form: Option<serde_json::Value>) -> serde_json::Value {
@@ -80,6 +81,8 @@ fn sanitized_form_snapshot(form: Option<serde_json::Value>) -> serde_json::Value
 pub(crate) fn musicdl_preview(request: MusicdlPreviewRequest) -> Result<String, String> {
     cli::equivalent_preview(&request)
 }
+
+const STDERR_TAIL_LINES: usize = 3;
 
 #[tauri::command]
 pub(crate) async fn musicdl_search(
@@ -203,10 +206,18 @@ pub(crate) async fn musicdl_search(
                 }
             })
         });
+        let stderr_tail = Arc::new(Mutex::new(Vec::<String>::new()));
         let stderr_task = stderr.map(|stderr| {
+            let tail = stderr_tail.clone();
             tauri::async_runtime::spawn(async move {
                 let mut lines = BufReader::new(stderr).lines();
-                while let Ok(Some(_)) = lines.next_line().await {}
+                while let Ok(Some(line)) = lines.next_line().await {
+                    let mut buffer = tail.lock().unwrap();
+                    if buffer.len() >= STDERR_TAIL_LINES {
+                        buffer.remove(0);
+                    }
+                    buffer.push(line);
+                }
             })
         });
 
@@ -277,6 +288,12 @@ pub(crate) async fn musicdl_search(
         } else {
             state_name
         };
+        if final_state == "failed" {
+            let tail = stderr_tail.lock().unwrap().join("\n");
+            if !tail.is_empty() {
+                message = format!("{message}\n{tail}");
+            }
+        }
         if final_state == "completed" {
             let _ = session_directory.into_path();
         } else {
@@ -411,7 +428,6 @@ pub(crate) async fn musicdl_download(
             "denoise": downsample,
         })),
         parser: Some(download_progress_parser()),
-        on_failure: None,
         cleanup_dir: Some(task_directory.into_path()),
     });
     Ok(TaskSubmitResult { task_id })
@@ -518,7 +534,6 @@ pub(crate) async fn musicdl_playlist(
             "denoise": request.downsample,
         })),
         parser: Some(download_progress_parser()),
-        on_failure: None,
         cleanup_dir: Some(task_directory.into_path()),
     });
     Ok(TaskSubmitResult { task_id })

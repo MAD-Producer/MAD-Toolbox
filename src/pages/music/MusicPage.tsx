@@ -40,7 +40,15 @@ const KNOWN_MUSIC_SOURCE_IDS = new Set(
 );
 
 function createPersistedMusicForm(): MusicFormState {
-  const form = loadStoredForm(MUSIC_FORM_STORAGE_KEY, createInitialMusicForm());
+  const form = loadStoredForm(
+    MUSIC_FORM_STORAGE_KEY,
+    createInitialMusicForm()
+  ) as MusicFormState & {
+    cookies?: string;
+  };
+  // "cookies" 是旧版明文 Cookie 字段：升级用户的存量 localStorage 里仍有明文，
+  // 剔除后随首次保存覆写，不再进入表单状态与持久化（后端快照兜底见 FORM_SNAPSHOT_SENSITIVE_FIELDS）
+  delete form.cookies;
   if (localStorage.getItem(MUSIC_FORM_STORAGE_KEY) !== null) return form;
   try {
     const saved = JSON.parse(
@@ -282,6 +290,11 @@ export function MusicPage({
     if (typeof directory === "string") updateForm({ outputDirectory: directory });
   };
 
+  const pickCookieFile = async () => {
+    const file = await openDialog({ multiple: false, directory: false });
+    if (typeof file === "string") updateForm({ cookiesFile: file });
+  };
+
   const runDisabled =
     taskSubmitting ||
     (sessionPhase !== "idle" && sessionPhase !== "ready") ||
@@ -324,6 +337,7 @@ export function MusicPage({
             form={form}
             onChange={updateForm}
             onPickOutputDirectory={() => void pickOutputDirectory()}
+            onPickCookieFile={() => void pickCookieFile()}
             globalProxy={globalProxy}
             defaultOutputDirectory={defaultOutputDirectory}
           />

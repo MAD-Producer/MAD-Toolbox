@@ -8,12 +8,12 @@ use std::time::Duration;
 use tauri::{AppHandle, State};
 use tokio::sync::Semaphore;
 
-use super::adapter::{self, NetworkCtx, ProbeKind, NEEDS_BROWSER_COOKIES_SIGNAL};
+use super::adapter::{self, NetworkCtx, ProbeKind};
 use crate::core::adapter::{preview_result, PreviewResult, SubmitResult};
 use crate::core::deps::{command_path, resolve_tool, ToolName};
 use crate::core::settings::load_app_settings;
 use crate::core::task::types::{CwdPolicy, Feature, TaskIntent};
-use crate::core::task::{FailureAdvisor, ParsedSignal, TaskHub, TaskSpec};
+use crate::core::task::{TaskHub, TaskSpec};
 
 fn resolve_ctx(app: &AppHandle) -> NetworkCtx {
     NetworkCtx {
@@ -46,30 +46,9 @@ pub fn network_submit(
         CwdPolicy::Explicit(dir) => Some(std::path::PathBuf::from(dir)),
     };
 
-    // 失败兜底（§2）：解析器发信号，顾问按预先算好的重试计划决定是否重试；
-    // 进度行解析出百分比时同步发 Progress 信号驱动任务卡进度条
-    let parser = Some(Arc::new(|line: &str| {
-        let mut signals = Vec::new();
-        if let Some(progress) = adapter::parse_progress(line) {
-            signals.push(ParsedSignal::Progress(progress));
-        }
-        if adapter::browser_cookie_fallback_requested(line) {
-            signals.push(ParsedSignal::Custom {
-                name: NEEDS_BROWSER_COOKIES_SIGNAL.into(),
-                payload: serde_json::json!({}),
-            });
-        }
-        signals
-    }) as _);
-    let on_failure: Option<FailureAdvisor> = adapter::retry_plan(&intent, &ctx).map(|retry| {
-        Arc::new(move |report: &crate::core::task::FailureReport| {
-            report
-                .signals
-                .iter()
-                .any(|s| s == NEEDS_BROWSER_COOKIES_SIGNAL)
-                .then(|| retry.clone())
-        }) as FailureAdvisor
-    });
+    // 进度行解析出百分比时发进度信号驱动任务卡进度条
+    let parser =
+        Some(Arc::new(|line: &str| adapter::parse_progress(line).into_iter().collect()) as _);
 
     let spec = TaskSpec {
         feature: Feature::Network,
@@ -85,7 +64,6 @@ pub fn network_submit(
         env_path: Some(command_path()),
         intent: adapter::sanitize_intent(&intent),
         parser,
-        on_failure,
         cleanup_dir: None,
     };
     Ok(SubmitResult {

@@ -34,38 +34,8 @@ use types::{
     Feature, LogStream, Pool, TaskEnvelope, TaskEvent, TaskIntent, TaskProgress, TaskStatus,
 };
 
-/// feature 提交的输出解析器：原始行 → 结构化信号。枢纽据信号更新信封/转发事件。
-pub type LineParser = Arc<dyn Fn(&str) -> Vec<ParsedSignal> + Send + Sync>;
-
-/// 失败重试顾问（§2：工具特有的失败兜底归 adapter）。
-/// 任务以失败退出时，枢纽把本次运行收集的自定义信号名交给顾问，
-/// 顾问返回 Some(新计划) 则在同一任务内重试一次（至多一次）。
-/// 机制在枢纽，知识（何种失败、补什么参数）在 feature adapter。
-pub type FailureAdvisor = Arc<dyn Fn(&FailureReport) -> Option<RetryPlan> + Send + Sync>;
-
-pub struct FailureReport<'a> {
-    /// 本次运行期间解析器发射过的自定义信号名（如 "needs-browser-cookies"）。
-    pub signals: &'a [String],
-}
-
-/// 重试计划：adapter 同时给出完整与脱敏两份 argv（脱敏知识在 adapter，§4.5）。
-#[derive(Clone)]
-pub struct RetryPlan {
-    pub argv: Vec<String>,
-    pub argv_redacted: Vec<String>,
-    /// 写进日志与事件的重试原因（如"检测到需登录，使用浏览器 Cookie 重试"）。
-    pub note: String,
-}
-
-#[derive(Debug, Clone)]
-pub enum ParsedSignal {
-    Progress(TaskProgress),
-    /// §4.2 扩展点：feature 自定义事件（交互式作业向 UI 递交内容）。
-    Custom {
-        name: String,
-        payload: serde_json::Value,
-    },
-}
+/// feature 提交的输出解析器：原始行 → 进度信号。枢纽据信号更新信封/转发事件。
+pub type LineParser = Arc<dyn Fn(&str) -> Vec<TaskProgress> + Send + Sync>;
 
 /// feature 提交任务的全部材料。工具路径/工作目录由 feature 侧解析完毕，
 /// 枢纽不做任何工具特判。
@@ -86,8 +56,6 @@ pub struct TaskSpec {
     /// 已脱敏的意图（feature 侧负责 sanitize——落库前置条件，§4.5）。
     pub intent: TaskIntent,
     pub parser: Option<LineParser>,
-    /// 失败重试顾问（可选）：知识在 adapter，机制在枢纽。
-    pub on_failure: Option<FailureAdvisor>,
     /// 任务独占的临时目录；排队取消、启动失败、进程终态或枢纽关闭时自动清理。
     pub cleanup_dir: Option<PathBuf>,
 }
@@ -224,15 +192,6 @@ struct RunningTask {
     killer: TreeKiller,
     parser: Option<LineParser>,
     writer: Option<TaskLogWriter>,
-    on_failure: Option<FailureAdvisor>,
-    /// 重试需要的再 spawn 材料。
-    tool_path: PathBuf,
-    cwd: Option<PathBuf>,
-    env_path: Option<OsString>,
-    /// 本次运行收集的自定义信号名（供失败顾问判断）。
-    signals: Vec<String>,
-    /// 已重试过（至多一次的闸）。
-    retried: bool,
     _cleanup_dir: CleanupDir,
 }
 
@@ -259,7 +218,6 @@ struct PendingSpec {
     cwd: Option<PathBuf>,
     env_path: Option<OsString>,
     parser: Option<LineParser>,
-    on_failure: Option<FailureAdvisor>,
     cleanup_dir: CleanupDir,
 }
 
@@ -341,7 +299,7 @@ async fn hub_loop(
             }
             HubMsg::Line { id, stream, line } => st.handle_line(&id, stream, &line),
             HubMsg::Exited { id, code } => {
-                st.handle_exited(&id, code, &tx);
+                st.handle_exited(&id, code);
                 st.try_dispatch(&tx);
             }
             HubMsg::Snapshot { reply } => {
@@ -398,7 +356,6 @@ impl HubState {
                 cwd: spec.cwd,
                 env_path: spec.env_path,
                 parser: spec.parser,
-                on_failure: spec.on_failure,
                 cleanup_dir: CleanupDir(spec.cleanup_dir),
             },
         );
@@ -478,12 +435,6 @@ impl HubState {
                         killer,
                         parser: pending.parser,
                         writer,
-                        on_failure: pending.on_failure,
-                        tool_path: pending.tool_path,
-                        cwd: pending.cwd,
-                        env_path: pending.env_path,
-                        signals: Vec::new(),
-                        retried: false,
                         _cleanup_dir: pending.cleanup_dir,
                     },
                 );
@@ -580,41 +531,25 @@ impl HubState {
         // 脱敏是持久化与展示的前置条件（§4.5）：日志文件与事件一律用脱敏行
         let redacted = super::redaction::redact_output_line(line);
 
-        // 解析器消费原始行（进度数字等不受脱敏影响）；信号收集后统一应用，避免借用交叠
-        let mut signals: Vec<ParsedSignal> = Vec::new();
+        // 解析器消费原始行（进度数字等不受脱敏影响）
+        let mut signals: Vec<TaskProgress> = Vec::new();
         if let Some(run) = self.running.get_mut(id) {
             if let Some(w) = run.writer.as_mut() {
                 w.write_line(stream, &redacted);
             }
             if let Some(parser) = &run.parser {
                 signals = parser(line);
-                for signal in &signals {
-                    if let ParsedSignal::Custom { name, .. } = signal {
-                        run.signals.push(name.clone());
-                    }
-                }
             }
         }
 
-        for signal in signals {
-            match signal {
-                ParsedSignal::Progress(progress) => {
-                    if let Some(envelope) = self.envelopes.get_mut(id) {
-                        envelope.progress = Some(progress.clone());
-                    }
-                    self.sink.emit(&TaskEvent::Progress {
-                        task_id: id.to_string(),
-                        progress,
-                    });
-                }
-                ParsedSignal::Custom { name, payload } => {
-                    self.sink.emit(&TaskEvent::Custom {
-                        task_id: id.to_string(),
-                        name,
-                        payload,
-                    });
-                }
+        for progress in signals {
+            if let Some(envelope) = self.envelopes.get_mut(id) {
+                envelope.progress = Some(progress.clone());
             }
+            self.sink.emit(&TaskEvent::Progress {
+                task_id: id.to_string(),
+                progress,
+            });
         }
 
         let seq = self.next_seq(id);
@@ -626,7 +561,7 @@ impl HubState {
         });
     }
 
-    fn handle_exited(&mut self, id: &str, code: Option<i32>, tx: &mpsc::UnboundedSender<HubMsg>) {
+    fn handle_exited(&mut self, id: &str, code: Option<i32>) {
         let Some(mut run) = self.running.remove(id) else {
             return;
         };
@@ -636,61 +571,6 @@ impl HubState {
         let Ok(next) = transition(envelope.status, TransitionEvent::Exit(code)) else {
             return;
         };
-
-        // 失败重试（至多一次）：把退出码与信号交给 adapter 顾问，机制在此、知识在 adapter（§2）
-        if next == TaskStatus::Failed && !run.retried {
-            if let Some(advisor) = run.on_failure.clone() {
-                let report = FailureReport {
-                    signals: &run.signals,
-                };
-                if let Some(retry) = advisor(&report) {
-                    match spawn_and_stream(
-                        id,
-                        &run.tool_path,
-                        &retry.argv,
-                        run.cwd.as_deref(),
-                        run.env_path.as_deref(),
-                        load_app_settings(&self.app).proxy.as_deref(),
-                        tx,
-                    ) {
-                        Ok(killer) => {
-                            run.retried = true;
-                            run.signals.clear();
-                            run.killer = killer;
-                            let note = rust_i18n::t!("backend.task.retryNote", note = retry.note)
-                                .to_string();
-                            if let Some(w) = run.writer.as_mut() {
-                                w.write_line(LogStream::System, &note);
-                                w.write_line(
-                                    LogStream::System,
-                                    &format!(
-                                        "$ {} {}",
-                                        envelope.tool,
-                                        retry.argv_redacted.join(" ")
-                                    ),
-                                );
-                            }
-                            let seq = self.next_seq(id);
-                            self.sink.emit(&TaskEvent::Log {
-                                task_id: id.to_string(),
-                                stream: LogStream::System,
-                                line: note,
-                                seq,
-                            });
-                            // 状态保持 running：重试是同一任务的第二次尝试；
-                            // 信封的脱敏 argv 更新为实际执行的版本（审计如实）
-                            envelope.argv_redacted = retry.argv_redacted;
-                            self.persist_and_emit(envelope);
-                            self.running.insert(id.to_string(), run);
-                            return;
-                        }
-                        Err(_) => {
-                            // spawn 失败 → 走正常失败终态
-                        }
-                    }
-                }
-            }
-        }
         envelope.status = next;
         envelope.exit_code = code;
         envelope.finished_at = Some(Utc::now());

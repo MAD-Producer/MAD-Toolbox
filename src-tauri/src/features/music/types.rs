@@ -10,6 +10,7 @@ pub(crate) struct MusicdlSearchRequest {
     pub(crate) clients_threadings: serde_json::Value,
     pub(crate) search_rules: serde_json::Value,
     pub(crate) output_directory: Option<String>,
+    pub(crate) cookies_file: Option<String>,
     pub(crate) search_size_per_source: usize,
 }
 
@@ -23,6 +24,7 @@ pub(crate) struct MusicdlPlaylistRequest {
     pub(crate) clients_threadings: serde_json::Value,
     pub(crate) search_rules: serde_json::Value,
     pub(crate) output_directory: Option<String>,
+    pub(crate) cookies_file: Option<String>,
     #[serde(default)]
     pub(crate) downsample: bool,
 }

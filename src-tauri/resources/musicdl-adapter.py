@@ -27,16 +27,49 @@ PROBE_HEAD_BYTES = 8192
 PROBE_WORKERS = 6
 
 
+def load_cookie_header(cookies_file):
+    """musicdl 客户端吃 Cookie 请求头字符串。浏览器扩展导出的 cookies.txt 是
+    Netscape 格式，取每行第 6/7 列拼成 "k=v; k=v"；否则整个文件按原始头字符串处理。
+    """
+    try:
+        with open(cookies_file, "r", encoding="utf-8") as handle:
+            content = handle.read().strip()
+    except OSError as error:
+        raise RuntimeError(f"Cannot read cookie file: {error}")
+    if not content:
+        return ""
+    pairs = []
+    for line in content.splitlines():
+        line = line.strip()
+        if line.startswith("#HttpOnly_"):
+            line = line[len("#HttpOnly_") :]
+        elif line.startswith("#"):
+            continue
+        fields = line.split("\t")
+        if len(fields) >= 7:
+            pairs.append(f"{fields[5]}={fields[6]}")
+    if pairs:
+        return "; ".join(pairs)
+    return content
+
+
 def build_client(request, work_dir_override=None):
     sources = request.get("musicSources") or []
     init_cfg = request.get("initMusicClientsCfg") or {}
     output_directory = work_dir_override or request.get("outputDirectory")
     search_size = max(1, min(int(request.get("searchSizePerSource") or 5), 100))
+    cookies = request.get("cookiesFile")
+    if cookies:
+        cookies = load_cookie_header(cookies)
     for source in sources:
         source_cfg = init_cfg.setdefault(source, {})
         source_cfg.setdefault("search_size_per_source", search_size)
         if output_directory:
             source_cfg["work_dir"] = output_directory
+        if cookies:
+            source_cfg["default_search_cookies"] = cookies
+            source_cfg["default_download_cookies"] = cookies
+            source_cfg["default_parse_cookies"] = cookies
     return musicdl.MusicClient(
         music_sources=sources,
         init_music_clients_cfg=init_cfg,

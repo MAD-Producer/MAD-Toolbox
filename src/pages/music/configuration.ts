@@ -22,7 +22,7 @@ export interface MusicFormState {
   searchSize: number;
   threadCount: number;
   proxy: string;
-  cookies: string;
+  cookiesFile: string;
   rawInit: string;
   rawRequests: string;
   rawThreadings: string;
@@ -133,7 +133,7 @@ export function createInitialMusicForm(): MusicFormState {
     searchSize: 5,
     threadCount: 5,
     proxy: "",
-    cookies: "",
+    cookiesFile: "",
     rawInit: "{}",
     rawRequests: "{}",
     rawThreadings: "{}",
@@ -165,11 +165,6 @@ function buildConfigs(
         : {};
     sourceInit.search_size_per_source = Math.max(1, form.searchSize || 1);
     if (form.outputDirectory.trim()) sourceInit.work_dir = form.outputDirectory.trim();
-    if (form.cookies.trim()) {
-      sourceInit.default_search_cookies = form.cookies.trim();
-      sourceInit.default_download_cookies = form.cookies.trim();
-      sourceInit.default_parse_cookies = form.cookies.trim();
-    }
     init[source] = sourceInit;
     if (form.proxy.trim()) {
       const sourceRequests =
@@ -224,6 +219,7 @@ export function createMusicSearchRequest(
     clientsThreadings: cli.clientsThreadings,
     searchRules: cli.searchRules,
     outputDirectory: form.outputDirectory || null,
+    cookiesFile: form.cookiesFile.trim() || null,
     searchSizePerSource: Math.max(1, form.searchSize || 1)
   };
 }
@@ -241,6 +237,7 @@ export function createMusicPlaylistRequest(
     clientsThreadings: cli.clientsThreadings,
     searchRules: cli.searchRules,
     outputDirectory: form.outputDirectory || null,
+    cookiesFile: form.cookiesFile.trim() || null,
     downsample
   };
 }

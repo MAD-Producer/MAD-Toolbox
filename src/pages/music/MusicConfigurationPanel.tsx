@@ -1,4 +1,5 @@
-import { NumberInput, Stack, Textarea, TextInput } from "@mantine/core";
+import { NumberInput, Stack, TextInput } from "@mantine/core";
+import { CookieFileField } from "../../components/common/CookieFileField";
 import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
@@ -9,6 +10,7 @@ interface MusicConfigurationPanelProps {
   form: MusicFormState;
   onChange: (patch: MusicFormPatch) => void;
   onPickOutputDirectory: () => void;
+  onPickCookieFile: () => void;
   globalProxy?: string | null;
   defaultOutputDirectory?: string | null;
 }
@@ -17,6 +19,7 @@ export function MusicConfigurationPanel({
   form,
   onChange,
   onPickOutputDirectory,
+  onPickCookieFile,
   globalProxy,
   defaultOutputDirectory
 }: MusicConfigurationPanelProps) {
@@ -70,12 +73,11 @@ export function MusicConfigurationPanel({
           onChange={(event) => onChange({ proxy: event.currentTarget.value })}
         />
       </FieldRow>
-      <FieldRow label={t("music.cookies.label")}>
-        <Textarea
-          autosize
-          minRows={1}
-          value={form.cookies}
-          onChange={(event) => onChange({ cookies: event.currentTarget.value })}
+      <FieldRow label={t("music.cookies.label")} hint={t("music.cookies.hint")}>
+        <CookieFileField
+          value={form.cookiesFile}
+          onChange={(cookiesFile) => onChange({ cookiesFile })}
+          onBrowse={onPickCookieFile}
         />
       </FieldRow>
     </Stack>

@@ -23,6 +23,7 @@ export function BilibiliPage(props: BilibiliPageProps) {
             submitDisabled={!workspace.expertMode && !workspace.preview}
             onSubmit={() => void workspace.submit()}
             onBeginLogin={workspace.beginLogin}
+            onLogout={workspace.logoutLogin}
             dependencyLabels={props.dependencyLabels}
             onOpenDependencies={props.onOpenDependencies}
           />

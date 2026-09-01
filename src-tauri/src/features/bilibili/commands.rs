@@ -33,6 +33,14 @@ pub(crate) async fn bilibili_login_status(app: AppHandle) -> Result<bool, String
 }
 
 #[tauri::command]
+pub(crate) fn bilibili_logout(app: AppHandle) -> Result<(), String> {
+    let (executable, _) = resolve_tool(&app, &ToolName::Bbdown)
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.commands.bbdown_not_found").to_string())?;
+    let working_dir = login::bbdown_directory(&executable)?;
+    login::bbdown_logout(&working_dir)
+}
+
+#[tauri::command]
 pub fn bilibili_preview(intent: TaskIntent) -> Result<PreviewResult, String> {
     let plan = adapter::plan(&intent).map_err(|e| e.to_string())?;
     Ok(preview_result(&plan))
@@ -66,8 +74,7 @@ pub fn bilibili_submit(
         env_path: Some(command_path()),
         // 落库的意图必须先脱敏（§4.5）；本次执行用的完整 argv 不受影响
         intent: adapter::sanitize_intent(&intent),
-        parser: None,     // BBDown 进度解析待样板后接入
-        on_failure: None, // BBDown 无失败兜底语义（yt-dlp 专属）
+        parser: None, // BBDown 进度解析待样板后接入
         cleanup_dir: None,
     };
     Ok(SubmitResult {

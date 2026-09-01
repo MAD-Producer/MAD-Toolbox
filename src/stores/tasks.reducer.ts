@@ -38,8 +38,6 @@ export function applyTaskEvent(state: TasksState, event: TaskEvent): TasksState 
       if (!task) return state;
       return { ...state, tasks: { ...state.tasks, [taskId]: { ...task, progress } } };
     }
-    case "custom":
-      return state;
   }
 }
 

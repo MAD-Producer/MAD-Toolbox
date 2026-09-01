@@ -48,6 +48,7 @@ export function useBilibiliWorkspace({
   const loginLoggedIn = useBilibiliLoginStore((state) => state.loggedIn);
   const startLogin = useBilibiliLoginStore((state) => state.start);
   const refreshLoginStatus = useBilibiliLoginStore((state) => state.refresh);
+  const logout = useBilibiliLoginStore((state) => state.logout);
   const dismissLoginQr = useBilibiliLoginStore((state) => state.dismissQr);
   const draftRevisionRef = useRef(0);
   const previewStateRef = useRef<RevisionedPreview | null>(null);
@@ -143,6 +144,15 @@ export function useBilibiliWorkspace({
     );
   };
 
+  const logoutLogin = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      notifications.show({ color: "red", message: String(error) });
+      throw error;
+    }
+  };
+
   const enterExpert = () => {
     const currentPreview = previewStateRef.current;
     if (currentPreview?.revision === draftRevisionRef.current && currentPreview.result !== null) {
@@ -203,6 +213,7 @@ export function useBilibiliWorkspace({
     loginPhase,
     loginLoggedIn,
     beginLogin,
+    logoutLogin,
     dismissLoginQr,
     pickOutputDirectory
   };
