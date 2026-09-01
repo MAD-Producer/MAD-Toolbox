@@ -33,10 +33,7 @@ export function NetworkVideoDownloadFields({
           disabled={disabled}
         />
       </FieldRow>
-      <FieldRow
-        label={t("network.fields.cookiesFile")}
-        hint={t("network.fields.cookiesFileHint")}
-      >
+      <FieldRow label={t("network.fields.cookiesFile")} hint={t("network.fields.cookiesFileHint")}>
         <CookieFileField
           value={form.cookiesFile}
           disabled={disabled}

@@ -2,7 +2,7 @@ import { notifications } from "../lib/notifications";
 import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import type { JobState } from "../contracts/job";
-import { bilibiliLoginStart, bilibiliLoginStatus } from "../pages/bilibili/api";
+import { bilibiliLoginStart, bilibiliLoginStatus, bilibiliLogout } from "../pages/bilibili/api";
 
 interface LoginQrPayload {
   jobId: string;
@@ -25,6 +25,7 @@ interface BilibiliLoginStore {
   init: () => Promise<void>;
   start: () => Promise<void>;
   refresh: () => Promise<void>;
+  logout: () => Promise<void>;
   dismissQr: () => void;
 }
 
@@ -141,6 +142,8 @@ export const useBilibiliLoginStore = create<BilibiliLoginStore>((set, get) => {
       bilibiliLoginStatus()
         .then((loggedIn) => set({ loggedIn }))
         .catch(() => set({ loggedIn: false })),
+
+    logout: () => bilibiliLogout().then(() => set({ loggedIn: false })),
 
     dismissQr: () => set({ phase: "idle", jobId: null, qrDataUrl: null })
   };

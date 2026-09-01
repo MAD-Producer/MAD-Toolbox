@@ -28,3 +28,7 @@ export function bilibiliLoginStart(): Promise<RunResult> {
 export function bilibiliLoginStatus(): Promise<boolean> {
   return invoke<boolean>("bilibili_login_status");
 }
+
+export function bilibiliLogout(): Promise<void> {
+  return invoke<void>("bilibili_logout");
+}

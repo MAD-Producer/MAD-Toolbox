@@ -65,6 +65,7 @@ pub fn run() {
             features::bilibili::commands::bilibili_preview,
             features::bilibili::commands::bilibili_login_start,
             features::bilibili::commands::bilibili_login_status,
+            features::bilibili::commands::bilibili_logout,
             features::network::commands::network_submit,
             features::network::commands::network_preview,
             features::network::commands::network_probe,

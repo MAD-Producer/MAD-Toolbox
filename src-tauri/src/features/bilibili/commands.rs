@@ -33,6 +33,14 @@ pub(crate) async fn bilibili_login_status(app: AppHandle) -> Result<bool, String
 }
 
 #[tauri::command]
+pub(crate) fn bilibili_logout(app: AppHandle) -> Result<(), String> {
+    let (executable, _) = resolve_tool(&app, &ToolName::Bbdown)
+        .ok_or_else(|| rust_i18n::t!("backend.bilibili.commands.bbdown_not_found").to_string())?;
+    let working_dir = login::bbdown_directory(&executable)?;
+    login::bbdown_logout(&working_dir)
+}
+
+#[tauri::command]
 pub fn bilibili_preview(intent: TaskIntent) -> Result<PreviewResult, String> {
     let plan = adapter::plan(&intent).map_err(|e| e.to_string())?;
     Ok(preview_result(&plan))

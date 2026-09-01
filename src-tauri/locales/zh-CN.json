@@ -18,6 +18,7 @@
   "backend.bilibili.login.login_failed_with_code": "B站登录失败，二维码状态码 %{code}",
   "backend.bilibili.login.login_not_signed_in": "BBDown 账号未登录：%{error}",
   "backend.bilibili.login.login_success": "BBDown Cookie 数据已补全并验证登录成功",
+  "backend.bilibili.login.logout_failed": "清除 BBDown 登录数据失败：%{error}",
   "backend.bilibili.login.login_url_api_failed": "B站登录地址接口失败：%{message}",
   "backend.bilibili.login.missing_poll_code": "B站登录状态响应缺少 data.code",
   "backend.bilibili.login.missing_qr_key": "B站登录接口没有返回二维码密钥",
