@@ -50,7 +50,7 @@ npm run tauri:build:full -- mac --ci
 Any arguments after the target are passed through to `tauri build`. Both
 commands first run the TypeScript and `cargo check` preflights, then verify the
 pinned sidecar binaries (downloading missing Windows ones) and produce the
-platform installer. CI tag builds use the same commands with an explicit
+platform installer. CI release builds use the same commands with an explicit
 target.
 
 The automation lives in `scripts/`, split by responsibility:
@@ -74,6 +74,30 @@ npm run version:bump -- patch   # or minor / major / x.y.z
 
 Then add the `CHANGELOG.md` entry. `npm run version:check` verifies that every
 reference matches `package.json` and runs in CI.
+
+Use a level-two heading for each release in `CHANGELOG.md`:
+
+```markdown
+## 1.2.2
+
+- feat: ...
+- fix: ...
+```
+
+To publish a release, commit the version and changelog changes, then tag that
+commit and push the tag:
+
+```bash
+git tag v1.2.2
+git push origin main v1.2.2
+```
+
+Tags must match `vX.Y.Z`. The release workflow verifies that the tag, all
+tracked version references and the corresponding `CHANGELOG.md` section agree.
+It then builds the Windows and macOS Full/Lite packages, creates the updater
+manifests and checksums, and publishes a GitHub Release using that changelog
+section as the release notes. A failed validation or build does not publish a
+partial release; the workflow can also be run manually for an existing tag.
 
 ## Code formatting
 

@@ -2,12 +2,12 @@
 
 All notable changes to MAD Toolbox are documented here.
 
-# 1.2.1
+## 1.2.1
 
 - feat: BBDown登录状态支持主动注销
 - fix: 显示指定 cookie 文件路径来绕过现代浏览器防护功能
 
-# 1.2.0
+## 1.2.0
 
 - feat: 全新的UI前端设计，让更多用户快速聚焦于目标
 - feat: app全局的样式更统一

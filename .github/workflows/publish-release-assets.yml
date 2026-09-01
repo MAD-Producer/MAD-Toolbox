@@ -1,149 +1,285 @@
-name: Publish release assets
+name: Build and publish release
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to update
+        description: Existing release tag to build and publish
         required: true
         type: string
 
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 permissions:
-  contents: write
-  actions: read
+  contents: read
 
 jobs:
-  publish:
-    name: Attach installers to release
+  prepare:
+    name: Validate release
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ github.token }}
-      API_ROOT: https://api.github.com/repos/${{ github.repository }}
-      TAG: ${{ inputs.tag }}
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      target_sha: ${{ steps.release.outputs.target_sha }}
 
     steps:
-      - name: Resolve latest artifact IDs
+      - name: Check out release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - id: release
+        name: Validate tag, versions and changelog
         shell: bash
         run: |
           set -euo pipefail
-          resolve_artifact() {
-            local artifact_name="$1"
-            curl --fail --silent --show-error --location \
-              --header "Accept: application/vnd.github+json" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              --header "Authorization: Bearer ${GH_TOKEN}" \
-              "${API_ROOT}/actions/artifacts?name=${artifact_name}&per_page=100" \
-              | jq -r --arg name "${artifact_name}" '
-                  [.artifacts[] | select(.name == $name)] | max_by(.created_at)
-                  | if . == null then
-                      "NOT_FOUND"
-                    elif .expired then
-                      "EXPIRED " + .created_at
-                    else
-                      "\(.id) \(.created_at)"
-                    end'
-          }
-
-          map_artifact() {
-            local artifact_name="$1" env_name="$2" resolved id created_at
-            resolved=$(resolve_artifact "${artifact_name}")
-            case "${resolved}" in
-              NOT_FOUND)
-                echo "::error::No artifact named ${artifact_name}. Have the build workflows finished?"
-                exit 1
-                ;;
-              EXPIRED*)
-                echo "::error::The newest ${artifact_name} artifact (created ${resolved#EXPIRED }) is expired. Re-run the build workflows."
-                exit 1
-                ;;
-            esac
-            read -r id created_at <<< "${resolved}"
-            echo "${env_name}=${id}" >> "${GITHUB_ENV}"
-            echo "Resolved ${artifact_name} -> artifact ${id} (created ${created_at})"
-          }
-
-          map_artifact MAD-Toolbox-Windows-x64-Full WINDOWS_FULL_ARTIFACT_ID
-          map_artifact MAD-Toolbox-Windows-x64-Lite WINDOWS_LITE_ARTIFACT_ID
-          map_artifact MAD-Toolbox-macOS-Apple-Silicon-Full MACOS_FULL_ARTIFACT_ID
-          map_artifact MAD-Toolbox-macOS-Apple-Silicon-Lite MACOS_LITE_ARTIFACT_ID
-
-      - name: Download CI artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p staging/windows-full staging/windows-lite staging/macos-full staging/macos-lite dist
-
-          download_artifact() {
-            local artifact_id="$1"
-            local output="$2"
-            curl --fail --location --retry 3 \
-              --header "Accept: application/vnd.github+json" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              --header "Authorization: Bearer ${GH_TOKEN}" \
-              "${API_ROOT}/actions/artifacts/${artifact_id}/zip" \
-              --output "$output"
-          }
-
-          download_artifact "$WINDOWS_FULL_ARTIFACT_ID" /tmp/windows-full.zip
-          download_artifact "$WINDOWS_LITE_ARTIFACT_ID" /tmp/windows-lite.zip
-          download_artifact "$MACOS_FULL_ARTIFACT_ID" /tmp/macos-full.zip
-          download_artifact "$MACOS_LITE_ARTIFACT_ID" /tmp/macos-lite.zip
-
-          unzip -q /tmp/windows-full.zip -d staging/windows-full
-          unzip -q /tmp/windows-lite.zip -d staging/windows-lite
-          unzip -q /tmp/macos-full.zip -d staging/macos-full
-          unzip -q /tmp/macos-lite.zip -d staging/macos-lite
-
-      - name: Prepare release files
-        shell: bash
-        run: |
-          set -euo pipefail
-          windows_full=$(find staging/windows-full -type f -name '*.exe' -print -quit)
-          windows_lite=$(find staging/windows-lite -type f -name '*.exe' -print -quit)
-          windows_full_sig=$(find staging/windows-full -type f -name '*.exe.sig' -print -quit)
-          windows_lite_sig=$(find staging/windows-lite -type f -name '*.exe.sig' -print -quit)
-          macos_full=$(find staging/macos-full -type f -name '*.dmg' -print -quit)
-          macos_lite=$(find staging/macos-lite -type f -name '*.dmg' -print -quit)
-          macos_full_tar=$(find staging/macos-full -type f -name '*.app.tar.gz' -print -quit)
-          macos_lite_tar=$(find staging/macos-lite -type f -name '*.app.tar.gz' -print -quit)
-          macos_full_sig=$(find staging/macos-full -type f -name '*.app.tar.gz.sig' -print -quit)
-          macos_lite_sig=$(find staging/macos-lite -type f -name '*.app.tar.gz.sig' -print -quit)
-          for required in windows_full windows_lite windows_full_sig windows_lite_sig \
-                          macos_full macos_lite macos_full_tar macos_lite_tar \
-                          macos_full_sig macos_lite_sig; do
-            if [ -z "${!required}" ]; then
-              echo "::error::Missing '${required}' artifact file. Updater assets (.sig / .app.tar.gz) are produced only when the build workflows run with TAURI_SIGNING_PRIVATE_KEY configured; re-run the build workflows."
-              exit 1
-            fi
-          done
-
-          # GitHub release assets replace spaces with dots in uploaded names.
-          # Use the final names here so SHA256SUMS.txt is verifiable after
-          # downloading assets from the release page.
-          cp "$windows_full" "dist/MAD.Toolbox_${TAG#v}_x64-Full-setup.exe"
-          cp "$windows_lite" "dist/MAD.Toolbox_${TAG#v}_x64-Lite-setup.exe"
-          cp "$macos_full" "dist/MAD.Toolbox_${TAG#v}_aarch64-Full.dmg"
-          cp "$macos_lite" "dist/MAD.Toolbox_${TAG#v}_aarch64-Lite.dmg"
-
-          # 应用内更新（tauri-plugin-updater）产物与按安装版本区分的清单
-          cp "$windows_full_sig" "dist/MAD.Toolbox_${TAG#v}_x64-Full-setup.exe.sig"
-          cp "$windows_lite_sig" "dist/MAD.Toolbox_${TAG#v}_x64-Lite-setup.exe.sig"
-          cp "$macos_full_tar" "dist/MAD.Toolbox_${TAG#v}_aarch64-Full.app.tar.gz"
-          cp "$macos_lite_tar" "dist/MAD.Toolbox_${TAG#v}_aarch64-Lite.app.tar.gz"
-          cp "$macos_full_sig" "dist/MAD.Toolbox_${TAG#v}_aarch64-Full.app.tar.gz.sig"
-          cp "$macos_lite_sig" "dist/MAD.Toolbox_${TAG#v}_aarch64-Lite.app.tar.gz.sig"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tag must match vX.Y.Z; received '$TAG'."
+            exit 1
+          fi
 
           version="${TAG#v}"
+          package_version=$(node -p "require('./package.json').version")
+          if [ "$version" != "$package_version" ]; then
+            echo "::error::Tag $TAG does not match package.json version $package_version."
+            exit 1
+          fi
+
+          npm run version:check
+          npm run --silent release:notes -- "$TAG" > release-notes.md
+          test -s release-notes.md
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "target_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 30
+
+  build:
+    name: ${{ matrix.platform }} ${{ matrix.edition }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows x64
+            platform_id: windows
+            runner: windows-2022
+            rust_target: x86_64-pc-windows-msvc
+            edition: Full
+            build_script: tauri:build:full
+          - platform: Windows x64
+            platform_id: windows
+            runner: windows-2022
+            rust_target: x86_64-pc-windows-msvc
+            edition: Lite
+            build_script: tauri:build:lite
+          - platform: macOS Apple Silicon
+            platform_id: macos
+            runner: macos-15
+            rust_target: aarch64-apple-darwin
+            edition: Full
+            build_script: tauri:build:full
+          - platform: macOS Apple Silicon
+            platform_id: macos
+            runner: macos-15
+            rust_target: aarch64-apple-darwin
+            edition: Lite
+            build_script: tauri:build:lite
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.target_sha }}
+
+      - name: Confirm Apple Silicon runner
+        if: matrix.platform_id == 'macos'
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.rust_target }}
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: release-${{ matrix.platform_id }}-${{ matrix.edition }}
+
+      - name: Install frontend packages
+        run: npm ci
+
+      - name: Check frontend formatting
+        run: npm run format:check
+
+      - name: Build Windows installer
+        if: matrix.platform_id == 'windows'
+        run: npm run ${{ matrix.build_script }} -- win --ci
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+      - name: Build macOS image
+        if: matrix.platform_id == 'macos'
+        run: npm run ${{ matrix.build_script }} -- mac --ci
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+      - name: Verify Windows installer
+        if: matrix.platform_id == 'windows'
+        shell: pwsh
+        run: |
+          $Installers = @(Get-ChildItem -LiteralPath "src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis" -Filter "*.exe" -File)
+          $Signatures = @(Get-ChildItem -LiteralPath "src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis" -Filter "*.exe.sig" -File)
+          if ($Installers.Count -ne 1 -or $Signatures.Count -ne 1) {
+            throw "Expected exactly one Windows installer and signature; found $($Installers.Count) installer(s) and $($Signatures.Count) signature(s)."
+          }
+          Get-FileHash -LiteralPath $Installers[0].FullName -Algorithm SHA256
+
+      - name: Verify macOS image
+        if: matrix.platform_id == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dmg_directory="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
+          app_directory="src-tauri/target/aarch64-apple-darwin/release/bundle/macos"
+          images=("$dmg_directory"/*.dmg)
+          archives=("$app_directory"/*.app.tar.gz)
+          signatures=("$app_directory"/*.app.tar.gz.sig)
+          test -f "${images[0]}"
+          test "${#images[@]}" -eq 1
+          test -f "${archives[0]}"
+          test "${#archives[@]}" -eq 1
+          test -f "${signatures[0]}"
+          test "${#signatures[@]}" -eq 1
+          hdiutil verify "${images[0]}"
+
+      - name: Upload Windows release files
+        if: matrix.platform_id == 'windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform_id }}-${{ matrix.edition }}
+          path: |
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe.sig
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload macOS release files
+        if: matrix.platform_id == 'macos'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform_id }}-${{ matrix.edition }}
+          path: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish GitHub Release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TARGET_SHA: ${{ needs.prepare.outputs.target_sha }}
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.target_sha }}
+          fetch-depth: 0
+
+      - name: Confirm tag has not moved
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          tag_sha=$(git rev-list -n 1 "$TAG")
+          if [ "$tag_sha" != "$TARGET_SHA" ]; then
+            echo "::error::Tag $TAG moved from $TARGET_SHA to $tag_sha during the build."
+            exit 1
+          fi
+
+      - name: Download release files
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: staging
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          copy_single() {
+            local directory="$1" pattern="$2" output="$3"
+            local files=()
+            mapfile -t files < <(find "$directory" -type f -name "$pattern")
+            if [ "${#files[@]}" -ne 1 ]; then
+              echo "::error::Expected one $pattern file in $directory, found ${#files[@]}."
+              exit 1
+            fi
+            cp "${files[0]}" "dist/$output"
+          }
+
+          copy_single staging/release-windows-Full '*.exe' "MAD.Toolbox_${VERSION}_x64-Full-setup.exe"
+          copy_single staging/release-windows-Lite '*.exe' "MAD.Toolbox_${VERSION}_x64-Lite-setup.exe"
+          copy_single staging/release-windows-Full '*.exe.sig' "MAD.Toolbox_${VERSION}_x64-Full-setup.exe.sig"
+          copy_single staging/release-windows-Lite '*.exe.sig' "MAD.Toolbox_${VERSION}_x64-Lite-setup.exe.sig"
+          copy_single staging/release-macos-Full '*.dmg' "MAD.Toolbox_${VERSION}_aarch64-Full.dmg"
+          copy_single staging/release-macos-Lite '*.dmg' "MAD.Toolbox_${VERSION}_aarch64-Lite.dmg"
+          copy_single staging/release-macos-Full '*.app.tar.gz' "MAD.Toolbox_${VERSION}_aarch64-Full.app.tar.gz"
+          copy_single staging/release-macos-Lite '*.app.tar.gz' "MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz"
+          copy_single staging/release-macos-Full '*.app.tar.gz.sig' "MAD.Toolbox_${VERSION}_aarch64-Full.app.tar.gz.sig"
+          copy_single staging/release-macos-Lite '*.app.tar.gz.sig' "MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz.sig"
+          copy_single staging/release-notes 'release-notes.md' release-notes.md
+          mv dist/release-notes.md release-notes.md
+
           download_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
           pub_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           make_manifest() {
             local edition="$1" out="$2" win_sig_file="$3" mac_sig_file="$4"
             jq -n \
-              --arg version "$version" \
+              --arg version "$VERSION" \
               --arg pub_date "$pub_date" \
-              --arg win_url "$download_base/MAD.Toolbox_${version}_x64-${edition}-setup.exe" \
+              --arg win_url "$download_base/MAD.Toolbox_${VERSION}_x64-${edition}-setup.exe" \
               --arg win_sig "$(cat "$win_sig_file")" \
-              --arg mac_url "$download_base/MAD.Toolbox_${version}_aarch64-${edition}.app.tar.gz" \
+              --arg mac_url "$download_base/MAD.Toolbox_${VERSION}_aarch64-${edition}.app.tar.gz" \
               --arg mac_sig "$(cat "$mac_sig_file")" \
               '{version: $version, pub_date: $pub_date,
                 platforms: {
@@ -151,11 +287,46 @@ jobs:
                   "darwin-aarch64": {signature: $mac_sig, url: $mac_url}
                 }}' > "$out"
           }
-          make_manifest Full dist/latest-full.json "$windows_full_sig" "$macos_full_sig"
-          make_manifest Lite dist/latest-lite.json "$windows_lite_sig" "$macos_lite_sig"
 
-          (cd dist && shasum -a 256 *.exe *.dmg *.app.tar.gz > SHA256SUMS.txt)
+          make_manifest Full dist/latest-full.json \
+            "dist/MAD.Toolbox_${VERSION}_x64-Full-setup.exe.sig" \
+            "dist/MAD.Toolbox_${VERSION}_aarch64-Full.app.tar.gz.sig"
+          make_manifest Lite dist/latest-lite.json \
+            "dist/MAD.Toolbox_${VERSION}_x64-Lite-setup.exe.sig" \
+            "dist/MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz.sig"
 
-      - name: Upload release assets
+          (cd dist && sha256sum *.exe *.dmg *.app.tar.gz > SHA256SUMS.txt)
+
+      - name: Create or update release
         shell: bash
-        run: gh release upload "$TAG" dist/*.exe dist/*.exe.sig dist/*.dmg dist/*.app.tar.gz dist/*.app.tar.gz.sig dist/latest-full.json dist/latest-lite.json dist/SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            release_is_draft=$(gh release view "$TAG" \
+              --json isDraft \
+              --jq .isDraft \
+              --repo "$GITHUB_REPOSITORY")
+          else
+            gh release create "$TAG" \
+              --verify-tag \
+              --draft \
+              --title "MAD Toolbox $TAG" \
+              --notes-file release-notes.md \
+              --repo "$GITHUB_REPOSITORY"
+            release_is_draft=true
+          fi
+
+          gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+
+          if [ "$release_is_draft" = "true" ]; then
+            gh release edit "$TAG" \
+              --draft=false \
+              --title "MAD Toolbox $TAG" \
+              --notes-file release-notes.md \
+              --repo "$GITHUB_REPOSITORY"
+          else
+            gh release edit "$TAG" \
+              --title "MAD Toolbox $TAG" \
+              --notes-file release-notes.md \
+              --repo "$GITHUB_REPOSITORY"
+          fi

@@ -16,7 +16,8 @@
     "format": "prettier --write . --ignore-unknown",
     "format:check": "prettier --check . --ignore-unknown",
     "version:bump": "node scripts/version/bump.js",
-    "version:check": "node scripts/version/check.js"
+    "version:check": "node scripts/version/check.js",
+    "release:notes": "node scripts/version/release-notes.js"
   },
   "dependencies": {
     "@mantine/carousel": "^9.5.1",
