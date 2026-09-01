@@ -2,9 +2,6 @@ name: Build macOS Apple Silicon
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: read
