@@ -89,7 +89,7 @@ pub struct TaskEnvelope {
     pub progress: Option<TaskProgress>,
 }
 
-/// 推给前端的任务事件（§4.2，含 feature 自定义载荷扩展点）。
+/// 推给前端的任务事件
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(
     tag = "type",
@@ -108,12 +108,6 @@ pub enum TaskEvent {
     Progress {
         task_id: String,
         progress: TaskProgress,
-    },
-    /// feature 解析器发射的自定义事件（如交互式作业向 UI 递交内容）。
-    Custom {
-        task_id: String,
-        name: String,
-        payload: serde_json::Value,
     },
 }
 

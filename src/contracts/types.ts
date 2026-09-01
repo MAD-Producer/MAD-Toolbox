@@ -45,5 +45,4 @@ export type LogStream = "stdout" | "stderr" | "system";
 export type TaskEvent =
   | { type: "changed"; data: TaskEnvelope }
   | { type: "log"; data: { taskId: string; stream: LogStream; line: string; seq: number } }
-  | { type: "progress"; data: { taskId: string; progress: TaskProgress } }
-  | { type: "custom"; data: { taskId: string; name: string; payload: unknown } };
+  | { type: "progress"; data: { taskId: string; progress: TaskProgress } };

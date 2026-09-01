@@ -9,7 +9,7 @@ export interface NetworkFormState {
   format: string;
   audioFormat: string;
   subtitleLanguages: string;
-  cookiesBrowser: string;
+  cookiesFile: string;
   playlistItems: string;
   retries: number;
   concurrentFragments: number;
@@ -30,7 +30,7 @@ export const defaultNetworkForm: NetworkFormState = {
   format: "",
   audioFormat: "best",
   subtitleLanguages: "zh.*,en.*",
-  cookiesBrowser: "",
+  cookiesFile: "",
   playlistItems: "",
   retries: 10,
   concurrentFragments: 4,

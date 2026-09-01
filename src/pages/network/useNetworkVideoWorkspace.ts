@@ -200,6 +200,11 @@ export function useNetworkVideoWorkspace({
     if (typeof directory === "string") update({ outputDirectory: directory });
   };
 
+  const pickCookieFile = async () => {
+    const file = await openDialog({ multiple: false, directory: false });
+    if (typeof file === "string") update({ cookiesFile: file });
+  };
+
   const preview = previewState?.result ?? null;
   const previewError = previewState?.error ?? null;
 
@@ -221,6 +226,7 @@ export function useNetworkVideoWorkspace({
     setProbeResult,
     probing,
     probe,
-    pickOutputDirectory
+    pickOutputDirectory,
+    pickCookieFile
   };
 }

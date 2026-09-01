@@ -25,8 +25,8 @@ pub struct NetworkIntent {
     pub format: String,
     pub audio_format: String,
     pub subtitle_languages: String,
-    /// 浏览器名（--cookies-from-browser）。主跑不带；失败兜底时由 adapter 补上（§2）。
-    pub cookies_browser: String,
+    /// Cookie 文件路径（Netscape 格式，--cookies）。用户提供，主跑直接携带。
+    pub cookies_file: String,
     pub playlist_items: String,
     pub retries: u32,
     pub concurrent_fragments: u32,
@@ -50,7 +50,7 @@ impl Default for NetworkIntent {
             format: String::new(),
             audio_format: "best".into(),
             subtitle_languages: "zh.*,en.*".into(),
-            cookies_browser: String::new(),
+            cookies_file: String::new(),
             playlist_items: String::new(),
             retries: 10,
             concurrent_fragments: 4,

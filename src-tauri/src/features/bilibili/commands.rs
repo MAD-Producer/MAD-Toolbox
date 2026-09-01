@@ -66,8 +66,7 @@ pub fn bilibili_submit(
         env_path: Some(command_path()),
         // 落库的意图必须先脱敏（§4.5）；本次执行用的完整 argv 不受影响
         intent: adapter::sanitize_intent(&intent),
-        parser: None,     // BBDown 进度解析待样板后接入
-        on_failure: None, // BBDown 无失败兜底语义（yt-dlp 专属）
+        parser: None, // BBDown 进度解析待样板后接入
         cleanup_dir: None,
     };
     Ok(SubmitResult {

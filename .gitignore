@@ -19,3 +19,4 @@ src-tauri/resources/MediaInfo-LIBCURL.DLL
 .zcode/
 output/
 .tauri/
+src-tauri/resources/__pycache__/

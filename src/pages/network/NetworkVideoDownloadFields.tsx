@@ -1,7 +1,8 @@
-import { Select, Stack, TextInput } from "@mantine/core";
+import { Stack, TextInput } from "@mantine/core";
+import { CookieFileField } from "../../components/common/CookieFileField";
 import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
-import { browserCookieOptions, resolveDefaultOutputDirectory } from "../../lib/platform";
+import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import type { NetworkFormState } from "./form";
 
@@ -10,6 +11,7 @@ interface NetworkVideoDownloadFieldsProps {
   disabled: boolean;
   onUpdate: (patch: Partial<NetworkFormState>) => void;
   onPickOutputDirectory: () => Promise<void>;
+  onPickCookieFile: () => Promise<void>;
   globalProxy?: string | null;
 }
 
@@ -18,6 +20,7 @@ export function NetworkVideoDownloadFields({
   disabled,
   onUpdate,
   onPickOutputDirectory,
+  onPickCookieFile,
   globalProxy
 }: NetworkVideoDownloadFieldsProps) {
   return (
@@ -31,15 +34,14 @@ export function NetworkVideoDownloadFields({
         />
       </FieldRow>
       <FieldRow
-        label={t("network.fields.cookiesBrowser")}
-        hint={t("network.fields.cookiesBrowserHint")}
+        label={t("network.fields.cookiesFile")}
+        hint={t("network.fields.cookiesFileHint")}
       >
-        <Select
-          data={browserCookieOptions()}
-          value={form.cookiesBrowser}
-          onChange={(value) => onUpdate({ cookiesBrowser: value ?? "" })}
+        <CookieFileField
+          value={form.cookiesFile}
           disabled={disabled}
-          allowDeselect={false}
+          onChange={(cookiesFile) => onUpdate({ cookiesFile })}
+          onBrowse={onPickCookieFile}
         />
       </FieldRow>
       <FieldRow label={t("common.outputDirectory")} hint={t("common.outputDirectoryHint")}>
