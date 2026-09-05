@@ -44,6 +44,12 @@ pub(crate) fn background_command(program: impl AsRef<OsStr>) -> Command {
     command
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+mod python_pin {
+    pub(crate) const WINGET_INSTALL: &str = "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements";
+    pub(crate) const INSTALL_DIRECTORY: &str = "Python313";
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum ToolName {
@@ -113,9 +119,7 @@ impl ToolName {
                 Self::Deno => Some(
                     "winget install --id DenoLand.Deno -e --accept-package-agreements --accept-source-agreements",
                 ),
-                Self::Python => Some(
-                    "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements",
-                ),
+                Self::Python => Some(python_pin::WINGET_INSTALL),
                 Self::Musicdl => Some(
                     "py -m pip install --user --upgrade pipx && py -m pipx ensurepath && py -m pipx install musicdl",
                 ),
@@ -210,8 +214,10 @@ fn winget_package_paths(packages_root: &Path) -> Vec<PathBuf> {
 
 #[cfg(target_os = "windows")]
 fn windows_local_paths(local: &Path) -> Vec<PathBuf> {
-    // The in-app Python installer is pinned to the user-scoped 3.13 package.
-    let python = local.join("Programs").join("Python").join("Python313");
+    let python = local
+        .join("Programs")
+        .join("Python")
+        .join(python_pin::INSTALL_DIRECTORY);
     let winget = local.join("Microsoft").join("WinGet");
     let mut paths = vec![python.join("Scripts"), python, winget.join("Links")];
     paths.extend(winget_package_paths(&winget.join("Packages")));
@@ -703,12 +709,9 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
                         "brew install python pipx && pipx ensurepath && pipx install musicdl"
                             .into()
                     }),
-                    ToolName::Python => Some(if cfg!(target_os = "windows") {
-                        "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements".into()
-                    } else {
-                        "brew install python".into()
-                    }),
-                    ToolName::Bbdown => tool.install_command().map(str::to_owned),
+                    ToolName::Python | ToolName::Bbdown => {
+                        tool.install_command().map(str::to_owned)
+                    }
                     _ => Some(if cfg!(target_os = "windows") {
                         rust_i18n::t!("backend.deps.wingetHint").to_string()
                     } else {

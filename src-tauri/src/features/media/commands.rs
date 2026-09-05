@@ -28,17 +28,23 @@ const FALLBACK_PREFERENCE: [&str; 7] = [
 static ENCODER_FALLBACK: OnceCell<Option<String>> = OnceCell::const_new();
 
 async fn media_ctx(app: &AppHandle) -> MediaCtx {
-    let fallback = ENCODER_FALLBACK
-        .get_or_init(|| async {
+    // 失败结果不缓存：一次瞬态探测失败不应把 None 钉死整个会话
+    let fallback = match ENCODER_FALLBACK.get() {
+        Some(fallback) => fallback.clone(),
+        None => {
             let encoders = ffmpeg_encoders(app.clone()).await.unwrap_or_default();
-            FALLBACK_PREFERENCE
+            let fallback = FALLBACK_PREFERENCE
                 .iter()
                 .find(|name| encoders.iter().any(|e| e == *name))
-                .map(|s| s.to_string())
-        })
-        .await;
+                .map(|s| s.to_string());
+            if fallback.is_some() {
+                let _ = ENCODER_FALLBACK.set(fallback.clone());
+            }
+            fallback
+        }
+    };
     MediaCtx {
-        encoder_fallback: fallback.clone(),
+        encoder_fallback: fallback,
     }
 }
 

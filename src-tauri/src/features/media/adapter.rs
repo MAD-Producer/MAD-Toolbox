@@ -166,6 +166,14 @@ fn audio_codec_for_output(operation: Operation, container: &str, audio_codec: &s
     }
 }
 
+fn probe_failure_fallback() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "h264_videotoolbox"
+    } else {
+        "libx264"
+    }
+}
+
 fn build_argv(input: &str, output: &str, form: &MediaIntent, ctx: &MediaCtx) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
     let mut push = |values: &[&str]| {
@@ -341,7 +349,7 @@ fn build_argv(input: &str, output: &str, form: &MediaIntent, ctx: &MediaCtx) -> 
             let video_codec = if form.video_codec == "copy" && must_encode_video {
                 ctx.encoder_fallback
                     .clone()
-                    .unwrap_or_else(|| "h264_videotoolbox".into())
+                    .unwrap_or_else(|| probe_failure_fallback().into())
             } else {
                 form.video_codec.clone()
             };
