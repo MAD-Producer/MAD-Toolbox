@@ -109,13 +109,17 @@ export function DependencyStatusPanel({
                         ? dependency.source === "bundled"
                           ? t("deps.bundled")
                           : t("deps.system")
-                        : t("deps.notReady")}
+                        : dependency.healthCheckFailed
+                          ? t("deps.environmentBroken")
+                          : t("deps.notReady")}
                     </Badge>
                   </Group>
                   <Text size="xs" c="dimmed" truncate>
                     {dependency.available
                       ? (dependency.version ?? t("deps.versionUnknown"))
-                      : t("deps.notInstalled")}
+                      : dependency.healthCheckFailed
+                        ? t("deps.musicdlEnvironmentBroken")
+                        : t("deps.notInstalled")}
                   </Text>
                   <Text size="xs" c="dimmed" truncate>
                     {dependency.available

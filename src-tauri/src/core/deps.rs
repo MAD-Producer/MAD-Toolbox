@@ -44,6 +44,12 @@ pub(crate) fn background_command(program: impl AsRef<OsStr>) -> Command {
     command
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+mod python_pin {
+    pub(crate) const WINGET_INSTALL: &str = "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements";
+    pub(crate) const INSTALL_DIRECTORY: &str = "Python313";
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum ToolName {
@@ -113,11 +119,9 @@ impl ToolName {
                 Self::Deno => Some(
                     "winget install --id DenoLand.Deno -e --accept-package-agreements --accept-source-agreements",
                 ),
-                Self::Python => Some(
-                    "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements",
-                ),
+                Self::Python => Some(python_pin::WINGET_INSTALL),
                 Self::Musicdl => Some(
-                    r#"winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements && "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" -m pip install --user --upgrade pipx && "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" -m pipx ensurepath && "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" -m pipx install musicdl"#,
+                    "py -m pip install --user --upgrade pipx && py -m pipx ensurepath && py -m pipx install musicdl",
                 ),
                 _ => None,
             }
@@ -149,6 +153,7 @@ pub(crate) struct DependencyStatus {
     source: Option<String>,
     path: Option<String>,
     version: Option<String>,
+    health_check_failed: bool,
     required: bool,
     install_hint: Option<String>,
 }
@@ -209,8 +214,10 @@ fn winget_package_paths(packages_root: &Path) -> Vec<PathBuf> {
 
 #[cfg(target_os = "windows")]
 fn windows_local_paths(local: &Path) -> Vec<PathBuf> {
-    // The in-app Python installer is pinned to the user-scoped 3.13 package.
-    let python = local.join("Programs").join("Python").join("Python313");
+    let python = local
+        .join("Programs")
+        .join("Python")
+        .join(python_pin::INSTALL_DIRECTORY);
     let winget = local.join("Microsoft").join("WinGet");
     let mut paths = vec![python.join("Scripts"), python, winget.join("Links")];
     paths.extend(winget_package_paths(&winget.join("Packages")));
@@ -619,6 +626,22 @@ async fn tool_version(path: &Path, tool: &ToolName) -> Option<String> {
     Some(shortened)
 }
 
+async fn musicdl_healthy(executable: &Path) -> bool {
+    let Ok(python) = musicdl_python(executable) else {
+        return false;
+    };
+    let mut command = Command::new(python);
+    hide_async_command_window(&mut command);
+    command
+        .env("PATH", command_path())
+        .kill_on_drop(true)
+        .args(["-c", "from musicdl import musicdl"]);
+    matches!(
+        timeout(Duration::from_secs(10), command.output()).await,
+        Ok(Ok(output)) if output.status.success()
+    )
+}
+
 #[tauri::command]
 pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
     let tools = [
@@ -645,14 +668,19 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
         } else {
             resolve_tool(&app, &tool)
         };
-        let version = if let Some((path, _)) = &resolved {
+        let health_check_failed = matches!(tool, ToolName::Musicdl)
+            && resolved.is_some()
+            && !musicdl_healthy(&resolved.as_ref().unwrap().0).await;
+        let available = resolved.is_some() && !health_check_failed;
+        let version = if available {
+            let (path, _) = resolved.as_ref().unwrap();
             tool_version(path, &tool).await
         } else {
             None
         };
         statuses.push(DependencyStatus {
             label: tool.label().into(),
-            available: resolved.is_some(),
+            available,
             bundled: resolved
                 .as_ref()
                 .map(|(_, bundled)| *bundled)
@@ -670,8 +698,9 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
                 .as_ref()
                 .map(|(path, _)| path.to_string_lossy().into_owned()),
             version,
+            health_check_failed,
             required: tool.required(),
-            install_hint: if resolved.is_none() {
+            install_hint: if !available {
                 match tool {
                     ToolName::Musicdl => Some(if cfg!(target_os = "windows") {
                         "py -m pip install --user --upgrade pipx; py -m pipx ensurepath; py -m pipx install musicdl"
@@ -680,12 +709,9 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
                         "brew install python pipx && pipx ensurepath && pipx install musicdl"
                             .into()
                     }),
-                    ToolName::Python => Some(if cfg!(target_os = "windows") {
-                        "winget install --id Python.Python.3.13 -e --scope user --accept-package-agreements --accept-source-agreements".into()
-                    } else {
-                        "brew install python".into()
-                    }),
-                    ToolName::Bbdown => tool.install_command().map(str::to_owned),
+                    ToolName::Python | ToolName::Bbdown => {
+                        tool.install_command().map(str::to_owned)
+                    }
                     _ => Some(if cfg!(target_os = "windows") {
                         rust_i18n::t!("backend.deps.wingetHint").to_string()
                     } else {

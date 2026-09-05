@@ -11,6 +11,7 @@ export interface DependencyStatus {
   source: "bundled" | "system" | null;
   path: string | null;
   version: string | null;
+  healthCheckFailed: boolean;
   required: boolean;
   installHint: string | null;
 }
