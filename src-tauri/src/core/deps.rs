@@ -94,10 +94,13 @@ impl ToolName {
         !matches!(self, Self::Ffprobe | Self::Musicdl | Self::Python)
     }
 
-    /// 一键安装命令（Windows 用 winget，macOS 用 Homebrew）；bbdown 仅认内置副本、ffprobe 随 FFmpeg 分发，均不支持。
+    /// 一键安装命令（Windows 用 winget，macOS 用 Homebrew）；macOS 的 bbdown 仅认内置副本，ffprobe 随 FFmpeg 分发。
     fn install_command(&self) -> Option<&'static str> {
         if cfg!(target_os = "windows") {
             match self {
+                Self::Bbdown => Some(
+                    "winget install --id nilaoda.BBDown -e --accept-package-agreements --accept-source-agreements",
+                ),
                 Self::YtDlp => Some(
                     "winget install --id yt-dlp.yt-dlp -e --accept-package-agreements --accept-source-agreements",
                 ),
@@ -174,7 +177,8 @@ fn winget_package_paths(packages_root: &Path) -> Vec<PathBuf> {
     // Portable packages do not always create WinGet Links. Rescan only the
     // packages this app installs so a completed install is visible immediately.
     const MAX_DEPTH: usize = 3;
-    const PACKAGES: [(&str, &str); 4] = [
+    const PACKAGES: [(&str, &str); 5] = [
+        ("nilaoda.BBDown_", "BBDown.exe"),
         ("Gyan.FFmpeg_", "ffmpeg.exe"),
         ("yt-dlp.yt-dlp_", "yt-dlp.exe"),
         ("MediaArea.MediaInfo_", "mediainfo.exe"),
@@ -368,14 +372,37 @@ pub(crate) fn bundled_binary(app: &AppHandle, name: &str) -> Option<PathBuf> {
     if cfg!(debug_assertions) {
         candidates.push(dev_binary);
     }
-    if let Ok(current) = env::current_exe() {
-        if let Some(parent) = current.parent() {
-            candidates.push(parent.join(&target_name));
+
+    #[cfg(target_os = "windows")]
+    if let Some(directory) = match name {
+        "BBDown" => Some("BBDown"),
+        "ffmpeg" | "ffprobe" => Some("FFmpeg"),
+        "mediainfo" => Some("MediaInfo"),
+        "yt-dlp" => Some("yt-dlp"),
+        "deno" => Some("Deno"),
+        _ => None,
+    } {
+        if let Ok(resources) = app.path().resource_dir() {
+            candidates.push(
+                resources
+                    .join("dependencies")
+                    .join(directory)
+                    .join(&target_name),
+            );
         }
     }
-    if let Ok(resources) = app.path().resource_dir() {
-        candidates.push(resources.join(&target_name));
-        candidates.push(resources.join("binaries").join(&target_name));
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Ok(current) = env::current_exe() {
+            if let Some(parent) = current.parent() {
+                candidates.push(parent.join(&target_name));
+            }
+        }
+        if let Ok(resources) = app.path().resource_dir() {
+            candidates.push(resources.join(&target_name));
+            candidates.push(resources.join("binaries").join(&target_name));
+        }
     }
     candidates.into_iter().find(|path| path.is_file())
 }
@@ -389,10 +416,11 @@ pub(crate) fn resolve_tool(app: &AppHandle, tool: &ToolName) -> Option<(PathBuf,
     .map(|path| (path, false));
 
     if matches!(tool, ToolName::Bbdown) {
-        // Full/Lite both ship BBDown. Never silently switch to a separately
-        // installed copy: BBDown must read and write the data file beside the
-        // executable included in this app.
-        bundled
+        if cfg!(target_os = "windows") {
+            bundled.or(system)
+        } else {
+            bundled
+        }
     } else if matches!(
         load_app_settings(app).dependency_preference,
         DependencyPreference::System
@@ -657,7 +685,7 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
                     } else {
                         "brew install python".into()
                     }),
-                    ToolName::Bbdown => None,
+                    ToolName::Bbdown => tool.install_command().map(str::to_owned),
                     _ => Some(if cfg!(target_os = "windows") {
                         rust_i18n::t!("backend.deps.wingetHint").to_string()
                     } else {

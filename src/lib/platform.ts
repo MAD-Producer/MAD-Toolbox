@@ -36,6 +36,7 @@ export const musicdlInstallCommand = isWindows
 export const pipCommand = isWindows ? "py -m pip" : "python3 -m pip";
 
 export const toolInstallCommands: Partial<Record<ToolName, string>> = {
+  ...(isWindows ? { bbdown: `winget install --id nilaoda.BBDown -e ${WINGET_ACCEPT}` } : {}),
   ffmpeg: isWindows ? `winget install --id Gyan.FFmpeg -e ${WINGET_ACCEPT}` : "brew install ffmpeg",
   "yt-dlp": isWindows
     ? `winget install --id yt-dlp.yt-dlp -e ${WINGET_ACCEPT}`

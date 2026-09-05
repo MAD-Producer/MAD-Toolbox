@@ -57,7 +57,8 @@ MAD Toolbox currently supports the following platforms:
 | Windows  | 10+        | `x86_64`     | Full / Lite `.exe` |
 | macOS    | 14+        | `aarch64`    | Full / Lite `.dmg` |
 
-BBDown is bundled by default in both the FULL and LITE versions.
+BBDown is bundled in all macOS packages and the Windows FULL package. Windows
+LITE installs it separately with WinGet.
 
 ### Installing Third-party Dependencies
 
@@ -68,6 +69,7 @@ For the dependencies required to run MAD Toolbox, you can install them on your s
 Make sure your system has the [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) package manager.
 
 ```powershell
+winget install --id nilaoda.BBDown -e
 winget install --id Gyan.FFmpeg -e
 winget install --id yt-dlp.yt-dlp -e
 winget install --id MediaArea.MediaInfo -e

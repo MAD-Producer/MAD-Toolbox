@@ -110,6 +110,7 @@
   "deps.bundled": "Bundled",
   "deps.copyCommand": "Copy command",
   "deps.copyInstallCommand": "Copy install command",
+  "deps.desc.bbdown": "Required for Bilibili downloads.",
   "deps.desc.deno": "Extractor scripts for some sites require Deno.",
   "deps.desc.ffmpeg": "Required for media tasks such as transcoding, trimming, and GIF export.",
   "deps.desc.mediainfo": "Used by media inspection (codec and container details); falls back to ffprobe when missing.",

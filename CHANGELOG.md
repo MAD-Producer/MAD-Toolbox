@@ -2,6 +2,11 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 1.X.X
+
+- ci: Windows LITE 版不再内置 BBDown，发布包体积更小
+- ci: FULL版打包删除 FFmpeg 的压缩包，发布包体积减小
+
 ## 1.2.1
 
 - feat: BBDown登录状态支持主动注销
