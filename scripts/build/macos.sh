@@ -60,8 +60,9 @@ cp "$yt_dlp" "$app/Contents/MacOS/yt-dlp"
 chmod 755 "$app/Contents/MacOS/yt-dlp"
 codesign --force --sign - --options runtime "$app"
 codesign --verify --deep --strict "$app"
+expected_bbdown_sha="$(sh "$project_directory/scripts/build/pinned-sha256.sh" BBDown binarySha256)"
 shasum -a 256 "$app/Contents/MacOS/BBDown" |
-  grep -q "33597b2b7b83eecb4fbb4f0a50a43f1ada3ac1d9b6adf4eadda8399c700ea470"
+  grep -q "$expected_bbdown_sha"
 "$app/Contents/MacOS/yt-dlp" --version | grep -q "2026.07.04"
 
 # createUpdaterArtifacts 在构建期生成的 app.tar.gz/.sig 来自重封前的 .app：

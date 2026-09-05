@@ -17,15 +17,14 @@
   },
   "bundle": {
     "targets": ["nsis"],
-    "externalBin": [
-      "binaries/BBDown",
-      "binaries/ffmpeg",
-      "binaries/ffprobe",
-      "binaries/mediainfo",
-      "binaries/yt-dlp",
-      "binaries/deno"
-    ],
+    "externalBin": [],
     "resources": {
+      "binaries/BBDown-x86_64-pc-windows-msvc.exe": "dependencies/BBDown/BBDown.exe",
+      "binaries/ffmpeg-x86_64-pc-windows-msvc.exe": "dependencies/FFmpeg/ffmpeg.exe",
+      "binaries/ffprobe-x86_64-pc-windows-msvc.exe": "dependencies/FFmpeg/ffprobe.exe",
+      "binaries/mediainfo-x86_64-pc-windows-msvc.exe": "dependencies/MediaInfo/mediainfo.exe",
+      "binaries/yt-dlp-x86_64-pc-windows-msvc.exe": "dependencies/yt-dlp/yt-dlp.exe",
+      "binaries/deno-x86_64-pc-windows-msvc.exe": "dependencies/Deno/deno.exe",
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
       "../third_party/sources.json": "third_party/sources.json",
       "../third_party/windows-sources.json": "third_party/windows-sources.json",
@@ -39,9 +38,7 @@
       "../third_party/licenses/MediaInfo-License.html": "licenses/MediaInfo-License.html",
       "../third_party/licenses/yt-dlp-Unlicense.txt": "licenses/yt-dlp-Unlicense.txt",
       "../third_party/licenses/yt-dlp-THIRD_PARTY_LICENSES.txt": "licenses/yt-dlp-THIRD_PARTY_LICENSES.txt",
-      "../third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz": "third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz",
-      "../third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz": "third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz",
-      "resources/MediaInfo-LIBCURL.DLL": "LIBCURL.DLL",
+      "resources/MediaInfo-LIBCURL.DLL": "dependencies/MediaInfo/LIBCURL.DLL",
       "resources/musicdl-adapter.py": "musicdl-adapter.py"
     },
     "windows": {

@@ -25,10 +25,10 @@ Official pages:
 
 ## Windows x64 Lite build
 
-BBDown is already included. On Windows 10 22H2 or Windows 11 x64, install the
-remaining tools with WinGet:
+On Windows 10 22H2 or Windows 11 x64, install the required tools with WinGet:
 
 ```powershell
+winget install --id nilaoda.BBDown -e
 winget install --id Gyan.FFmpeg -e
 winget install --id yt-dlp.yt-dlp -e
 winget install --id MediaArea.MediaInfo -e
@@ -49,6 +49,7 @@ network-free WebView2 installation is required.
 
 Official or project-designated release pages:
 
+- BBDown: https://github.com/nilaoda/BBDown/releases
 - FFmpeg official build index: https://ffmpeg.org/download.html
 - Gyan Windows builds: https://www.gyan.dev/ffmpeg/builds/
 - BtbN Windows builds: https://github.com/BtbN/FFmpeg-Builds/releases
@@ -70,8 +71,8 @@ themselves.
 
 The current FFmpeg sidecars use BtbN's LGPL static Windows x64 build. This
 keeps GPL and nonfree components out of the distributed package. The exact
-FFmpeg source revision and the BtbN build-recipe snapshot are included in the
-installer to satisfy source and attribution obligations.
+FFmpeg source revision and BtbN build-recipe snapshot are published beside each
+release as separate downloads and linked from `THIRD_PARTY_NOTICES.md`.
 
 Python and musicdl remain external in both modes:
 

@@ -22,17 +22,20 @@ endorsed by the original BBDown author.
 - Project: FFmpeg
 - Website: https://ffmpeg.org/
 - macOS version: 8.1.2
-- Windows version: n8.1 latest (2026-08-02)
+- Windows version: n8.1.2-34-g9b6c8969e0 (2026-07-31)
 - License: LGPL-2.1-or-later (macOS) / LGPL-3.0-or-later (Windows build)
 - macOS source: https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz
-- Windows source commit: https://github.com/FFmpeg/FFmpeg/commit/9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b
-- Windows build recipe: https://github.com/BtbN/FFmpeg-Builds
+- Windows source: https://github.com/FFmpeg/FFmpeg/archive/9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz
+- Windows build recipe: https://github.com/BtbN/FFmpeg-Builds/archive/a99e8230eae00d1cee38f23076a7a1f55cd984e2.tar.gz
 
 Both Full binaries were built without `--enable-gpl` or `--enable-nonfree`.
-The macOS build links only to macOS system libraries and frameworks. The
-Windows x64 build is the BtbN FFmpeg-Builds LGPL static distribution. Its
-exact FFmpeg source archive, BtbN build recipe archive, binary checksums,
-build information and LGPL texts are included under `third_party/`.
+The macOS build links only to macOS system libraries and frameworks. Its source
+archive is available through the link above and as a separate release asset.
+The Windows x64 build is the BtbN FFmpeg-Builds LGPL static distribution. Its exact
+FFmpeg source and BtbN build recipe are available through the links above and
+as separate release assets. Binary and source checksums are recorded in
+`third_party/windows-sources.json`; that metadata and the LGPL texts remain
+included with the application.
 
 The BtbN build recipe is Copyright 2020-2021 BtbN and licensed under MIT. Its
 license is included at `third_party/licenses/BtbN-FFmpeg-Builds-MIT.txt`.

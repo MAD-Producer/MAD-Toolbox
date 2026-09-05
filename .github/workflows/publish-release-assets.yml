@@ -268,6 +268,12 @@ jobs:
           copy_single staging/release-macos-Full '*.app.tar.gz.sig' "MAD.Toolbox_${VERSION}_aarch64-Full.app.tar.gz.sig"
           copy_single staging/release-macos-Lite '*.app.tar.gz.sig' "MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz.sig"
           copy_single staging/release-notes 'release-notes.md' release-notes.md
+          test "$(sha256sum third_party/source_archives/ffmpeg-8.1.2.tar.xz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg") | .artifactSha256' third_party/sources.json)"
+          test "$(sha256sum third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .sourceArchiveSha256' third_party/windows-sources.json)"
+          test "$(sha256sum third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .buildRecipeArchiveSha256' third_party/windows-sources.json)"
+          cp third_party/source_archives/ffmpeg-8.1.2.tar.xz dist/
+          cp third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz dist/
+          cp third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz dist/
           mv dist/release-notes.md release-notes.md
 
           download_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
@@ -295,7 +301,20 @@ jobs:
             "dist/MAD.Toolbox_${VERSION}_x64-Lite-setup.exe.sig" \
             "dist/MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz.sig"
 
-          (cd dist && sha256sum *.exe *.dmg *.app.tar.gz > SHA256SUMS.txt)
+          (cd dist && sha256sum *.exe *.dmg *.app.tar.gz ffmpeg-*.tar.xz ffmpeg-*.tar.gz btbn-*.tar.gz > SHA256SUMS.txt)
+
+          {
+            printf '%s\n' \
+              '## Downloads' \
+              '' \
+              '| | Full | Lite |' \
+              '| --- | --- | --- |' \
+              "| Windows x64 | [![Windows Full setup](https://img.shields.io/badge/Full-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_${VERSION}_x64-Full-setup.exe) | [![Windows Lite setup](https://img.shields.io/badge/Lite-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_${VERSION}_x64-Lite-setup.exe) |" \
+              "| macOS Apple Silicon | [![macOS Full image](https://img.shields.io/badge/Full-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_${VERSION}_aarch64-Full.dmg) | [![macOS Lite image](https://img.shields.io/badge/Lite-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_${VERSION}_aarch64-Lite.dmg) |" \
+              ''
+            cat release-notes.md
+          } > release-notes.final.md
+          mv release-notes.final.md release-notes.md
 
       - name: Create or update release
         shell: bash
