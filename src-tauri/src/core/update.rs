@@ -80,20 +80,19 @@ fn manifest_endpoint(app: &AppHandle, source: UpdateSource) -> Result<Url, Strin
         .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())
 }
 
-fn mirror_download_url(download_url: &Url, version: &str) -> Result<Url, String> {
+fn mirror_download_url(download_url: &Url) -> Result<Url, String> {
     let file_name = download_url
         .path_segments()
         .and_then(Iterator::last)
         .filter(|segment| !segment.is_empty())
         .ok_or_else(|| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
-    let version_dir = format!("v{version}");
     let mut mirror_url: Url = MIRROR_BASE_URL
         .parse()
         .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
     mirror_url
         .path_segments_mut()
         .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?
-        .extend(["sd", "mt", &version_dir, file_name]);
+        .extend(["sd", "mt", file_name]);
     Ok(mirror_url)
 }
 
@@ -319,9 +318,9 @@ pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<S
         .await
         .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .ok_or_else(|| rust_i18n::t!("backend.update.alreadyUpToDate").to_string())?;
-    // OpenList 按版本保存发布文件；镜像模式的清单和安装包均走 OpenList。
+    // OpenList 根目录只保留最新发布文件；镜像模式的清单和安装包均走 OpenList。
     if use_mirror {
-        update.download_url = mirror_download_url(&update.download_url, &update.version)?;
+        update.download_url = mirror_download_url(&update.download_url)?;
     }
     update.timeout = Some(DOWNLOAD_TIMEOUT);
 
