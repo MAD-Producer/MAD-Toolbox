@@ -204,7 +204,13 @@ jobs:
           copy_single staging/nightly-windows-Lite '*.exe' MAD.Toolbox_nightly_x64-Lite-setup.exe
           copy_single staging/nightly-macos-Full '*.dmg' MAD.Toolbox_nightly_aarch64-Full.dmg
           copy_single staging/nightly-macos-Lite '*.dmg' MAD.Toolbox_nightly_aarch64-Lite.dmg
-          (cd dist && sha256sum *.exe *.dmg > SHA256SUMS.txt)
+          test "$(sha256sum third_party/source_archives/ffmpeg-8.1.2.tar.xz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg") | .artifactSha256' third_party/sources.json)"
+          test "$(sha256sum third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .sourceArchiveSha256' third_party/windows-sources.json)"
+          test "$(sha256sum third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .buildRecipeArchiveSha256' third_party/windows-sources.json)"
+          cp third_party/source_archives/ffmpeg-8.1.2.tar.xz dist/
+          cp third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz dist/
+          cp third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz dist/
+          (cd dist && sha256sum *.exe *.dmg ffmpeg-*.tar.xz ffmpeg-*.tar.gz btbn-*.tar.gz > SHA256SUMS.txt)
 
           short_sha=${TARGET_SHA:0:7}
           printf '%s\n\n%s\n\n%s\n' \
@@ -212,6 +218,20 @@ jobs:
             "Commit: [${short_sha}](https://github.com/${GITHUB_REPOSITORY}/commit/${TARGET_SHA})" \
             'This pre-release is intended for testing and is not offered through the in-app updater.' \
             > release-notes.md
+
+          download_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/nightly"
+          {
+            printf '%s\n' \
+              '## Downloads' \
+              '' \
+              '| | Full | Lite |' \
+              '| --- | --- | --- |' \
+              "| Windows x64 | [![Windows Full setup](https://img.shields.io/badge/Full-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_nightly_x64-Full-setup.exe) | [![Windows Lite setup](https://img.shields.io/badge/Lite-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_nightly_x64-Lite-setup.exe) |" \
+              "| macOS Apple Silicon | [![macOS Full image](https://img.shields.io/badge/Full-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_nightly_aarch64-Full.dmg) | [![macOS Lite image](https://img.shields.io/badge/Lite-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_nightly_aarch64-Lite.dmg) |" \
+              ''
+            cat release-notes.md
+          } > release-notes.final.md
+          mv release-notes.final.md release-notes.md
 
       - name: Move nightly tag
         shell: bash

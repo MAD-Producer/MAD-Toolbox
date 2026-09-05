@@ -60,7 +60,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
-      - name: Verify DMG and create checksum
+      - name: Verify DMG
         shell: bash
         run: |
           set -euo pipefail
@@ -69,7 +69,6 @@ jobs:
           test -f "${images[0]}"
           test "${#images[@]}" -eq 1
           hdiutil verify "${images[0]}"
-          shasum -a 256 "${images[0]}" > "$bundle_directory/SHA256SUMS.txt"
 
       - name: Upload DMG
         uses: actions/upload-artifact@v7
@@ -77,7 +76,6 @@ jobs:
           name: MAD-Toolbox-macOS-Apple-Silicon-${{ matrix.edition }}
           path: |
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
             src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
             src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: error

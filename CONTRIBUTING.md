@@ -49,16 +49,16 @@ npm run tauri:build:full -- mac --ci
 
 Any arguments after the target are passed through to `tauri build`. Both
 commands first run the TypeScript and `cargo check` preflights, then verify the
-pinned sidecar binaries (downloading missing Windows ones) and produce the
-platform installer. CI release builds use the same commands with an explicit
-target.
+sidecars required by that platform and edition (downloading missing Windows Full
+ones) and produce the platform installer. CI release builds use the same
+commands with an explicit target.
 
 The automation lives in `scripts/`, split by responsibility:
 
 ```text
 scripts/
 ├── build/          # build.js entry, windows.ps1 + windows-tools.ps1,
-│                   # macos.sh + macos-tools.sh
+│                   # macos.sh + macos-tools.sh, pinned-sha256.sh
 └── version/        # bump.js, check.js
 ```
 

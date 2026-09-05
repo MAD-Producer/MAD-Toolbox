@@ -37,9 +37,22 @@ npm run tauri:dev
 Full bundles BBDown, FFmpeg/ffprobe, MediaInfo CLI, yt-dlp and Deno, and embeds
 the WebView2 offline installer. After the Full installer has been downloaded,
 installation and application startup do not require an internet connection.
-Lite bundles BBDown and finds the other programs from WinGet/system and other
-known Windows installation locations, so Lite still requires those dependencies
-to be installed separately. Lite also skips the WebView2 installation step and
+Bundled tools are grouped under the installation directory as follows:
+
+```text
+dependencies/
+├── BBDown/BBDown.exe
+├── Deno/deno.exe
+├── FFmpeg/ffmpeg.exe
+├── FFmpeg/ffprobe.exe
+├── MediaInfo/mediainfo.exe
+├── MediaInfo/LIBCURL.DLL
+└── yt-dlp/yt-dlp.exe
+```
+
+Lite bundles no command-line tools and finds BBDown and the other programs from
+WinGet/system and other known Windows installation locations, so those dependencies
+must be installed separately. Lite also skips the WebView2 installation step and
 uses the system WebView2 Runtime, so it does not show a WebView2 setup dialog or
 carry the Full installer's offline runtime payload. Windows 10 22H2 and Windows
 11 normally include the runtime; if it is missing, install it separately or use
@@ -57,22 +70,23 @@ The package scripts select the Windows x64 build flow on a Windows x64 host;
 append `-- win` (for example `npm run tauri:build:lite -- win`) to pin the
 target explicitly. The flow runs on Windows PowerShell 5.1, which ships with
 Windows, so PowerShell 7 is not required. Every build first runs the TypeScript
-and cargo checks, then `scripts/build/windows-tools.ps1` downloads only missing
-artifacts and verifies pinned SHA-256
-values. The output is a per-user bilingual NSIS installer. The build machine
-needs network access when a pinned artifact or the Full-only WebView2 offline
-package is not already cached; this does not create a network requirement for
-the shipped Full installer. Lite does not download or package the WebView2
-offline installer.
+and cargo checks, then `scripts/build/windows-tools.ps1` downloads and verifies
+missing pinned artifacts for Full builds. Lite builds do not download
+command-line tools. The output is a per-user bilingual NSIS installer. The Full
+build machine needs network access when a pinned artifact or the WebView2
+offline package is not already cached; this does not create a network
+requirement for the shipped Full installer. Lite does not download or package
+the WebView2 offline installer.
 
 ## CLI state and diagnostics
 
-The bundled BBDown is launched directly from the directory shipped inside the
-application. Later downloads use that same executable and working directory,
-so BBDown reads `BBDown.data` exactly as in the original CLI. GUI QR login uses
+The Full package's bundled BBDown and the Lite package's WinGet BBDown are
+launched directly from their executable directories. Later downloads use that
+same executable and working directory, so BBDown reads `BBDown.data` exactly as
+in the original CLI. GUI QR login uses
 BBDown's official web endpoints only to complete that native data file from the
 Cookie fields returned by Bilibili; it does not modify the BBDown binary,
-launch a separately installed BBDown, or keep a second credential store.
+or keep a second credential store.
 
 MAD Toolbox does not encrypt or inject this native state and does not use
 Credential Manager. Templates are ordinary WebView application data.

@@ -17,7 +17,7 @@
   },
   "bundle": {
     "targets": ["nsis"],
-    "externalBin": ["binaries/BBDown"],
+    "externalBin": [],
     "resources": {
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
       "../third_party/windows-sources.json": "third_party/windows-sources.json",

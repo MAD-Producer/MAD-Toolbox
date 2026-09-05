@@ -110,6 +110,7 @@
   "deps.bundled": "应用内置",
   "deps.copyCommand": "复制命令",
   "deps.copyInstallCommand": "复制安装命令",
+  "deps.desc.bbdown": "B站下载的必需工具。",
   "deps.desc.deno": "部分站点的解析脚本依赖 Deno。",
   "deps.desc.ffmpeg": "转码、剪辑、GIF 等媒体处理任务的必需工具。",
   "deps.desc.mediainfo": "媒体检视（读取编码与容器信息）使用，缺失时回落到 ffprobe。",

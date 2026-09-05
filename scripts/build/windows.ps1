@@ -15,7 +15,9 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = [System.IO.Path]::GetDirectoryName([System.IO.Path]::GetDirectoryName($PSScriptRoot))
 [System.IO.Directory]::SetCurrentDirectory($ProjectRoot)
 
-& ([System.IO.Path]::Combine($PSScriptRoot, "windows-tools.ps1")) -Edition $Edition
+if ($Edition -eq "Full") {
+  & ([System.IO.Path]::Combine($PSScriptRoot, "windows-tools.ps1")) -Edition $Edition
+}
 
 # The tauri arguments are a JSON array of strings. JavaScriptSerializer is
 # used instead of ConvertFrom-Json (Microsoft.PowerShell.Utility cmdlet), and

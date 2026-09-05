@@ -50,7 +50,7 @@ struct UpdateDownloadProgress {
     total: Option<u64>,
 }
 
-/// 安装版本检测：Full 捆绑 ffmpeg 等 sidecar，Lite 只带 BBDown。
+/// 安装版本检测：Full 捆绑 ffmpeg 等 sidecar，Lite 不捆绑 ffmpeg。
 /// 只查应用安装目录/资源目录，系统 PATH 上的 ffmpeg 不影响判定。
 fn installed_edition(app: &AppHandle) -> &'static str {
     if bundled_binary(app, "ffmpeg").is_some() {

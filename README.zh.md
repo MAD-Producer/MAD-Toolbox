@@ -58,7 +58,7 @@ MAD Toolbox 目前支持以下平台：
 | Windows | 10 及以上 | `x86_64`  | Full版 / Lite版 `.exe` |
 | macOS   | 14 及以上 | `aarch64` | Full版 / Lite版 `.dmg` |
 
-其中 BBDown 默认内置于FULL版本和LITE版。
+macOS 的 FULL版和LITE版以及 Windows FULL版内置 BBDown；Windows LITE版通过 WinGet 单独安装。
 
 ### 第三方依赖下载
 
@@ -69,6 +69,7 @@ MAD Toolbox 目前支持以下平台：
 请确保您的系统含有 [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) 包管理工具。
 
 ```powershell
+winget install --id nilaoda.BBDown -e
 winget install --id Gyan.FFmpeg -e
 winget install --id yt-dlp.yt-dlp -e
 winget install --id MediaArea.MediaInfo -e

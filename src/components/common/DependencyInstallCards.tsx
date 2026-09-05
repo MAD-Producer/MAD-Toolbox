@@ -22,6 +22,7 @@ const PIP_MIRRORS = [
 ] as const;
 
 const INSTALL_DESCRIPTIONS: Partial<Record<ToolName, () => string>> = {
+  bbdown: () => t("deps.desc.bbdown"),
   ffmpeg: () => t("deps.desc.ffmpeg"),
   "yt-dlp": () => t("deps.desc.ytDlp"),
   mediainfo: () => t("deps.desc.mediainfo"),

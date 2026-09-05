@@ -21,7 +21,6 @@
       "../third_party/licenses/yt-dlp-THIRD_PARTY_LICENSES.txt": "licenses/yt-dlp-THIRD_PARTY_LICENSES.txt",
       "../third_party/build/ffmpeg-macos-arm64.sh": "third_party/build/ffmpeg-macos-arm64.sh",
       "../third_party/build/FFmpeg-8.1.2-BUILD-INFO.txt": "third_party/build/FFmpeg-8.1.2-BUILD-INFO.txt",
-      "../third_party/source_archives/ffmpeg-8.1.2.tar.xz": "third_party/source_archives/ffmpeg-8.1.2.tar.xz",
       "resources/musicdl-adapter.py": "musicdl-adapter.py"
     }
   }
