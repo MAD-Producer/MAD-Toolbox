@@ -78,7 +78,7 @@ Python and musicdl remain external in both modes:
 
 ```powershell
 winget install --id Python.Python.3.13 -e --scope user
-& "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" -m pip install --user pipx
-& "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" -m pipx ensurepath
-& "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe" -m pipx install musicdl
+py -m pip install --user pipx
+py -m pipx ensurepath
+py -m pipx install musicdl
 ```

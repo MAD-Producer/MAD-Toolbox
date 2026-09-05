@@ -7,6 +7,7 @@ All notable changes to MAD Toolbox are documented here.
 - ci: Windows LITE 版不再内置 BBDown，发布包体积更小
 - ci: FULL版打包删除 FFmpeg 的压缩包，发布包体积减小
 - feat: 切换更新时的镜像源网址
+- feat: musicdl 依赖增加有效性检查
 
 ## 1.2.1
 
