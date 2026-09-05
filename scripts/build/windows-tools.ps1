@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("Full", "Lite")]
+  [ValidateSet("Full")]
   [string]$Edition
 )
 

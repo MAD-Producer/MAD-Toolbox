@@ -113,12 +113,6 @@ jobs:
 
       - run: npm ci
 
-      # Same Windows PowerShell 5.1 invocation that scripts/build/build.js
-      # performs locally, so CI exercises the 5.1 code path.
-      - name: Verify bundled Windows sidecar (Lite)
-        if: matrix.platform == 'windows-2022'
-        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build/windows-tools.ps1 -Edition Lite
-
       - run: npm run build
 
       # Platform-specific cargo check invocation (kept explicit for readability)
