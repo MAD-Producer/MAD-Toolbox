@@ -22,9 +22,10 @@ use super::settings::load_app_settings;
 
 const MANIFEST_URL: &str =
     "https://github.com/MAD-Producer/MAD-Toolbox/releases/latest/download/latest-%EDITION%.json";
+const MIRROR_MANIFEST_URL: &str = "https://dl.mad.org.cn/sd/mt/latest-%EDITION%.json";
 const RELEASE_URL_PREFIX: &str = "https://github.com/MAD-Producer/MAD-Toolbox/releases/tag/v";
-/// MAD Producer 官方镜像：代理 GitHub 直链
-const MIRROR_PREFIX: &str = "https://store.madproducer.cn/";
+/// MAD Producer OpenList 下载目录。`/@s/mt` 是分享页面，实际文件需走 `/sd/mt/...`。
+const MIRROR_BASE_URL: &str = "https://dl.mad.org.cn/";
 /// 清单请求超时；下载阶段在 check 后单独放宽
 const UPDATER_TIMEOUT: Duration = Duration::from_secs(30);
 /// 安装包下载不设整体超时（镜像源较慢），仅放宽到 1 小时兜底
@@ -41,6 +42,14 @@ pub(crate) struct UpdateCheck {
     latest_version: String,
     update_available: bool,
     release_url: String,
+    source: UpdateSource,
+}
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum UpdateSource {
+    Github,
+    Mirror,
 }
 
 #[derive(Serialize, Clone)]
@@ -60,22 +69,31 @@ fn installed_edition(app: &AppHandle) -> &'static str {
     }
 }
 
-fn manifest_endpoints(app: &AppHandle, prefer_mirror: bool) -> Result<Vec<Url>, String> {
-    let github = MANIFEST_URL.replace("%EDITION%", installed_edition(app));
-    let mirror = format!("{MIRROR_PREFIX}{github}");
-    let endpoints = if prefer_mirror {
-        [mirror, github]
-    } else {
-        [github, mirror]
+fn manifest_endpoint(app: &AppHandle, source: UpdateSource) -> Result<Url, String> {
+    let template = match source {
+        UpdateSource::Github => MANIFEST_URL,
+        UpdateSource::Mirror => MIRROR_MANIFEST_URL,
     };
-    endpoints
-        .into_iter()
-        .map(|endpoint| {
-            endpoint
-                .parse()
-                .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())
-        })
-        .collect()
+    template
+        .replace("%EDITION%", installed_edition(app))
+        .parse()
+        .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())
+}
+
+fn mirror_download_url(download_url: &Url) -> Result<Url, String> {
+    let file_name = download_url
+        .path_segments()
+        .and_then(Iterator::last)
+        .filter(|segment| !segment.is_empty())
+        .ok_or_else(|| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
+    let mut mirror_url: Url = MIRROR_BASE_URL
+        .parse()
+        .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
+    mirror_url
+        .path_segments_mut()
+        .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?
+        .extend(["sd", "mt", file_name]);
+    Ok(mirror_url)
 }
 
 #[cfg(target_os = "windows")]
@@ -214,14 +232,16 @@ pub(crate) fn cleanup_staged_installer(app: &AppHandle) {
 #[cfg(not(target_os = "windows"))]
 pub(crate) fn cleanup_staged_installer(_app: &AppHandle) {}
 
-#[tauri::command]
-pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, String> {
+async fn check_update_from_source(
+    app: &AppHandle,
+    source: UpdateSource,
+) -> Result<UpdateCheck, String> {
     let current = app.package_info().version.to_string();
     let update_available = Arc::new(AtomicBool::new(false));
     let comparator_result = Arc::clone(&update_available);
     let mut builder = app
         .updater_builder()
-        .endpoints(manifest_endpoints(&app, false)?)
+        .endpoints(vec![manifest_endpoint(app, source)?])
         .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .version_comparator(move |current, release| {
             comparator_result.store(release.version > current, Ordering::Relaxed);
@@ -247,14 +267,41 @@ pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, Stri
         update_available: update_available.load(Ordering::Relaxed),
         release_url: format!("{RELEASE_URL_PREFIX}{}", release.version),
         current_version: current,
+        source,
     })
 }
 
 #[tauri::command]
+pub(crate) async fn check_for_update(
+    app: AppHandle,
+    prefer_mirror: bool,
+) -> Result<UpdateCheck, String> {
+    let primary = if prefer_mirror {
+        UpdateSource::Mirror
+    } else {
+        UpdateSource::Github
+    };
+    let fallback = if prefer_mirror {
+        UpdateSource::Github
+    } else {
+        UpdateSource::Mirror
+    };
+    match check_update_from_source(&app, primary).await {
+        Ok(update) => Ok(update),
+        Err(_) => check_update_from_source(&app, fallback).await,
+    }
+}
+
+#[tauri::command]
 pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<String, String> {
+    let source = if use_mirror {
+        UpdateSource::Mirror
+    } else {
+        UpdateSource::Github
+    };
     let mut builder = app
         .updater_builder()
-        .endpoints(manifest_endpoints(&app, use_mirror)?)
+        .endpoints(vec![manifest_endpoint(&app, source)?])
         .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .timeout(UPDATER_TIMEOUT);
     if let Some(proxy) = load_app_settings(&app).proxy {
@@ -271,11 +318,9 @@ pub(crate) async fn install_update(app: AppHandle, use_mirror: bool) -> Result<S
         .await
         .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .ok_or_else(|| rust_i18n::t!("backend.update.alreadyUpToDate").to_string())?;
-    // 清单本身可经镜像获取，但其中的下载直链仍是 GitHub：镜像模式下重写后再下载
+    // OpenList 根目录只保留最新发布文件；镜像模式的清单和安装包均走 OpenList。
     if use_mirror {
-        update.download_url = format!("{MIRROR_PREFIX}{}", update.download_url)
-            .parse()
-            .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())?;
+        update.download_url = mirror_download_url(&update.download_url)?;
     }
     update.timeout = Some(DOWNLOAD_TIMEOUT);
 
