@@ -18,7 +18,7 @@ import {
   IconRefresh,
   IconWorld
 } from "@tabler/icons-react";
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import { useUpdateStore } from "../../stores/update";
 import organizationLogo from "../../assets/organization_logo.png";
@@ -124,12 +124,17 @@ export function AboutSettingsPage() {
   const startDownload = useUpdateStore((state) => state.startDownload);
   const finishDownload = useUpdateStore((state) => state.finishDownload);
 
+  useEffect(() => {
+    if (update) setSource(update.source);
+  }, [update]);
+
   async function handleCheckUpdate() {
     setChecking(true);
     try {
-      const result = await checkForUpdate();
+      const result = await checkForUpdate(source === "mirror");
       if (result.updateAvailable) {
         setUpdate(result);
+        setSource(result.source);
         notifications.show({
           message: t("settings.about.updateFound", { version: result.latestVersion }),
           color: "green"

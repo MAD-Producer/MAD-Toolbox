@@ -349,3 +349,36 @@ jobs:
               --notes-file release-notes.md \
               --repo "$GITHUB_REPOSITORY"
           fi
+
+      - name: Publish OpenList mirror
+        shell: bash
+        env:
+          OPENLIST_WEBDAV_URL: ${{ secrets.OPENLIST_WEBDAV_URL }}
+          OPENLIST_USERNAME: ${{ secrets.OPENLIST_USERNAME }}
+          OPENLIST_PASSWORD: ${{ secrets.OPENLIST_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${OPENLIST_WEBDAV_URL:?Missing OPENLIST_WEBDAV_URL secret}"
+          : "${OPENLIST_USERNAME:?Missing OPENLIST_USERNAME secret}"
+          : "${OPENLIST_PASSWORD:?Missing OPENLIST_PASSWORD secret}"
+
+          target="${OPENLIST_WEBDAV_URL%/}"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --user "$OPENLIST_USERNAME:$OPENLIST_PASSWORD" \
+            --request MKCOL "$target/v$VERSION")
+          if [ "$status" != "201" ] && [ "$status" != "405" ]; then
+            echo "::error::Could not create OpenList version directory (HTTP $status)."
+            exit 1
+          fi
+
+          upload() {
+            curl --fail --silent --show-error \
+              --user "$OPENLIST_USERNAME:$OPENLIST_PASSWORD" \
+              --upload-file "$1" "$2"
+          }
+
+          for file in dist/MAD.Toolbox_* dist/latest-*.json dist/SHA256SUMS.txt; do
+            upload "$file" "$target/v$VERSION/$(basename "$file")"
+          done
+          upload dist/latest-full.json "$target/latest-full.json"
+          upload dist/latest-lite.json "$target/latest-lite.json"
