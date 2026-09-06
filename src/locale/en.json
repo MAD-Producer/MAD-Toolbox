@@ -450,6 +450,7 @@
   "settings.shell.sectionAria": "Select a settings section",
   "shell.backToMain": "Back to main screen",
   "shell.currentFeature": "Current feature",
+  "shell.feedback": "Feedback",
   "shell.primaryNav": "Primary features",
   "shell.settings": "Settings",
   "startup.bilibiliQuality.p1": "The quality of Bilibili video downloads depends on whether you are signed in via the QR code login, and on your premium account level. Without signing in, only up to 480P is available; after signing in, 1080P is usually available.",

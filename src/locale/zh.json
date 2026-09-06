@@ -450,6 +450,7 @@
   "settings.shell.sectionAria": "选择设置分区",
   "shell.backToMain": "返回主界面",
   "shell.currentFeature": "当前功能",
+  "shell.feedback": "问题反馈",
   "shell.primaryNav": "主要功能",
   "shell.settings": "设置",
   "startup.bilibiliQuality.p1": "Bilibili 视频下载的画质，取决于是否通过界面扫码登录，以及大会员账号的等级。未登录时最高只能下载 480P，扫码登录后一般可以下载到 1080P。",

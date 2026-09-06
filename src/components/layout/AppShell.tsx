@@ -1,5 +1,11 @@
-import { ActionIcon, Box, Group, Indicator, Title, Tooltip } from "@mantine/core";
-import { IconArrowLeft, IconCircleArrowDown, IconSettings } from "@tabler/icons-react";
+import { ActionIcon, Box, Button, Group, Indicator, Title, Tooltip } from "@mantine/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+  IconArrowLeft,
+  IconCircleArrowDown,
+  IconMessageReport,
+  IconSettings
+} from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
 import type { L1NavigationItem, L2NavigationItem } from "../../app/navigation";
 import type { AppRoute } from "../../app/route";
@@ -14,6 +20,8 @@ import { WorkspaceFrame } from "./WorkspaceFrame";
 
 type AppSection = AppRoute["section"];
 type SecondaryPage = Extract<AppRoute, { page: string }>["page"];
+
+const FEEDBACK_URL = "https://link.mad.org.cn/r8katw";
 
 interface AppShellProps {
   route: AppRoute;
@@ -138,6 +146,15 @@ export function AppShell({
                 <IconArrowLeft size={20} stroke={1.7} />
               </ActionIcon>
               <Title order={3}>{t("shell.settings")}</Title>
+              <Button
+                ml="auto"
+                variant="default"
+                radius="md"
+                leftSection={<IconMessageReport size={16} stroke={1.7} />}
+                onClick={() => void openUrl(FEEDBACK_URL)}
+              >
+                {t("shell.feedback")}
+              </Button>
             </Group>
           ) : (
             <Box
