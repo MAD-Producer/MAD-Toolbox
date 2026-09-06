@@ -35,6 +35,11 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
             onUpdate={workspace.update}
             onPickOutputDirectory={workspace.pickOutputDirectory}
             onPickCookieFile={workspace.pickCookieFile}
+            onVerifyCookie={workspace.verifyCookie}
+            cookieFiles={props.cookieFiles}
+            onAddCookieFile={props.onAddCookieFile}
+            cookieVerification={workspace.cookieVerification}
+            verifyingCookie={workspace.verifyingCookie}
             globalProxy={props.globalProxy}
           />
         </SettingsSection>

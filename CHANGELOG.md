@@ -8,6 +8,8 @@ All notable changes to MAD Toolbox are documented here.
 - ci: FULL版打包删除 FFmpeg 的压缩包，发布包体积减小
 - feat: 切换更新时的镜像源网址
 - feat: musicdl 依赖增加有效性检查
+- feat: 支持存储cookie文件路径，用户可以快速切换已保存的cookie文件
+- feat：设置页新增反馈入口
 
 ## 1.2.1
 

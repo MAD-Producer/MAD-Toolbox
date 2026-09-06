@@ -4,6 +4,7 @@ import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
+import type { CookieFileOption } from "../../contracts/types";
 import type { MusicFormPatch, MusicFormState } from "./configuration";
 
 interface MusicConfigurationPanelProps {
@@ -13,6 +14,8 @@ interface MusicConfigurationPanelProps {
   onPickCookieFile: () => void;
   globalProxy?: string | null;
   defaultOutputDirectory?: string | null;
+  cookieFiles: CookieFileOption[];
+  onAddCookieFile?: () => void;
 }
 
 export function MusicConfigurationPanel({
@@ -21,7 +24,9 @@ export function MusicConfigurationPanel({
   onPickOutputDirectory,
   onPickCookieFile,
   globalProxy,
-  defaultOutputDirectory
+  defaultOutputDirectory,
+  cookieFiles,
+  onAddCookieFile
 }: MusicConfigurationPanelProps) {
   return (
     <Stack gap="md">
@@ -77,7 +82,9 @@ export function MusicConfigurationPanel({
         <CookieFileField
           value={form.cookiesFile}
           onChange={(cookiesFile) => onChange({ cookiesFile })}
+          options={cookieFiles}
           onBrowse={onPickCookieFile}
+          onAddCookieFile={onAddCookieFile}
         />
       </FieldRow>
     </Stack>

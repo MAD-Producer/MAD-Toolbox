@@ -15,7 +15,8 @@ export function useBackend() {
     defaultOutputDirectory: null,
     dependencyPreference: "bundled",
     proxy: null,
-    language: "auto"
+    language: "auto",
+    cookieFiles: []
   });
 
   const refreshDependencies = useCallback(async () => {

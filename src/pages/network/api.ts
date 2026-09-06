@@ -11,7 +11,7 @@ export interface SubmitResult {
   taskId: string;
 }
 
-export type ProbeKind = "formats" | "metadata";
+export type ProbeKind = "formats" | "metadata" | "cookie";
 
 export function networkPreview(intent: TaskIntent): Promise<PreviewResult> {
   return invoke<PreviewResult>("network_preview", { intent });
