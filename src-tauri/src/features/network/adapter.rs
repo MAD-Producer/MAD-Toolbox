@@ -214,12 +214,12 @@ fn append_ffmpeg_location(argv: &mut Vec<String>, ctx: &NetworkCtx) {
     }
 }
 
-/// 查询种类（§4.1）：formats / metadata 是查询不是作业——结果由页面即时消费、不产出文件。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ProbeKind {
     Formats,
     Metadata,
+    Cookie,
 }
 
 /// 查询 argv：复用表单翻译，剥离下载模式 flag，追加查询 flag；不注入 ffmpeg（无合流）。
@@ -238,11 +238,37 @@ pub fn probe_argv(
     if form.url.trim().is_empty() {
         return Err(AdapterError::MissingUrl);
     }
-    form.mode = NetworkMode::Video;
     let probe_ctx = NetworkCtx {
         deno_path: ctx.deno_path.clone(),
         ffmpeg_location: None,
     };
+    if kind == ProbeKind::Cookie {
+        let mut argv = Vec::new();
+        if let Some(deno) = probe_ctx
+            .deno_path
+            .as_deref()
+            .filter(|path| !path.is_empty())
+        {
+            argv.push("--js-runtimes".into());
+            argv.push(format!("deno:{deno}"));
+        }
+        if !form.proxy.trim().is_empty() {
+            argv.push("--proxy".into());
+            argv.push(form.proxy.trim().into());
+        }
+        if !form.cookies_file.trim().is_empty() {
+            argv.push("--cookies".into());
+            argv.push(form.cookies_file.trim().into());
+        }
+        argv.extend([
+            "--simulate".into(),
+            "--playlist-end".into(),
+            "1".into(),
+            form.url.trim().into(),
+        ]);
+        return Ok(argv);
+    }
+    form.mode = NetworkMode::Video;
     let mut argv = build_argv(&form, &probe_ctx);
     match kind {
         ProbeKind::Formats => argv.push("--list-formats".into()),
@@ -250,6 +276,7 @@ pub fn probe_argv(
             argv.push("--skip-download".into());
             argv.push("--dump-single-json".into());
         }
+        ProbeKind::Cookie => unreachable!(),
     }
     Ok(argv)
 }

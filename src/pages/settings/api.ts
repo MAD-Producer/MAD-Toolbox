@@ -1,11 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { DependencyStatus, ToolName } from "../../contracts/dependency";
+import type { CookieFileOption } from "../../contracts/types";
 
 export interface AppSettings {
   defaultOutputDirectory: string | null;
   dependencyPreference: "bundled" | "system";
   proxy: string | null;
   language: "auto" | "zh" | "en";
+  cookieFiles: CookieFileOption[];
 }
 
 export interface UpdateCheck {

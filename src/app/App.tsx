@@ -157,6 +157,11 @@ export default function App() {
     setRoute({ section: "settings", page: "dependencies" });
   };
 
+  const openGeneralSettings = () => {
+    setLastSettingsPage("general");
+    setRoute({ section: "settings", page: "general" });
+  };
+
   const openUpdateSettings = () => {
     setLastSettingsPage("about");
     setRoute({ section: "settings", page: "about" });
@@ -324,6 +329,8 @@ export default function App() {
           dependencyLabels={missingLabelsFor("network")}
           onOpenDependencies={openDependencySettings}
           globalProxy={backend.settings.proxy}
+          cookieFiles={backend.settings.cookieFiles}
+          onAddCookieFile={openGeneralSettings}
         />
       )
     },
@@ -344,6 +351,8 @@ export default function App() {
           onSubmitted={() => markWorkspaceReleasable("music", generation)}
           dependencyLabels={missingLabelsFor("music")}
           onOpenDependencies={openDependencySettings}
+          cookieFiles={backend.settings.cookieFiles}
+          onAddCookieFile={openGeneralSettings}
         />
       )
     },

@@ -7,6 +7,13 @@ use tauri::{AppHandle, Manager};
 use super::language::{apply_language, LanguageChoice};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CookieFileSetting {
+    pub(crate) alias: String,
+    pub(crate) path: String,
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum DependencyPreference {
     #[default]
@@ -24,6 +31,8 @@ pub(crate) struct AppSettings {
     pub(crate) proxy: Option<String>,
     #[serde(default)]
     pub(crate) language: LanguageChoice,
+    #[serde(default)]
+    pub(crate) cookie_files: Vec<CookieFileSetting>,
 }
 
 pub(crate) fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -89,6 +98,10 @@ pub(crate) fn save_app_settings(
         .proxy
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
+    for cookie_file in &mut settings.cookie_files {
+        cookie_file.alias = cookie_file.alias.trim().to_string();
+        cookie_file.path = cookie_file.path.trim().to_string();
+    }
     if let Some(directory) = &settings.default_output_directory {
         if !Path::new(directory).is_dir() {
             return Err(t!("backend.settings.invalid_output_directory").to_string());

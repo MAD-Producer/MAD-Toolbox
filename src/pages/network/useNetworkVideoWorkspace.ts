@@ -3,6 +3,8 @@ import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
 import type { TaskIntent, TaskSeed } from "../../contracts/types";
+import type { CookieFileOption } from "../../contracts/types";
+import type { CookieVerificationStatus } from "../../components/common/CookieFileField";
 import {
   networkPreview,
   networkProbe,
@@ -26,6 +28,8 @@ export interface NetworkVideoPageProps {
   dependencyLabels?: string[];
   onOpenDependencies?: () => void;
   globalProxy?: string | null;
+  cookieFiles: CookieFileOption[];
+  onAddCookieFile?: () => void;
 }
 
 export interface NetworkProbeResult {
@@ -56,6 +60,8 @@ export function useNetworkVideoWorkspace({
   const [submitting, setSubmitting] = useState(false);
   const [probeResult, setProbeResult] = useState<NetworkProbeResult | null>(null);
   const [probing, setProbing] = useState<ProbeKind | null>(null);
+  const [verifyingCookie, setVerifyingCookie] = useState(false);
+  const [cookieVerification, setCookieVerification] = useState<CookieVerificationStatus>("idle");
   const draftRevisionRef = useRef(0);
   const previewStateRef = useRef<RevisionedPreview | null>(null);
   previewStateRef.current = previewState;
@@ -69,6 +75,9 @@ export function useNetworkVideoWorkspace({
 
   const update = (patch: Partial<NetworkFormState>) => {
     reviseDraft();
+    if (patch.url !== undefined || patch.cookiesFile !== undefined) {
+      setCookieVerification("idle");
+    }
     setForm((current) => ({ ...current, ...patch }));
   };
 
@@ -98,6 +107,7 @@ export function useNetworkVideoWorkspace({
   useEffect(() => {
     if (!seed) return;
     setPreviewState(null);
+    setCookieVerification("idle");
     if (seed.task.intent.type === "form") {
       setExpertTextState(null);
       const restored = {
@@ -195,6 +205,43 @@ export function useNetworkVideoWorkspace({
     }
   };
 
+  const verifyCookie = async () => {
+    if (!form.url.trim()) {
+      notifications.show({ color: "yellow", message: t("network.cookieVerify.urlRequired") });
+      return;
+    }
+    if (!form.cookiesFile.trim()) {
+      notifications.show({ color: "yellow", message: t("network.cookieVerify.fileRequired") });
+      return;
+    }
+
+    const requestedRevision = draftRevisionRef.current;
+    setCookieVerification("idle");
+    setVerifyingCookie(true);
+    try {
+      await networkProbe({ type: "form", data: { ...form } }, "cookie");
+      if (draftRevisionRef.current !== requestedRevision) return;
+      setCookieVerification("valid");
+      notifications.show({ color: "green", message: t("network.cookieVerify.valid") });
+    } catch (error) {
+      if (draftRevisionRef.current !== requestedRevision) return;
+      setCookieVerification("invalid");
+      const reason = String(error)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .pop();
+      notifications.show({
+        color: "red",
+        message: reason
+          ? `${t("network.cookieVerify.invalid")}: ${reason}`
+          : t("network.cookieVerify.invalid")
+      });
+    } finally {
+      setVerifyingCookie(false);
+    }
+  };
+
   const pickOutputDirectory = async () => {
     const directory = await openDialog({ directory: true });
     if (typeof directory === "string") update({ outputDirectory: directory });
@@ -226,6 +273,9 @@ export function useNetworkVideoWorkspace({
     setProbeResult,
     probing,
     probe,
+    verifyingCookie,
+    cookieVerification,
+    verifyCookie,
     pickOutputDirectory,
     pickCookieFile
   };

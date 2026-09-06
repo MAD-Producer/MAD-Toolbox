@@ -4,6 +4,8 @@ import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
+import type { CookieFileOption } from "../../contracts/types";
+import type { CookieVerificationStatus } from "../../components/common/CookieFileField";
 import type { NetworkFormState } from "./form";
 
 interface NetworkVideoDownloadFieldsProps {
@@ -12,6 +14,11 @@ interface NetworkVideoDownloadFieldsProps {
   onUpdate: (patch: Partial<NetworkFormState>) => void;
   onPickOutputDirectory: () => Promise<void>;
   onPickCookieFile: () => Promise<void>;
+  onVerifyCookie: () => Promise<void>;
+  cookieFiles: CookieFileOption[];
+  cookieVerification: CookieVerificationStatus;
+  verifyingCookie: boolean;
+  onAddCookieFile?: () => void;
   globalProxy?: string | null;
 }
 
@@ -21,6 +28,11 @@ export function NetworkVideoDownloadFields({
   onUpdate,
   onPickOutputDirectory,
   onPickCookieFile,
+  onVerifyCookie,
+  cookieFiles,
+  cookieVerification,
+  verifyingCookie,
+  onAddCookieFile,
   globalProxy
 }: NetworkVideoDownloadFieldsProps) {
   return (
@@ -36,9 +48,14 @@ export function NetworkVideoDownloadFields({
       <FieldRow label={t("network.fields.cookiesFile")} hint={t("network.fields.cookiesFileHint")}>
         <CookieFileField
           value={form.cookiesFile}
+          options={cookieFiles}
           disabled={disabled}
+          verificationStatus={cookieVerification}
+          verifying={verifyingCookie}
           onChange={(cookiesFile) => onUpdate({ cookiesFile })}
           onBrowse={onPickCookieFile}
+          onVerify={onVerifyCookie}
+          onAddCookieFile={onAddCookieFile}
         />
       </FieldRow>
       <FieldRow label={t("common.outputDirectory")} hint={t("common.outputDirectoryHint")}>

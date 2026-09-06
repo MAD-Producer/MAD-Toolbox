@@ -2,6 +2,11 @@ export type Feature = "bilibili" | "network" | "media" | "music";
 
 export type Pool = "download" | "local";
 
+export interface CookieFileOption {
+  alias: string;
+  path: string;
+}
+
 export type TaskStatus =
   "queued" | "running" | "canceling" | "success" | "failed" | "canceled" | "interrupted";
 

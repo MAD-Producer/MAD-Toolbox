@@ -15,7 +15,7 @@ import { MusicPageHeader } from "./MusicPageHeader";
 import { MusicSearchResults } from "./MusicSearchResults";
 import { MusicSourcePicker } from "./MusicSourcePicker";
 import type { DependencyStatus } from "../../contracts/dependency";
-import type { TaskSeed } from "../../contracts/types";
+import type { CookieFileOption, TaskSeed } from "../../contracts/types";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { useMusicSessionStore } from "../../stores/music-session";
@@ -87,6 +87,8 @@ interface MusicPageProps {
   onSubmitted?: () => void;
   dependencyLabels?: string[];
   onOpenDependencies?: () => void;
+  cookieFiles: CookieFileOption[];
+  onAddCookieFile?: () => void;
 }
 
 export function MusicPage({
@@ -102,7 +104,9 @@ export function MusicPage({
   onRetain,
   onSubmitted,
   dependencyLabels,
-  onOpenDependencies
+  onOpenDependencies,
+  cookieFiles,
+  onAddCookieFile
 }: MusicPageProps) {
   const [form, setForm] = useState(createPersistedMusicForm);
   const [advancedOpen, advancedToggle] = useDisclosure(false);
@@ -340,6 +344,8 @@ export function MusicPage({
             onPickCookieFile={() => void pickCookieFile()}
             globalProxy={globalProxy}
             defaultOutputDirectory={defaultOutputDirectory}
+            cookieFiles={cookieFiles}
+            onAddCookieFile={onAddCookieFile}
           />
         </SettingsSection>
         <MusicSourcePicker sources={form.sources} onChange={(sources) => updateForm({ sources })} />
