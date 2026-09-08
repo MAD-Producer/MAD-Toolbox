@@ -312,6 +312,10 @@ jobs:
               "| Windows x64 | [![Windows Full setup](https://img.shields.io/badge/Full-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_${VERSION}_x64-Full-setup.exe) | [![Windows Lite setup](https://img.shields.io/badge/Lite-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_${VERSION}_x64-Lite-setup.exe) |" \
               "| macOS Apple Silicon | [![macOS Full image](https://img.shields.io/badge/Full-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_${VERSION}_aarch64-Full.dmg) | [![macOS Lite image](https://img.shields.io/badge/Lite-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_${VERSION}_aarch64-Lite.dmg) |" \
               ''
+            printf '%s\n' \
+              "不知道下载哪个版本？可以查看 [版本推荐](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/VERSION_RECOMMENDATION.md)" \
+              "Not sure which version to download? See [Version Recommendation](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/VERSION_RECOMMENDATION.md)" \
+              ''
             cat release-notes.md
           } > release-notes.final.md
           mv release-notes.final.md release-notes.md
