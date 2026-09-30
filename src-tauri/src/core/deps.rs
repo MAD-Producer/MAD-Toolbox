@@ -500,89 +500,43 @@ pub(crate) fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
         .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlInterpreterMissing").to_string())
 }
 
+// distlib Windows launchers contain: PE launcher + UTF-8 shebang + ZIP payload.
+#[cfg(target_os = "windows")]
+fn musicdl_python_hint(executable: &Path) -> Result<PathBuf, String> {
+    let bytes = std::fs::read(executable).map_err(|error| error.to_string())?;
+    let interpreter = bytes
+        .windows(2)
+        .enumerate()
+        .filter(|(_, pair)| *pair == b"#!")
+        .find_map(|(offset, _)| {
+            let tail = &bytes[offset + 2..];
+            let end = tail.iter().position(|byte| *byte == b'\n')?;
+            if !tail.get(end + 1..)?.starts_with(b"PK\x03\x04") {
+                return None;
+            }
+            let value = std::str::from_utf8(&tail[..end]).ok()?.trim();
+            let value = value
+                .strip_prefix('"')
+                .and_then(|quoted| quoted.split_once('"').map(|(path, _)| path))
+                .unwrap_or(value);
+            let path = PathBuf::from(value);
+            (path.is_absolute()
+                && path
+                    .file_name()?
+                    .to_str()?
+                    .eq_ignore_ascii_case("python.exe"))
+            .then_some(path)
+        });
+    interpreter.ok_or_else(|| rust_i18n::t!("backend.deps.musicdlPythonUnrecognized").to_string())
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
-    let mut candidates = Vec::new();
-    if let Some(python_root) = executable.parent().and_then(Path::parent) {
-        candidates.push(python_root.join("python.exe"));
-    }
-    if let Some(pipx_home) = env::var_os("PIPX_HOME") {
-        candidates.push(
-            PathBuf::from(pipx_home)
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-    }
-    if let Some(profile) = env::var_os("USERPROFILE") {
-        let profile = PathBuf::from(profile);
-        candidates.push(
-            profile
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-        candidates.push(
-            profile
-                .join(".local")
-                .join("share")
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-    }
-    if let Some(local) = env::var_os("LOCALAPPDATA") {
-        let local = PathBuf::from(local);
-        candidates.push(
-            local
-                .join("pipx")
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-        candidates.push(
-            local
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-    }
-    if let Some(pipx) = find_system_binary("pipx") {
-        let mut command = std::process::Command::new(pipx);
-        hide_std_command_window(&mut command);
-        if let Ok(output) = command
-            .args(["environment", "--value", "PIPX_LOCAL_VENVS"])
-            .output()
-        {
-            if output.status.success() {
-                let root = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !root.is_empty() {
-                    candidates.push(
-                        PathBuf::from(root)
-                            .join("musicdl")
-                            .join("Scripts")
-                            .join("python.exe"),
-                    );
-                }
-            }
-        }
-    }
-    if let Some(system) = find_system_binary("python") {
-        candidates.push(system);
-    }
-    candidates
-        .into_iter()
-        .find(|candidate| candidate.is_file())
-        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlEnvNotFound").to_string())
+    let interpreter = musicdl_python_hint(executable)?;
+    interpreter
+        .is_file()
+        .then_some(interpreter)
+        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlInterpreterMissing").to_string())
 }
 
 async fn tool_version(path: &Path, tool: &ToolName) -> Option<String> {
