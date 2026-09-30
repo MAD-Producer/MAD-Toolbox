@@ -1,3 +1,12 @@
+/* FRAMENEO 素材为纯白图形（形状存于 alpha 通道），仅在深色背景下可见 */
+.about-sponsor-logo {
+  filter: invert(1);
+}
+
+[data-mantine-color-scheme="dark"] .about-sponsor-logo {
+  filter: none;
+}
+
 .quote-hero-mark {
   font-weight: 700;
   background-image: linear-gradient(

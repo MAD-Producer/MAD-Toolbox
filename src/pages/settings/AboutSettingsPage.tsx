@@ -21,6 +21,7 @@ import { Fragment, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import { useUpdateStore } from "../../stores/update";
 import organizationLogo from "../../assets/organization_logo.png";
+import frameneoLogo from "../../../assets/FRAMENEO_logo.avif";
 import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
@@ -40,11 +41,6 @@ const TEAM_LINKS = [
 ] as const satisfies ReadonlyArray<{ nameKey: TranslationKey; url: string }>;
 
 const CREDITS = [
-  {
-    name: "FRAMENEO",
-    noteKey: "settings.about.credit.frameneo",
-    url: "https://www.frameneo.com/"
-  },
   {
     name: "FFmpeg",
     noteKey: "settings.about.credit.ffmpeg",
@@ -245,6 +241,9 @@ export function AboutSettingsPage() {
             {TEAM_LINKS.map((link) => (
               <Button
                 key={link.url}
+                size="sm"
+                flex="0 0 auto"
+                fullWidth
                 variant="transparent"
                 color="gray"
                 className="about-action"
@@ -255,6 +254,40 @@ export function AboutSettingsPage() {
               </Button>
             ))}
           </Stack>
+        </Group>
+      </SettingsSectionCard>
+
+      <SettingsSectionCard title={t("settings.about.specialThanks")}>
+        <Group justify="space-between" align="center" wrap="nowrap" gap="xl" px="lg" py="md">
+          <Group gap="md" wrap="nowrap" style={{ minWidth: 0 }}>
+            <Image
+              src={frameneoLogo}
+              alt="FRAMENEO"
+              h={48}
+              w="auto"
+              flex="0 0 auto"
+              className="about-sponsor-logo"
+            />
+            <Stack gap={2} style={{ minWidth: 0 }}>
+              <Text size="sm" fw={500}>
+                FRAMENEO
+              </Text>
+              <Text size="xs" c="dimmed">
+                {t("settings.about.credit.frameneo")}
+              </Text>
+            </Stack>
+          </Group>
+          <Button
+            size="sm"
+            flex="0 0 auto"
+            variant="transparent"
+            color="gray"
+            className="about-action"
+            leftSection={<IconExternalLink size={16} stroke={1.7} />}
+            onClick={() => void openUrl("https://www.frameneo.com/")}
+          >
+            {t("settings.about.frameneoWebsite")}
+          </Button>
         </Group>
       </SettingsSectionCard>
 
