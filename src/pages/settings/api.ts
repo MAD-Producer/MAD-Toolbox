@@ -15,7 +15,6 @@ export interface UpdateCheck {
   latestVersion: string;
   updateAvailable: boolean;
   releaseUrl: string;
-  source: "github" | "mirror";
 }
 
 export function fetchAppSettings(): Promise<AppSettings> {
@@ -26,12 +25,12 @@ export function saveAppSettings(settings: AppSettings): Promise<AppSettings> {
   return invoke<AppSettings>("save_app_settings", { settings });
 }
 
-export function checkForUpdate(preferMirror = false): Promise<UpdateCheck> {
-  return invoke<UpdateCheck>("check_for_update", { preferMirror });
+export function checkForUpdate(): Promise<UpdateCheck> {
+  return invoke<UpdateCheck>("check_for_update");
 }
 
-export function installUpdate(useMirror: boolean): Promise<void> {
-  return invoke<void>("install_update", { useMirror });
+export function installUpdate(): Promise<void> {
+  return invoke<void>("install_update");
 }
 
 export function fetchDependencyStatus(): Promise<DependencyStatus[]> {

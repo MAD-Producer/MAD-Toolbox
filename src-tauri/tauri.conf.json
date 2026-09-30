@@ -54,7 +54,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY0QTM3ODE0QkI1NjFBRjkKUldUNUdsYTdGSGlqWlA1dEFnbncyeDV1djFnT3RiYUkvOU1icDFFcnpkYXUzVC9VNUhGK1FGWSsK",
       "endpoints": [
-        "https://github.com/MAD-Producer/MAD-Toolbox/releases/latest/download/latest-full.json"
+        "https://openlist.frameneo.com/sd/mt/latest-full.json"
       ],
       "windows": {
         "installMode": "passive"

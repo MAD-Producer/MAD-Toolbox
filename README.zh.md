@@ -46,7 +46,7 @@
 
 ## 开始使用
 
-开始使用 MAD Toolbox，只需在 [Release](https://github.com/MAD-Producer/MAD-Toolbox/releases/) 下载最新发行版即可。
+开始使用 MAD Toolbox，只需在[下载页面](https://openlist.frameneo.com/@s/mt)下载最新发行版即可。应用内更新使用同一来源，由 [FRAMENEO](https://www.frameneo.com/) 提供高速 CDN 缓存服务。
 
 `main` 分支发生变更时，每日构建的可安装快照会发布到
 [Nightly Build](https://github.com/MAD-Producer/MAD-Toolbox/releases/tag/nightly) 预发行版。Nightly 仅用于测试，不会通过应用内更新推送。
