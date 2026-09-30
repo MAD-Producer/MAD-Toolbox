@@ -1004,6 +1004,81 @@ mod tests {
 
     use super::*;
 
+    fn launcher_fixture(python: &Path) -> (PathBuf, PathBuf) {
+        let directory = env::temp_dir().join(format!("mad-deps-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let launcher = directory.join("musicdl.exe");
+        let mut bytes = b"MZ\0\xffnot-a-shebang#!invalid\n".to_vec();
+        bytes.extend(format!("#!\"{}\"\n", python.display()).as_bytes());
+        bytes.extend(b"PK\x03\x04");
+        std::fs::write(&launcher, bytes).unwrap();
+        (directory, launcher)
+    }
+
+    #[test]
+    fn launcher_uses_embedded_interpreter_even_when_it_is_missing() {
+        let expected = PathBuf::from(r"C:\Missing 环境\O'Brien\Scripts\python.exe");
+        let (directory, launcher) = launcher_fixture(&expected);
+        assert_eq!(musicdl_python_hint(&launcher).unwrap(), expected);
+        assert!(musicdl_python(&launcher).is_err());
+        assert!(musicdl_pipx_environment(&launcher).is_none());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[tokio::test]
+    async fn unmanaged_broken_environment_does_not_offer_pipx_reinstall() {
+        let (directory, launcher) = launcher_fixture(Path::new(r"C:\Custom\Scripts\python.exe"));
+        assert!(
+            dependency_install_command(&ToolName::Musicdl, Some(&launcher), true)
+                .await
+                .is_none()
+        );
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[tokio::test]
+    async fn pipx_repair_preserves_custom_home_and_parses_in_powershell() {
+        let directory = env::temp_dir().join(format!("mad-deps-test-{}", uuid::Uuid::new_v4()));
+        let environment = directory.join("O'Brien 环境").join("venvs").join("musicdl");
+        std::fs::create_dir_all(&environment).unwrap();
+        std::fs::write(
+            environment.join("pipx_metadata.json"),
+            r#"{"main_package":{"package":"musicdl"}}"#,
+        )
+        .unwrap();
+        let (launcher_directory, launcher) =
+            launcher_fixture(&environment.join("Scripts").join("python.exe"));
+        assert_eq!(musicdl_pipx_environment(&launcher).unwrap(), environment);
+        let script = dependency_install_command(&ToolName::Musicdl, Some(&launcher), true)
+            .await
+            .unwrap();
+        assert!(script.contains("reinstall 'musicdl' --python $python"));
+        assert!(script.contains(&format!(
+            "$env:PIPX_HOME = {}",
+            shell_quote(
+                &environment
+                    .parent()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .to_string_lossy()
+            )
+        )));
+        assert!(script.contains("$env:PIPX_BIN_DIR = "));
+        let output = background_command("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command",
+                "$tokens = $null; $errors = $null; [System.Management.Automation.Language.Parser]::ParseInput($env:MAD_TEST_SCRIPT, [ref]$tokens, [ref]$errors) > $null; if ($errors.Count) { $errors | Out-String | Write-Output; exit 1 }"])
+            .env("MAD_TEST_SCRIPT", script)
+            .output().await.unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        std::fs::remove_dir_all(launcher_directory).unwrap();
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
     fn command_processor() -> PathBuf {
         env::var_os("ComSpec")
             .map(PathBuf::from)
