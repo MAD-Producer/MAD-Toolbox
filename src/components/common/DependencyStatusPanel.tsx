@@ -1,10 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActionIcon, Badge, Button, Card, Group, Stack, Text, Tooltip } from "@mantine/core";
 import { IconCircleCheck, IconDownload, IconRefresh } from "@tabler/icons-react";
-import type { DependencyStatus } from "../../contracts/dependency";
-import { t } from "../../locale";
+import type { DependencyStatus, ToolName } from "../../contracts/dependency";
+import { t, type TranslationKey } from "../../locale";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { FieldWithActions } from "./FieldWithActions";
+
+const TOOL_PURPOSES: Record<ToolName, TranslationKey> = {
+  bbdown: "deps.purpose.bbdown",
+  "yt-dlp": "deps.purpose.ytDlp",
+  deno: "deps.purpose.deno",
+  ffmpeg: "deps.purpose.ffmpeg",
+  ffprobe: "deps.purpose.ffprobe",
+  mediainfo: "deps.purpose.mediainfo",
+  musicdl: "deps.purpose.musicdl",
+  python: "deps.purpose.python"
+};
 
 interface DependencyStatusPanelProps {
   dependencies: DependencyStatus[];
@@ -19,17 +30,27 @@ export function DependencyStatusPanel({
   onRefresh,
   onInstall
 }: DependencyStatusPanelProps) {
-  const [opened, setOpened] = useState(false);
-  const missing = dependencies.filter((item) => item.required && !item.available);
+  const missing = dependencies.filter((item) => !item.available);
+  const missingTools = missing.map((item) => item.tool).join(",");
+  const [opened, setOpened] = useState(missing.length > 0);
+  const sortedDependencies = [...missing, ...dependencies.filter((item) => item.available)];
+
+  useEffect(() => {
+    if (missingTools) setOpened(true);
+  }, [missingTools]);
 
   return (
     <CollapsibleSection
       opened={opened}
       onToggle={() => setOpened((value) => !value)}
       title={
-        missing.length > 0 ? (
+        dependencies.length === 0 ? (
+          <Text size="sm" c="dimmed">
+            {t("deps.checking")}
+          </Text>
+        ) : missing.length > 0 ? (
           <Badge variant="transparent" color="yellow">
-            {t("deps.requiredMissingCount", { count: missing.length })}
+            {t("deps.missingCount", { count: missing.length })}
           </Badge>
         ) : (
           <Badge variant="transparent" color="teal" leftSection={<IconCircleCheck size={12} />}>
@@ -44,14 +65,17 @@ export function DependencyStatusPanel({
           className="dep-refresh"
           leftSection={<IconRefresh size={14} />}
           loading={loading}
-          onClick={onRefresh}
+          onClick={() => {
+            if (missing.length > 0) setOpened(true);
+            onRefresh();
+          }}
         >
           {t("deps.recheck")}
         </Button>
       }
     >
       <Stack gap="xs">
-        {dependencies.map((dependency) => {
+        {sortedDependencies.map((dependency) => {
           const installable = !dependency.available && Boolean(dependency.installCommand);
           return (
             <FieldWithActions
@@ -84,21 +108,9 @@ export function DependencyStatusPanel({
               <Card withBorder radius="calc(var(--mantine-radius-md) + 4px)" padding="sm">
                 <Stack gap={2}>
                   <Group justify="space-between" wrap="nowrap">
-                    <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={600}>
-                        {dependency.label}
-                      </Text>
-                      {!dependency.required && (
-                        <Badge
-                          size="xs"
-                          variant="transparent"
-                          color="gray"
-                          style={{ flexShrink: 0 }}
-                        >
-                          {t("deps.optionalBadge")}
-                        </Badge>
-                      )}
-                    </Group>
+                    <Text size="sm" fw={600}>
+                      {dependency.label}
+                    </Text>
                     <Badge
                       color={dependency.available ? "teal" : "yellow"}
                       variant="transparent"
@@ -113,6 +125,9 @@ export function DependencyStatusPanel({
                           : t("deps.notReady")}
                     </Badge>
                   </Group>
+                  <Text size="xs" c="dimmed">
+                    {t(TOOL_PURPOSES[dependency.tool])}
+                  </Text>
                   <Text size="xs" c="dimmed" truncate>
                     {dependency.available
                       ? (dependency.version ?? t("deps.versionUnknown"))
