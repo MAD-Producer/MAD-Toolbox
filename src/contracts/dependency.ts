@@ -12,6 +12,9 @@ export interface DependencyStatus {
   path: string | null;
   version: string | null;
   healthCheckFailed: boolean;
+  healthCheckError: string | null;
+  installCommand: string | null;
+  installShell: "PowerShell" | "sh";
   required: boolean;
   installHint: string | null;
 }

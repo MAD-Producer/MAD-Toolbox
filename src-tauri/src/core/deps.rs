@@ -120,9 +120,7 @@ impl ToolName {
                     "winget install --id DenoLand.Deno -e --accept-package-agreements --accept-source-agreements",
                 ),
                 Self::Python => Some(python_pin::WINGET_INSTALL),
-                Self::Musicdl => Some(
-                    "py -m pip install --user --upgrade pipx && py -m pipx ensurepath && py -m pipx install musicdl",
-                ),
+                Self::Musicdl => None,
                 _ => None,
             }
         } else {
@@ -131,10 +129,8 @@ impl ToolName {
                 Self::Ffmpeg => Some("brew install ffmpeg"),
                 Self::Mediainfo => Some("brew install media-info"),
                 Self::Deno => Some("brew install deno"),
-                Self::Python => Some("brew install python"),
-                Self::Musicdl => {
-                    Some("brew install python pipx && pipx ensurepath && pipx install musicdl")
-                }
+                Self::Python => Some("brew install python@3.13"),
+                Self::Musicdl => None,
                 _ => None,
             }
         }
@@ -154,6 +150,9 @@ pub(crate) struct DependencyStatus {
     path: Option<String>,
     version: Option<String>,
     health_check_failed: bool,
+    health_check_error: Option<String>,
+    install_command: Option<String>,
+    install_shell: &'static str,
     required: bool,
     install_hint: Option<String>,
 }
@@ -251,9 +250,6 @@ pub(crate) fn command_path() -> OsString {
             paths.push(profile.join(".local").join("bin"));
             paths.push(profile.join("scoop").join("shims"));
         }
-        if let Some(pipx_bin) = env::var_os("PIPX_BIN_DIR") {
-            paths.push(PathBuf::from(pipx_bin));
-        }
         if let Some(scoop) = env::var_os("SCOOP") {
             paths.push(PathBuf::from(scoop).join("shims"));
         }
@@ -279,6 +275,9 @@ pub(crate) fn command_path() -> OsString {
                     .join("Packages"),
             ));
         }
+    }
+    if let Some(pipx_bin) = env::var_os("PIPX_BIN_DIR") {
+        paths.insert(0, PathBuf::from(pipx_bin));
     }
     #[cfg(not(target_os = "windows"))]
     if let Some(home) = env::var_os("HOME") {
@@ -500,89 +499,205 @@ pub(crate) fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
         .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlInterpreterMissing").to_string())
 }
 
+// distlib Windows launchers contain: PE launcher + UTF-8 shebang + ZIP payload.
+#[cfg(target_os = "windows")]
+fn musicdl_python_hint(executable: &Path) -> Result<PathBuf, String> {
+    let bytes = std::fs::read(executable).map_err(|error| error.to_string())?;
+    let interpreter = bytes
+        .windows(2)
+        .enumerate()
+        .filter(|(_, pair)| *pair == b"#!")
+        .find_map(|(offset, _)| {
+            let tail = &bytes[offset + 2..];
+            let end = tail.iter().position(|byte| *byte == b'\n')?;
+            if !tail.get(end + 1..)?.starts_with(b"PK\x03\x04") {
+                return None;
+            }
+            let value = std::str::from_utf8(&tail[..end]).ok()?.trim();
+            let value = value
+                .strip_prefix('"')
+                .and_then(|quoted| quoted.split_once('"').map(|(path, _)| path))
+                .unwrap_or(value);
+            let path = PathBuf::from(value);
+            (path.is_absolute()
+                && path
+                    .file_name()?
+                    .to_str()?
+                    .eq_ignore_ascii_case("python.exe"))
+            .then_some(path)
+        });
+    interpreter.ok_or_else(|| rust_i18n::t!("backend.deps.musicdlPythonUnrecognized").to_string())
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) fn musicdl_python(executable: &Path) -> Result<PathBuf, String> {
+    let interpreter = musicdl_python_hint(executable)?;
+    interpreter
+        .is_file()
+        .then_some(interpreter)
+        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlInterpreterMissing").to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn musicdl_python_hint(executable: &Path) -> Result<PathBuf, String> {
+    let script = std::fs::read_to_string(executable).map_err(|error| error.to_string())?;
+    musicdl_launcher_python(&script)
+        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlPythonUnrecognized").to_string())
+}
+
+fn musicdl_pipx_environment(executable: &Path) -> Option<PathBuf> {
+    let python = musicdl_python_hint(executable).ok()?;
+    let root = python.parent()?.parent()?;
+    let metadata: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(root.join("pipx_metadata.json")).ok()?).ok()?;
+    (root.parent()?.file_name()? == "venvs"
+        && metadata["main_package"]["package"].as_str() == Some("musicdl"))
+    .then(|| root.to_path_buf())
+}
+
+async fn compatible_python(preferred: Option<PathBuf>) -> Option<PathBuf> {
     let mut candidates = Vec::new();
-    if let Some(python_root) = executable.parent().and_then(Path::parent) {
-        candidates.push(python_root.join("python.exe"));
-    }
-    if let Some(pipx_home) = env::var_os("PIPX_HOME") {
-        candidates.push(
-            PathBuf::from(pipx_home)
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-    }
-    if let Some(profile) = env::var_os("USERPROFILE") {
-        let profile = PathBuf::from(profile);
-        candidates.push(
-            profile
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-        candidates.push(
-            profile
-                .join(".local")
-                .join("share")
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-    }
-    if let Some(local) = env::var_os("LOCALAPPDATA") {
-        let local = PathBuf::from(local);
-        candidates.push(
-            local
-                .join("pipx")
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-        candidates.push(
-            local
-                .join("pipx")
-                .join("venvs")
-                .join("musicdl")
-                .join("Scripts")
-                .join("python.exe"),
-        );
-    }
-    if let Some(pipx) = find_system_binary("pipx") {
-        let mut command = std::process::Command::new(pipx);
-        hide_std_command_window(&mut command);
-        if let Ok(output) = command
-            .args(["environment", "--value", "PIPX_LOCAL_VENVS"])
-            .output()
-        {
-            if output.status.success() {
-                let root = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !root.is_empty() {
-                    candidates.push(
-                        PathBuf::from(root)
-                            .join("musicdl")
-                            .join("Scripts")
-                            .join("python.exe"),
-                    );
+    candidates.extend(preferred);
+    #[cfg(target_os = "windows")]
+    {
+        let mut command = background_command("py");
+        command.args(["-0p"]).kill_on_drop(true);
+        if let Ok(Ok(output)) = timeout(Duration::from_secs(3), command.output()).await {
+            for line in String::from_utf8_lossy(&output.stdout).lines() {
+                if let Some(drive) = line.find(":\\") {
+                    if let Some(path) = line.get(drive.saturating_sub(1)..) {
+                        candidates.push(PathBuf::from(path.trim()));
+                    }
                 }
             }
         }
     }
-    if let Some(system) = find_system_binary("python") {
-        candidates.push(system);
+    for directory in env::split_paths(&command_path()) {
+        if directory
+            .file_name()
+            .is_some_and(|name| name == "WindowsApps")
+        {
+            continue;
+        }
+        for name in [
+            "python",
+            "python3",
+            "python3.13",
+            "python3.12",
+            "python3.11",
+            "python3.10",
+        ] {
+            let path = directory.join(executable_filename(name));
+            if path.is_file() && !candidates.contains(&path) {
+                candidates.push(path);
+            }
+        }
     }
-    candidates
-        .into_iter()
-        .find(|candidate| candidate.is_file())
-        .ok_or_else(|| rust_i18n::t!("backend.deps.musicdlEnvNotFound").to_string())
+    for candidate in candidates {
+        let mut command = background_command(&candidate);
+        command.args(["-c", "import sys, json, venv; assert sys.version_info >= (3, 10); print(json.dumps(getattr(sys, '_base_executable', sys.executable)))"])
+            .env("PYTHONIOENCODING", "utf-8").kill_on_drop(true);
+        if let Ok(Ok(output)) = timeout(Duration::from_secs(3), command.output()).await {
+            if output.status.success() {
+                if let Ok(path) = serde_json::from_slice::<String>(&output.stdout) {
+                    let path = PathBuf::from(path);
+                    if path.is_file() {
+                        return Some(path);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn shell_quote(value: &str) -> String {
+    if cfg!(target_os = "windows") {
+        format!("'{}'", value.replace('\'', "''"))
+    } else {
+        format!("'{}'", value.replace('\'', "'\"'\"'"))
+    }
+}
+
+async fn dependency_install_command(
+    tool: &ToolName,
+    executable: Option<&Path>,
+    health_check_failed: bool,
+) -> Option<String> {
+    if !matches!(tool, ToolName::Musicdl) {
+        return tool.install_command().map(str::to_owned);
+    }
+    let repair = if health_check_failed {
+        Some(musicdl_pipx_environment(executable?)?)
+    } else {
+        None
+    };
+    let python = compatible_python(executable.and_then(|path| musicdl_python(path).ok())).await;
+    let pipx = find_system_binary("pipx");
+    let operation = repair
+        .as_ref()
+        .and_then(|root| root.file_name())
+        .map(|name| format!("reinstall {}", shell_quote(&name.to_string_lossy())))
+        .unwrap_or_else(|| "install musicdl".into());
+    let environment = repair
+        .as_ref()
+        .map(|root| {
+            let home = shell_quote(&root.parent().unwrap().parent().unwrap().to_string_lossy());
+            let bin = executable
+                .and_then(Path::parent)
+                .filter(|directory| !directory.starts_with(root))
+                .map(|directory| shell_quote(&directory.to_string_lossy()));
+            if cfg!(target_os = "windows") {
+                format!(
+                    "$env:PIPX_HOME = {home}\n{}",
+                    bin.map(|bin| format!("$env:PIPX_BIN_DIR = {bin}\n"))
+                        .unwrap_or_default()
+                )
+            } else {
+                format!(
+                    "export PIPX_HOME={home}\n{}",
+                    bin.map(|bin| format!("export PIPX_BIN_DIR={bin}\n"))
+                        .unwrap_or_default()
+                )
+            }
+        })
+        .unwrap_or_default();
+    if cfg!(target_os = "windows") {
+        let python_setup = if let Some(python) = python {
+            format!("$python = {}", shell_quote(&python.to_string_lossy()))
+        } else {
+            format!(
+                "{}\n$env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User') + ';' + $env:PATH\nif (Get-Command py -ErrorAction SilentlyContinue) {{\n$python = & py -3.13 -c 'import sys; print(sys.executable)'\n}} else {{\n$python = Join-Path $env:LOCALAPPDATA 'Programs\\Python\\Python313\\python.exe'\n}}\nif (!$python -or !(Test-Path -LiteralPath $python)) {{ throw 'Python 3.13 was not found. Reopen the app after installing Python.' }}",
+                python_pin::WINGET_INSTALL
+            )
+        };
+        let pipx_setup = if let Some(pipx) = pipx {
+            format!(
+                "$pipx = {}\n$prefix = @()",
+                shell_quote(&pipx.to_string_lossy())
+            )
+        } else {
+            "$pipx = $python\n$prefix = @('-m', 'pipx')\n& $python -m pip install --user --upgrade pipx\nif ($LASTEXITCODE -ne 0) { throw 'Unable to install pipx' }".into()
+        };
+        Some(format!(
+            "& {{\n$ErrorActionPreference = 'Stop'\n{python_setup}\n{pipx_setup}\n{environment}& $pipx @prefix {operation} --python $python\nif ($LASTEXITCODE -ne 0) {{ throw 'musicdl installation failed' }}\n& $pipx @prefix ensurepath\nif ($LASTEXITCODE -ne 0) {{ throw 'Unable to update PATH' }}\n}}"
+        ))
+    } else {
+        let python_setup = if let Some(python) = python {
+            format!("python={}", shell_quote(&python.to_string_lossy()))
+        } else {
+            "brew install python@3.13\npython=\"$(brew --prefix python@3.13)/bin/python3.13\""
+                .into()
+        };
+        let pipx_setup = if let Some(pipx) = pipx {
+            format!("pipx={}", shell_quote(&pipx.to_string_lossy()))
+        } else {
+            "brew install pipx\npipx=\"$(brew --prefix)/bin/pipx\"".into()
+        };
+        Some(format!(
+            "(\nset -e\n{python_setup}\n{pipx_setup}\n{environment}\"$pipx\" {operation} --python \"$python\"\n\"$pipx\" ensurepath\n)"
+        ))
+    }
 }
 
 async fn tool_version(path: &Path, tool: &ToolName) -> Option<String> {
@@ -626,20 +741,28 @@ async fn tool_version(path: &Path, tool: &ToolName) -> Option<String> {
     Some(shortened)
 }
 
-async fn musicdl_healthy(executable: &Path) -> bool {
-    let Ok(python) = musicdl_python(executable) else {
-        return false;
-    };
-    let mut command = Command::new(python);
-    hide_async_command_window(&mut command);
+async fn musicdl_health(executable: &Path) -> Result<(), String> {
+    let python = musicdl_python(executable)?;
+    let mut command = background_command(python);
     command
         .env("PATH", command_path())
+        .env("PYTHONIOENCODING", "utf-8")
         .kill_on_drop(true)
         .args(["-c", "from musicdl import musicdl"]);
-    matches!(
-        timeout(Duration::from_secs(10), command.output()).await,
-        Ok(Ok(output)) if output.status.success()
-    )
+    let output = timeout(Duration::from_secs(10), command.output())
+        .await
+        .map_err(|_| rust_i18n::t!("backend.deps.healthTimeout").to_string())?
+        .map_err(|error| error.to_string())?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        Err(if error.is_empty() {
+            output.status.to_string()
+        } else {
+            error
+        })
+    }
 }
 
 #[tauri::command]
@@ -659,19 +782,39 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
         let bundled_path = bundled_binary(&app, tool.executable());
         let mut system_path =
             find_distinct_system_binary(tool.executable(), bundled_path.as_deref());
-        if matches!(tool, ToolName::Python) && system_path.is_none() {
+        if matches!(tool, ToolName::Python) {
             system_path = resolve_tool(&app, &ToolName::Musicdl)
                 .and_then(|(musicdl, _)| musicdl_python(&musicdl).ok());
+            if system_path.is_none() {
+                system_path = compatible_python(None).await;
+            }
         }
         let resolved = if matches!(tool, ToolName::Python) {
             system_path.clone().map(|path| (path, false))
         } else {
             resolve_tool(&app, &tool)
         };
-        let health_check_failed = matches!(tool, ToolName::Musicdl)
-            && resolved.is_some()
-            && !musicdl_healthy(&resolved.as_ref().unwrap().0).await;
+        let health_check_error = if matches!(tool, ToolName::Musicdl) {
+            if let Some((path, _)) = &resolved {
+                musicdl_health(path).await.err()
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let health_check_failed = health_check_error.is_some();
         let available = resolved.is_some() && !health_check_failed;
+        let install_command = if available {
+            None
+        } else {
+            dependency_install_command(
+                &tool,
+                resolved.as_ref().map(|(path, _)| path.as_path()),
+                health_check_failed,
+            )
+            .await
+        };
         let version = if available {
             let (path, _) = resolved.as_ref().unwrap();
             tool_version(path, &tool).await
@@ -700,55 +843,54 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
             version,
             health_check_failed,
             required: tool.required(),
-            install_hint: if !available {
-                match tool {
-                    ToolName::Musicdl => Some(if cfg!(target_os = "windows") {
-                        "py -m pip install --user --upgrade pipx; py -m pipx ensurepath; py -m pipx install musicdl"
-                            .into()
-                    } else {
-                        "brew install python pipx && pipx ensurepath && pipx install musicdl"
-                            .into()
-                    }),
-                    ToolName::Python | ToolName::Bbdown => {
-                        tool.install_command().map(str::to_owned)
-                    }
-                    _ => Some(if cfg!(target_os = "windows") {
-                        rust_i18n::t!("backend.deps.wingetHint").to_string()
-                    } else {
-                        "brew install ffmpeg yt-dlp media-info deno".into()
-                    }),
-                }
+            install_hint: if health_check_failed && install_command.is_none() {
+                Some(rust_i18n::t!("backend.deps.manualRepair").to_string())
             } else {
                 None
             },
+            install_command,
+            install_shell: if cfg!(target_os = "windows") {
+                "PowerShell"
+            } else {
+                "sh"
+            },
+            health_check_error,
             tool,
         });
     }
     statuses
 }
 
-/// 在独立控制台窗口执行安装命令，窗口结束后返回子进程供等待；pause 让用户看完输出再按键关闭。
+/// Windows 安装命令与页面复制命令均使用 PowerShell 5.1 语法。
 #[cfg(target_os = "windows")]
 fn launch_install(command: &str) -> Result<tokio::process::Child, String> {
     use std::os::windows::process::CommandExt;
     const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+    use base64::Engine;
     let script = format!(
-        "{command} & echo. & echo {} & pause >nul",
-        rust_i18n::t!("backend.deps.installDone")
+        "$ErrorActionPreference = 'Stop'\ntry {{\n{command}\nif ($LASTEXITCODE -ne 0) {{ throw \"Exit code: $LASTEXITCODE\" }}\n}} catch {{ Write-Host $_ -ForegroundColor Red }}\nRead-Host {}",
+        shell_quote(&rust_i18n::t!("backend.deps.installDone"))
     );
-    let mut builder = Command::new("cmd.exe");
-    builder.arg("/C").arg(script);
+    let bytes: Vec<u8> = script.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    let mut builder = Command::new("powershell.exe");
+    builder.args([
+        "-NoProfile",
+        "-EncodedCommand",
+        &base64::engine::general_purpose::STANDARD.encode(bytes),
+    ]);
+    builder.env("PATH", command_path());
     builder.as_std_mut().creation_flags(CREATE_NEW_CONSOLE);
     builder.spawn().map_err(|error| {
         rust_i18n::t!("backend.deps.terminalOpenFailed", error = error).to_string()
     })
 }
 
-/// 在 Terminal 新窗口执行安装命令，命令结束后标签页自动关闭。
 #[cfg(target_os = "macos")]
 fn launch_install(command: &str) -> Result<(), String> {
+    let command = format!("sh -c {}; exit", shell_quote(command));
+    let escaped = command.replace('\\', "\\\\").replace('"', "\\\"");
     let script =
-        format!("tell application \"Terminal\"\nactivate\ndo script \"{command}; exit\"\nend tell");
+        format!("tell application \"Terminal\"\nactivate\ndo script \"{escaped}\"\nend tell");
     let status = std::process::Command::new("osascript")
         .args(["-e", &script])
         .status()
@@ -762,17 +904,30 @@ fn launch_install(command: &str) -> Result<(), String> {
     }
 }
 
-/// 一键安装：立即打开终端窗口执行 winget/Homebrew 命令并返回；安装流程结束后
-/// 发出 dependency-install-finished 事件（Windows：控制台窗口关闭；macOS：轮询到工具出现在系统 PATH）。
+/// 打开终端执行安装；Windows 窗口关闭或 macOS 检测到工具后刷新依赖。
 #[tauri::command]
 pub(crate) async fn dependency_install(app: AppHandle, tool: ToolName) -> Result<(), String> {
-    let command = tool
-        .install_command()
-        .ok_or_else(|| rust_i18n::t!("backend.deps.installNotSupported").to_string())?;
+    let resolved = resolve_tool(&app, &tool);
+    let health_check_failed = if matches!(tool, ToolName::Musicdl) {
+        if let Some((path, _)) = &resolved {
+            musicdl_health(path).await.is_err()
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+    let command = dependency_install_command(
+        &tool,
+        resolved.as_ref().map(|(path, _)| path.as_path()),
+        health_check_failed,
+    )
+    .await
+    .ok_or_else(|| rust_i18n::t!("backend.deps.installNotSupported").to_string())?;
     let handle = app.clone();
     #[cfg(target_os = "windows")]
     {
-        let mut child = launch_install(command)?;
+        let mut child = launch_install(&command)?;
         tauri::async_runtime::spawn(async move {
             if child.wait().await.is_ok() {
                 let _ = handle.emit("dependency-install-finished", tool);
@@ -781,7 +936,7 @@ pub(crate) async fn dependency_install(app: AppHandle, tool: ToolName) -> Result
     }
     #[cfg(target_os = "macos")]
     {
-        launch_install(command)?;
+        launch_install(&command)?;
         let executable = tool.executable().to_string();
         tauri::async_runtime::spawn(async move {
             // Terminal 的 do script 拿不到完成事件，改为轮询系统 PATH；安装完成后
@@ -789,7 +944,10 @@ pub(crate) async fn dependency_install(app: AppHandle, tool: ToolName) -> Result
             let deadline = tokio::time::Instant::now() + Duration::from_secs(30 * 60);
             while tokio::time::Instant::now() < deadline {
                 tokio::time::sleep(Duration::from_secs(3)).await;
-                if find_system_binary(&executable).is_some() {
+                if let Some(path) = find_system_binary(&executable) {
+                    if matches!(tool, ToolName::Musicdl) && musicdl_health(&path).await.is_err() {
+                        continue;
+                    }
                     let _ = handle.emit("dependency-install-finished", tool);
                     break;
                 }
@@ -845,6 +1003,81 @@ mod tests {
     use std::os::windows::ffi::OsStringExt;
 
     use super::*;
+
+    fn launcher_fixture(python: &Path) -> (PathBuf, PathBuf) {
+        let directory = env::temp_dir().join(format!("mad-deps-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let launcher = directory.join("musicdl.exe");
+        let mut bytes = b"MZ\0\xffnot-a-shebang#!invalid\n".to_vec();
+        bytes.extend(format!("#!\"{}\"\n", python.display()).as_bytes());
+        bytes.extend(b"PK\x03\x04");
+        std::fs::write(&launcher, bytes).unwrap();
+        (directory, launcher)
+    }
+
+    #[test]
+    fn launcher_uses_embedded_interpreter_even_when_it_is_missing() {
+        let expected = PathBuf::from(r"C:\Missing 环境\O'Brien\Scripts\python.exe");
+        let (directory, launcher) = launcher_fixture(&expected);
+        assert_eq!(musicdl_python_hint(&launcher).unwrap(), expected);
+        assert!(musicdl_python(&launcher).is_err());
+        assert!(musicdl_pipx_environment(&launcher).is_none());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[tokio::test]
+    async fn unmanaged_broken_environment_does_not_offer_pipx_reinstall() {
+        let (directory, launcher) = launcher_fixture(Path::new(r"C:\Custom\Scripts\python.exe"));
+        assert!(
+            dependency_install_command(&ToolName::Musicdl, Some(&launcher), true)
+                .await
+                .is_none()
+        );
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[tokio::test]
+    async fn pipx_repair_preserves_custom_home_and_parses_in_powershell() {
+        let directory = env::temp_dir().join(format!("mad-deps-test-{}", uuid::Uuid::new_v4()));
+        let environment = directory.join("O'Brien 环境").join("venvs").join("musicdl");
+        std::fs::create_dir_all(&environment).unwrap();
+        std::fs::write(
+            environment.join("pipx_metadata.json"),
+            r#"{"main_package":{"package":"musicdl"}}"#,
+        )
+        .unwrap();
+        let (launcher_directory, launcher) =
+            launcher_fixture(&environment.join("Scripts").join("python.exe"));
+        assert_eq!(musicdl_pipx_environment(&launcher).unwrap(), environment);
+        let script = dependency_install_command(&ToolName::Musicdl, Some(&launcher), true)
+            .await
+            .unwrap();
+        assert!(script.contains("reinstall 'musicdl' --python $python"));
+        assert!(script.contains(&format!(
+            "$env:PIPX_HOME = {}",
+            shell_quote(
+                &environment
+                    .parent()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .to_string_lossy()
+            )
+        )));
+        assert!(script.contains("$env:PIPX_BIN_DIR = "));
+        let output = background_command("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command",
+                "$tokens = $null; $errors = $null; [System.Management.Automation.Language.Parser]::ParseInput($env:MAD_TEST_SCRIPT, [ref]$tokens, [ref]$errors) > $null; if ($errors.Count) { $errors | Out-String | Write-Output; exit 1 }"])
+            .env("MAD_TEST_SCRIPT", script)
+            .output().await.unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        std::fs::remove_dir_all(launcher_directory).unwrap();
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 
     fn command_processor() -> PathBuf {
         env::var_os("ComSpec")

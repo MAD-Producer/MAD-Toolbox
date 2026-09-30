@@ -2,7 +2,7 @@ import { ActionIcon, Card, Code, Divider, Group, Stack, Text, Tooltip } from "@m
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { IconExternalLink, IconWorld } from "@tabler/icons-react";
 import type { DependencyStatus, ToolName } from "../../contracts/dependency";
-import { isWindows, pipCommand, toolInstallCommands } from "../../lib/platform";
+import { pipCommand } from "../../lib/platform";
 import { t } from "../../locale";
 import { CopyIconButton } from "./CopyIconButton";
 
@@ -38,13 +38,15 @@ interface DependencyInstallCardsProps {
 const tooltipEvents = { hover: true, focus: true, touch: false } as const;
 
 export function DependencyInstallCards({ dependencies }: DependencyInstallCardsProps) {
-  const missing = dependencies.filter((item) => !item.available && toolInstallCommands[item.tool]);
+  const missing = dependencies.filter(
+    (item) => !item.available && (item.installCommand || item.installHint)
+  );
   if (missing.length === 0) return null;
 
   return (
     <Stack gap="md">
       {missing.map((dependency) => {
-        const command = toolInstallCommands[dependency.tool] as string;
+        const command = dependency.installCommand;
         return (
           <Card
             key={dependency.tool}
@@ -66,19 +68,35 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
               </Text>
               {dependency.tool === "musicdl" && (
                 <Text size="sm" c="dimmed">
-                  {t("deps.musicdlPipxNote", { manager: isWindows ? "winget" : "Homebrew" })}
+                  {t("deps.musicdlPipxNote")}
                 </Text>
               )}
-              <Group gap={6} wrap="nowrap" align="flex-start">
-                <Code
-                  block
-                  style={{ flex: 1, minWidth: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
-                >
-                  {command}
-                </Code>
-                <CopyIconButton value={command} label={t("deps.copyInstallCommand")} />
-              </Group>
-              {dependency.tool === "musicdl" && (
+              {command && (
+                <Text size="xs" c="dimmed">
+                  {dependency.installShell}
+                </Text>
+              )}
+              {command ? (
+                <Group gap={6} wrap="nowrap" align="flex-start">
+                  <Code
+                    block
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "anywhere"
+                    }}
+                  >
+                    {command}
+                  </Code>
+                  <CopyIconButton value={command} label={t("deps.copyInstallCommand")} />
+                </Group>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  {dependency.installHint ?? t("deps.manualInstall")}
+                </Text>
+              )}
+              {dependency.tool === "musicdl" && command && (
                 <>
                   <Divider
                     my={4}
