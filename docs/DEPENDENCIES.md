@@ -74,11 +74,21 @@ keeps GPL and nonfree components out of the distributed package. The exact
 FFmpeg source revision and BtbN build-recipe snapshot are published beside each
 release as separate downloads and linked from `THIRD_PARTY_NOTICES.md`.
 
-Python and musicdl remain external in both modes:
+Python and musicdl remain external in both modes. Use Settings → Dependencies
+for the command generated for your environment. The displayed command and the
+install button share the backend installation rules. Windows commands use
+PowerShell 5.1 or newer; macOS commands use `sh`.
 
-```powershell
-winget install --id Python.Python.3.13 -e --scope user
-py -m pip install --user pipx
-py -m pipx ensurepath
-py -m pipx install musicdl
-```
+For musicdl, the app reuses a runnable Python 3.10+ interpreter with the `venv`
+module and explicitly passes its path to pipx. If none is found, it installs
+Python 3.13 (WinGet on Windows, `python@3.13` on Homebrew). Package dependency
+compatibility is still checked by pip during installation. Existing pipx is
+reused; otherwise it is installed with Python/pip on Windows or Homebrew on macOS.
+
+The app reads the interpreter recorded in the musicdl launcher instead of
+guessing which Python owns it. Failed imports show their error output. A
+reinstall command is offered only when the launcher's environment contains
+pipx metadata for musicdl; other environments must be repaired manually.
+Custom pipx environment and exposed-launcher directories are retained during
+repair. After installation, re-check dependencies in Settings if the status
+has not refreshed automatically.

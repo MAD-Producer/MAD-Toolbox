@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ActionIcon, Badge, Button, Card, Group, Stack, Text, Tooltip } from "@mantine/core";
 import { IconCircleCheck, IconDownload, IconRefresh } from "@tabler/icons-react";
-import { isWindows, toolInstallCommands } from "../../lib/platform";
 import type { DependencyStatus } from "../../contracts/dependency";
 import { t } from "../../locale";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -53,8 +52,7 @@ export function DependencyStatusPanel({
     >
       <Stack gap="xs">
         {dependencies.map((dependency) => {
-          const installable =
-            !dependency.available && Boolean(toolInstallCommands[dependency.tool]);
+          const installable = !dependency.available && Boolean(dependency.installCommand);
           return (
             <FieldWithActions
               key={dependency.tool}
@@ -62,9 +60,7 @@ export function DependencyStatusPanel({
               actions={
                 installable && (
                   <Tooltip
-                    label={t("deps.installTooltip", {
-                      manager: isWindows ? "winget" : "Homebrew"
-                    })}
+                    label={dependency.healthCheckFailed ? t("deps.repair") : t("deps.install")}
                     position="top"
                   >
                     <ActionIcon
@@ -73,7 +69,10 @@ export function DependencyStatusPanel({
                       radius="md"
                       size="xl"
                       style={{ height: "auto" }}
-                      aria-label={t("deps.installAria", { name: dependency.label })}
+                      aria-label={t(
+                        dependency.healthCheckFailed ? "deps.repairAria" : "deps.installAria",
+                        { name: dependency.label }
+                      )}
                       onClick={() => onInstall(dependency)}
                     >
                       <IconDownload size={18} />
@@ -121,11 +120,20 @@ export function DependencyStatusPanel({
                         ? t("deps.musicdlEnvironmentBroken")
                         : t("deps.notInstalled")}
                   </Text>
-                  <Text size="xs" c="dimmed" truncate>
+                  <Text size="xs" c="dimmed" style={{ overflowWrap: "anywhere" }}>
                     {dependency.available
                       ? (dependency.path ?? t("deps.pathUnknown"))
                       : (dependency.installHint ?? t("deps.noVersionFound"))}
                   </Text>
+                  {dependency.healthCheckError && (
+                    <Text
+                      size="xs"
+                      c="red"
+                      style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+                    >
+                      {dependency.healthCheckError}
+                    </Text>
+                  )}
                 </Stack>
               </Card>
             </FieldWithActions>
