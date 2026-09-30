@@ -2,7 +2,7 @@
 
 All notable changes to MAD Toolbox are documented here.
 
-## 1.X.X
+## 2.0.0
 
 - ci: Windows LITE 版不再内置 BBDown，发布包体积更小
 - ci: FULL版打包删除 FFmpeg 的压缩包，发布包体积减小
@@ -10,6 +10,8 @@ All notable changes to MAD Toolbox are documented here.
 - feat: musicdl 依赖增加有效性检查
 - feat: 支持存储cookie文件路径，用户可以快速切换已保存的cookie文件
 - feat：设置页新增反馈入口
+- feat: MAD Toolbox 的分发下载由 FRAMENEO 的 CDN 服务提供
+- feat: 关于页新增 FRAMENEO 特别致谢，Logo 适配明暗主题
 
 ## 1.2.1
 
