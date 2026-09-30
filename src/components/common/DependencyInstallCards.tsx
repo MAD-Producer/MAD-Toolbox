@@ -57,11 +57,6 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
             <Stack gap="xs">
               <Group gap="xs">
                 <Text fw={500}>{dependency.label}</Text>
-                {dependency.tool === "musicdl" && (
-                  <Text span size="xs" c="dimmed">
-                    {t("deps.optionalSuffix")}
-                  </Text>
-                )}
               </Group>
               <Text size="sm" c="dimmed">
                 {INSTALL_DESCRIPTIONS[dependency.tool]?.()}

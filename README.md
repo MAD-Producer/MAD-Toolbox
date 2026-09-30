@@ -43,7 +43,7 @@ Underlying tools:
 
 ## Getting Started
 
-To get started with MAD Toolbox, simply download the latest release from [Releases](https://github.com/MAD-Producer/MAD-Toolbox/releases/).
+To get started with MAD Toolbox, download the latest release from the [download page](https://openlist.frameneo.com/@s/mt). In-app updates use the same source, with high-speed CDN caching provided by [FRAMENEO](https://www.frameneo.com/).
 
 Daily installable snapshots of `main` are available from the
 [Nightly Build](https://github.com/MAD-Producer/MAD-Toolbox/releases/tag/nightly) pre-release when

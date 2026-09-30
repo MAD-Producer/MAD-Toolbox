@@ -79,6 +79,13 @@ for the command generated for your environment. The displayed command and the
 install button share the backend installation rules. Windows commands use
 PowerShell 5.1 or newer; macOS commands use `sh`.
 
+Settings → Dependencies lists each tool's purpose instead of a global optional
+label. Unavailable tools appear first and automatically expand the status panel,
+including Python and musicdl. You can still collapse it manually; newly missing
+tools or re-checking while tools are missing expand it again. The summary counts
+all unavailable tools; each row explains which feature needs the tool or which
+fallback is available. Missing music tools do not prevent using video features.
+
 For musicdl, the app reuses a runnable Python 3.10+ interpreter with the `venv`
 module and explicitly passes its path to pipx. If none is found, it installs
 Python 3.13 (WinGet on Windows, `python@3.13` on Homebrew). Package dependency

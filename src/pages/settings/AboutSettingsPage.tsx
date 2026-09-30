@@ -5,7 +5,6 @@ import {
   Divider,
   Group,
   Image,
-  SegmentedControl,
   Stack,
   Text,
   Tooltip
@@ -18,18 +17,17 @@ import {
   IconRefresh,
   IconWorld
 } from "@tabler/icons-react";
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import { useUpdateStore } from "../../stores/update";
 import organizationLogo from "../../assets/organization_logo.png";
+import frameneoLogo from "../../../assets/FRAMENEO_logo.avif";
 import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 import { t, type TranslationKey } from "../../locale";
-import { checkForUpdate, installUpdate, type UpdateCheck } from "./api";
+import { checkForUpdate, installUpdate } from "./api";
 import { SettingsRow, SettingsSectionCard } from "./SettingsBlocks";
-
-type DownloadSource = "github" | "mirror";
 
 const GITHUB_URL = "https://github.com/MAD-Producer/MAD-Toolbox";
 const TOOLBOX_URL = "https://toolbox.madproducer.cn";
@@ -116,7 +114,6 @@ function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) 
 
 export function AboutSettingsPage() {
   const [checking, setChecking] = useState(false);
-  const [source, setSource] = useState<DownloadSource>("github");
   const update = useUpdateStore((state) => state.update);
   const downloading = useUpdateStore((state) => state.downloading);
   const progress = useUpdateStore((state) => state.progress);
@@ -124,17 +121,12 @@ export function AboutSettingsPage() {
   const startDownload = useUpdateStore((state) => state.startDownload);
   const finishDownload = useUpdateStore((state) => state.finishDownload);
 
-  useEffect(() => {
-    if (update) setSource(update.source);
-  }, [update]);
-
   async function handleCheckUpdate() {
     setChecking(true);
     try {
-      const result = await checkForUpdate(source === "mirror");
+      const result = await checkForUpdate();
       if (result.updateAvailable) {
         setUpdate(result);
-        setSource(result.source);
         notifications.show({
           message: t("settings.about.updateFound", { version: result.latestVersion }),
           color: "green"
@@ -154,7 +146,7 @@ export function AboutSettingsPage() {
     if (!update || downloading) return;
     startDownload();
     try {
-      await installUpdate(source === "mirror");
+      await installUpdate();
     } catch (error) {
       notifications.show({ message: String(error), color: "red" });
     } finally {
@@ -196,42 +188,30 @@ export function AboutSettingsPage() {
                 GitHub
               </Button>
               {update ? (
-                <Group gap="sm" wrap="nowrap">
-                  <Tooltip
-                    label={
-                      downloading
-                        ? progress !== null
-                          ? t("settings.about.downloadingProgress", { percent: progress })
-                          : t("settings.about.downloading")
-                        : t("settings.about.updateToVersion", { version: update.latestVersion })
-                    }
-                    opened={downloading || undefined}
-                    position="bottom"
+                <Tooltip
+                  label={
+                    downloading
+                      ? progress !== null
+                        ? t("settings.about.downloadingProgress", { percent: progress })
+                        : t("settings.about.downloading")
+                      : t("settings.about.updateToVersion", { version: update.latestVersion })
+                  }
+                  opened={downloading || undefined}
+                  position="bottom"
+                >
+                  <ActionIcon
+                    size="input-sm"
+                    variant="filled"
+                    color="green"
+                    loading={downloading}
+                    aria-label={t("settings.about.updateToVersion", {
+                      version: update.latestVersion
+                    })}
+                    onClick={() => void handleDownloadUpdate()}
                   >
-                    <ActionIcon
-                      size="input-sm"
-                      variant="filled"
-                      color="green"
-                      loading={downloading}
-                      aria-label={t("settings.about.updateToVersion", {
-                        version: update.latestVersion
-                      })}
-                      onClick={() => void handleDownloadUpdate()}
-                    >
-                      <IconDownload size={16} stroke={1.7} />
-                    </ActionIcon>
-                  </Tooltip>
-                  <SegmentedControl
-                    size="xs"
-                    value={source}
-                    onChange={(value) => setSource(value as DownloadSource)}
-                    disabled={downloading}
-                    data={[
-                      { value: "github", label: t("settings.about.sourceGithub") },
-                      { value: "mirror", label: t("settings.about.sourceMirror") }
-                    ]}
-                  />
-                </Group>
+                    <IconDownload size={16} stroke={1.7} />
+                  </ActionIcon>
+                </Tooltip>
               ) : (
                 <Button
                   leftSection={<IconRefresh size={16} />}
@@ -261,6 +241,9 @@ export function AboutSettingsPage() {
             {TEAM_LINKS.map((link) => (
               <Button
                 key={link.url}
+                size="sm"
+                flex="0 0 auto"
+                fullWidth
                 variant="transparent"
                 color="gray"
                 className="about-action"
@@ -271,6 +254,40 @@ export function AboutSettingsPage() {
               </Button>
             ))}
           </Stack>
+        </Group>
+      </SettingsSectionCard>
+
+      <SettingsSectionCard title={t("settings.about.specialThanks")}>
+        <Group justify="space-between" align="center" wrap="nowrap" gap="xl" px="lg" py="md">
+          <Group gap="md" wrap="nowrap" style={{ minWidth: 0 }}>
+            <Image
+              src={frameneoLogo}
+              alt="FRAMENEO"
+              h={48}
+              w="auto"
+              flex="0 0 auto"
+              className="about-sponsor-logo"
+            />
+            <Stack gap={2} style={{ minWidth: 0 }}>
+              <Text size="sm" fw={500}>
+                FRAMENEO
+              </Text>
+              <Text size="xs" c="dimmed">
+                {t("settings.about.credit.frameneo")}
+              </Text>
+            </Stack>
+          </Group>
+          <Button
+            size="sm"
+            flex="0 0 auto"
+            variant="transparent"
+            color="gray"
+            className="about-action"
+            leftSection={<IconExternalLink size={16} stroke={1.7} />}
+            onClick={() => void openUrl("https://www.frameneo.com/")}
+          >
+            {t("settings.about.frameneoWebsite")}
+          </Button>
         </Group>
       </SettingsSectionCard>
 
