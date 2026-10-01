@@ -1,43 +1,22 @@
 import { NumberInput, Select, Stack, TextInput } from "@mantine/core";
-import {
-  FieldRow,
-  OptionGroup,
-  SwitchTileGrid,
-  type SwitchTileItem
-} from "../../components/common/FieldRow";
-import { t, type TranslationKey } from "../../locale";
-import type { MediaFormState } from "./form";
+import { FieldRow, OptionGroup, SwitchTileGrid } from "../../components/common/FieldRow";
+import { t } from "../../locale";
+import { defaultMediaForm, type MediaFormState } from "./form";
+import { mediaSwitchTileItems, type MediaSwitchSpec } from "./switchTiles";
 
-type AdvancedSwitch = {
-  key: keyof MediaFormState;
-  labelKey?: TranslationKey;
-  label?: string;
-};
-
-const VIDEO_SWITCHES: ReadonlyArray<AdvancedSwitch> = [
+const VIDEO_SWITCHES: ReadonlyArray<MediaSwitchSpec> = [
   { key: "deinterlace", labelKey: "media.fields.deinterlace" },
   { key: "flipHorizontal", labelKey: "media.fields.flipHorizontal" },
   { key: "flipVertical", labelKey: "media.fields.flipVertical" }
 ];
 
-const ENCODING_SWITCHES: ReadonlyArray<AdvancedSwitch> = [{ key: "fastStart", label: "faststart" }];
-
-const AUDIO_SWITCHES: ReadonlyArray<AdvancedSwitch> = [
-  { key: "loudnessNormalization", labelKey: "media.fields.loudnessNormalization" }
+const ENCODING_SWITCHES: ReadonlyArray<MediaSwitchSpec> = [
+  { key: "fastStart", label: "faststart" }
 ];
 
-function toTileItems(
-  switches: ReadonlyArray<AdvancedSwitch>,
-  form: MediaFormState,
-  onUpdate: (patch: Partial<MediaFormState>) => void
-): SwitchTileItem[] {
-  return switches.map(({ key, labelKey, label }) => ({
-    key,
-    label: labelKey ? t(labelKey) : (label as string),
-    checked: form[key] as boolean,
-    onToggle: (checked) => onUpdate({ [key]: checked })
-  }));
-}
+const AUDIO_SWITCHES: ReadonlyArray<MediaSwitchSpec> = [
+  { key: "loudnessNormalization", labelKey: "media.fields.loudnessNormalization" }
+];
 
 interface MediaAdvancedFieldsProps {
   form: MediaFormState;
@@ -73,7 +52,9 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
             step={0.25}
             min={0.25}
             value={form.speed}
-            onChange={(value) => onUpdate({ speed: typeof value === "number" ? value : 1 })}
+            onChange={(value) =>
+              onUpdate({ speed: typeof value === "number" ? value : defaultMediaForm.speed })
+            }
           />
         </FieldRow>
         <FieldRow label={t("media.fields.rotation")}>
@@ -96,7 +77,7 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
             onChange={(event) => onUpdate({ crop: event.currentTarget.value })}
           />
         </FieldRow>
-        <SwitchTileGrid items={toTileItems(VIDEO_SWITCHES, form, onUpdate)} columns={3} />
+        <SwitchTileGrid items={mediaSwitchTileItems(VIDEO_SWITCHES, form, onUpdate)} columns={3} />
       </OptionGroup>
       <OptionGroup title={t("media.group.encoding")}>
         <FieldRow label={t("media.fields.videoBitrate")}>
@@ -112,7 +93,10 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
             onChange={(event) => onUpdate({ crf: event.currentTarget.value })}
           />
         </FieldRow>
-        <SwitchTileGrid items={toTileItems(ENCODING_SWITCHES, form, onUpdate)} columns={3} />
+        <SwitchTileGrid
+          items={mediaSwitchTileItems(ENCODING_SWITCHES, form, onUpdate)}
+          columns={3}
+        />
       </OptionGroup>
       <OptionGroup title={t("media.group.audio")}>
         <FieldRow label={t("media.fields.audioBitrate")}>
@@ -135,7 +119,7 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
             onChange={(event) => onUpdate({ volume: event.currentTarget.value })}
           />
         </FieldRow>
-        <SwitchTileGrid items={toTileItems(AUDIO_SWITCHES, form, onUpdate)} columns={3} />
+        <SwitchTileGrid items={mediaSwitchTileItems(AUDIO_SWITCHES, form, onUpdate)} columns={3} />
       </OptionGroup>
     </Stack>
   );

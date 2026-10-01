@@ -60,7 +60,6 @@ export function NetworkVideoDownloadFields({
       </FieldRow>
       <FieldRow label={t("common.outputDirectory")} hint={t("common.outputDirectoryHint")}>
         <OutputDirectoryField
-          bare
           value={form.outputDirectory}
           disabled={disabled}
           onChange={(outputDirectory) => onUpdate({ outputDirectory })}

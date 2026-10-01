@@ -39,6 +39,19 @@ export function MediaWorkspace({
 }: MediaWorkspaceProps) {
   const workspace = useMediaWorkspace({ page, active, ...pageProps });
 
+  const commandPanel = (
+    <MediaCommandPanel
+      isPr={workspace.isPr}
+      expertMode={workspace.expertMode}
+      expertText={workspace.expertText}
+      preview={workspace.preview}
+      previewError={workspace.previewError}
+      onEnterExpert={workspace.enterExpert}
+      onExitExpert={() => workspace.setExpertText(null)}
+      onExpertTextChange={workspace.setExpertText}
+    />
+  );
+
   return (
     <Box mih="100%">
       <Stack gap="md" p="lg">
@@ -97,7 +110,6 @@ export function MediaWorkspace({
             />
             <FieldRow label={t("common.outputDirectory")} hint={t("media.outputToSourceHint")}>
               <OutputDirectoryField
-                bare
                 value={workspace.form.outputDirectory}
                 disabled={workspace.expertMode}
                 onChange={(outputDirectory) => workspace.update({ outputDirectory })}
@@ -146,16 +158,7 @@ export function MediaWorkspace({
 
         {workspace.isPr ? (
           <Card withBorder padding="md" radius="md">
-            <MediaCommandPanel
-              isPr
-              expertMode={workspace.expertMode}
-              expertText={workspace.expertText}
-              preview={workspace.preview}
-              previewError={workspace.previewError}
-              onEnterExpert={workspace.enterExpert}
-              onExitExpert={() => workspace.setExpertText(null)}
-              onExpertTextChange={workspace.setExpertText}
-            />
+            {commandPanel}
           </Card>
         ) : (
           <SettingsSection
@@ -173,16 +176,7 @@ export function MediaWorkspace({
           >
             <Stack gap="md">
               <Card withBorder padding="md" radius="md">
-                <MediaCommandPanel
-                  isPr={false}
-                  expertMode={workspace.expertMode}
-                  expertText={workspace.expertText}
-                  preview={workspace.preview}
-                  previewError={workspace.previewError}
-                  onEnterExpert={workspace.enterExpert}
-                  onExitExpert={() => workspace.setExpertText(null)}
-                  onExpertTextChange={workspace.setExpertText}
-                />
+                {commandPanel}
               </Card>
               {!workspace.expertMode && (
                 <MediaAdvancedFields form={workspace.form} onUpdate={workspace.update} />

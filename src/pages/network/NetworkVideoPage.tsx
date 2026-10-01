@@ -1,13 +1,21 @@
 import { Badge, Box, Card, Stack } from "@mantine/core";
 import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
 import { t } from "../../locale";
+import { ExpertCommandPanel } from "../../components/common/ExpertCommandPanel";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { NetworkVideoAdvancedFields } from "./NetworkVideoAdvancedFields";
-import { NetworkVideoCommandPanel } from "./NetworkVideoCommandPanel";
 import { NetworkVideoDownloadFields } from "./NetworkVideoDownloadFields";
 import { NetworkVideoPageHeader } from "./NetworkVideoPageHeader";
 import { NetworkVideoProbeDialog } from "./NetworkVideoProbeDialog";
 import { useNetworkVideoWorkspace, type NetworkVideoPageProps } from "./useNetworkVideoWorkspace";
+
+const COMMAND_LABELS = {
+  previewTitle: "network.command.previewTitle",
+  expertTitle: "network.command.expertTitle",
+  restoreForm: "network.command.restoreForm",
+  editCommand: "network.command.edit",
+  expertWarning: "network.command.expertHint"
+} as const;
 
 export function NetworkVideoPage(props: NetworkVideoPageProps) {
   const workspace = useNetworkVideoWorkspace(props);
@@ -18,7 +26,9 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
         {props.active && (
           <NetworkVideoPageHeader
             probing={workspace.probing}
-            probeDisabled={!workspace.form.url.trim() || workspace.expertMode}
+            probeDisabled={
+              !workspace.form.url.trim() || workspace.expertMode || workspace.probing !== null
+            }
             submitting={workspace.submitting}
             submitDisabled={!workspace.expertMode && !workspace.preview}
             onSubmit={() => void workspace.submit()}
@@ -59,7 +69,8 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
         >
           <Stack gap="md">
             <Card withBorder padding="md" radius="md">
-              <NetworkVideoCommandPanel
+              <ExpertCommandPanel
+                labels={COMMAND_LABELS}
                 expertText={workspace.expertText}
                 preview={workspace.preview}
                 previewError={workspace.previewError}

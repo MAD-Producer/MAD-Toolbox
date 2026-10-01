@@ -123,6 +123,9 @@ export const MUSIC_SOURCE_GROUPS: ReadonlyArray<
   ]
 ];
 
+export const DEFAULT_SEARCH_SIZE = 5;
+export const DEFAULT_THREAD_COUNT = 5;
+
 export function createInitialMusicForm(): MusicFormState {
   return {
     mode: "search",
@@ -130,8 +133,8 @@ export function createInitialMusicForm(): MusicFormState {
     playlistUrl: "",
     sources: [...DEFAULT_MUSIC_SOURCES],
     outputDirectory: "",
-    searchSize: 5,
-    threadCount: 5,
+    searchSize: DEFAULT_SEARCH_SIZE,
+    threadCount: DEFAULT_THREAD_COUNT,
     proxy: "",
     cookiesFile: "",
     rawInit: "{}",
@@ -151,13 +154,10 @@ function parseObject(text: string, label: string): Record<string, unknown> {
 
 function buildConfigs(
   form: MusicFormState,
-  rawInit: Record<string, unknown>,
-  rawRequests: Record<string, unknown>,
-  rawThreadings: Record<string, unknown>
+  init: Record<string, unknown>,
+  requests: Record<string, unknown>,
+  threadings: Record<string, unknown>
 ) {
-  const init = structuredClone(rawInit);
-  const requests = structuredClone(rawRequests);
-  const threadings = structuredClone(rawThreadings);
   for (const source of form.sources) {
     const sourceInit =
       init[source] && typeof init[source] === "object" && !Array.isArray(init[source])

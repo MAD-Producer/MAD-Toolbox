@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { notifications } from "../lib/notifications";
 import type { DependencyStatus, ToolName } from "../contracts/dependency";
 import {
   fetchAppSettings,
@@ -11,25 +12,25 @@ import {
 export function useBackend() {
   const [dependencies, setDependencies] = useState<DependencyStatus[]>([]);
   const [loadingDependencies, setLoadingDependencies] = useState(true);
-  const [settings, setSettings] = useState<AppSettings>({
-    defaultOutputDirectory: null,
-    dependencyPreference: "bundled",
-    proxy: null,
-    language: "auto",
-    cookieFiles: []
-  });
+  const [settings, setSettings] = useState<AppSettings | null>(null);
 
   const refreshDependencies = useCallback(async () => {
     setLoadingDependencies(true);
     try {
       setDependencies(await fetchDependencyStatus());
+    } catch (error) {
+      notifications.show({ color: "red", message: String(error) });
     } finally {
       setLoadingDependencies(false);
     }
   }, []);
 
   const refreshSettings = useCallback(async () => {
-    setSettings(await fetchAppSettings());
+    try {
+      setSettings(await fetchAppSettings());
+    } catch (error) {
+      notifications.show({ color: "red", message: String(error) });
+    }
   }, []);
 
   const saveSettings = useCallback(async (next: AppSettings) => {

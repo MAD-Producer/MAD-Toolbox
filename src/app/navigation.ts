@@ -20,7 +20,6 @@ export interface L2NavigationItem<
 > {
   page: PageId;
   labelKey: TranslationKey;
-  icon?: TablerIcon;
 }
 
 export const L1_NAVIGATION = [
@@ -45,8 +44,3 @@ export const SETTINGS_L2_NAVIGATION = [
   { page: "dependencies", labelKey: "nav.settings.dependencies" },
   { page: "about", labelKey: "nav.settings.about" }
 ] as const satisfies readonly L2NavigationItem<SettingsPageId>[];
-
-export const L2_NAVIGATION = {
-  media: MEDIA_L2_NAVIGATION,
-  settings: SETTINGS_L2_NAVIGATION
-} as const;

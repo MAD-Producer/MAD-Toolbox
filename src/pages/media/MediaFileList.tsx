@@ -1,5 +1,6 @@
 import { ActionIcon, Group, List, ScrollArea, Text } from "@mantine/core";
 import { IconFile, IconX } from "@tabler/icons-react";
+import { memo } from "react";
 import { t } from "../../locale";
 
 interface MediaFileListProps {
@@ -17,7 +18,7 @@ function parentDir(path: string): string {
   return index === -1 ? "" : path.slice(0, index);
 }
 
-export function MediaFileList({ inputs, onRemove }: MediaFileListProps) {
+export const MediaFileList = memo(function MediaFileList({ inputs, onRemove }: MediaFileListProps) {
   return (
     <ScrollArea.Autosize mah={280}>
       <List spacing="xs" center>
@@ -51,4 +52,4 @@ export function MediaFileList({ inputs, onRemove }: MediaFileListProps) {
       </List>
     </ScrollArea.Autosize>
   );
-}
+});

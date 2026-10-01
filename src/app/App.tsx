@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useMantineColorScheme } from "@mantine/core";
 import { listen } from "@tauri-apps/api/event";
 import { notifications } from "../lib/notifications";
@@ -31,8 +31,6 @@ import { SettingsShell } from "../pages/settings/SettingsShell";
 import { useBilibiliLoginStore } from "../stores/bilibili-login";
 import { useMusicSessionStore } from "../stores/music-session";
 import { useWorkspacesStore, type WorkspaceId } from "../stores/workspaces";
-import { musicdlDownload, musicdlPlaylist, type MusicdlPlaylistRequest } from "../pages/music/api";
-import type { MusicFormState } from "../pages/music/configuration";
 import { L1_NAVIGATION } from "./navigation";
 import {
   currentLanguage,
@@ -77,12 +75,6 @@ export default function App() {
   const [lang, setLang] = useState(currentLanguage());
   const backend = useBackend();
   const initTasksStore = useTasksStore((s) => s.init);
-  const activeTaskCount = useTasksStore(
-    (state) =>
-      Object.values(state.tasks).filter((task) =>
-        ["queued", "running", "canceling"].includes(task.status)
-      ).length
-  );
   const initBilibiliLogin = useBilibiliLoginStore((state) => state.init);
   const initMusicSession = useMusicSessionStore((state) => state.init);
   const markWorkspaceRetained = useWorkspacesStore((state) => state.markRetained);
@@ -132,9 +124,9 @@ export default function App() {
   useEffect(() => onLanguageChanged(() => setLang(currentLanguage())), []);
 
   useEffect(() => {
-    const backendChoice: LanguageChoice = backend.settings.language ?? "auto";
+    const backendChoice: LanguageChoice = backend.settings?.language ?? "auto";
     if (resolveChoice(backendChoice) !== currentLanguage()) setLanguageChoice(backendChoice);
-  }, [backend.settings.language]);
+  }, [backend.settings?.language]);
 
   const distributionMode =
     backend.dependencies.some((item) => item.required) &&
@@ -190,34 +182,13 @@ export default function App() {
     });
   };
 
+  const consumeTaskSeed = useCallback(() => setTaskSeed(null), []);
+
   const changeLanguage = (choice: LanguageChoice) => {
     setLanguageChoice(choice);
     void setAppLanguage(choice)
       .then(() => backend.refreshSettings())
       .catch(showError);
-  };
-
-  const downloadMusic = async (
-    sessionId: string,
-    indices: number[],
-    downsample: boolean,
-    form: MusicFormState
-  ) => {
-    try {
-      return await musicdlDownload(sessionId, indices, downsample, form);
-    } catch (error) {
-      showError(error);
-      throw error;
-    }
-  };
-
-  const downloadMusicPlaylist = async (request: MusicdlPlaylistRequest, form: MusicFormState) => {
-    try {
-      return await musicdlPlaylist(request, form);
-    } catch (error) {
-      showError(error);
-      throw error;
-    }
   };
 
   const navigatePrimary = (section: AppSection) => {
@@ -244,16 +215,12 @@ export default function App() {
     }
   };
 
-  const seedTaskIntoWorkspace = (task: TaskEnvelope, purpose: TaskSeed["purpose"]) => {
+  const seedTaskIntoWorkspace = useCallback((task: TaskEnvelope, purpose: TaskSeed["purpose"]) => {
     const target = routeForTask(task);
     const targetWorkspace = workspaceIdForRoute(target);
     if (targetWorkspace !== null) {
       const session = useWorkspacesStore.getState().sessions[targetWorkspace];
-      if (
-        session.mounted &&
-        session.phase === "retained" &&
-        !window.confirm(t("app.confirmDiscardDraft"))
-      ) {
+      if (session.status === "retained" && !window.confirm(t("app.confirmDiscardDraft"))) {
         return;
       }
       useWorkspacesStore.getState().reset(targetWorkspace);
@@ -261,18 +228,24 @@ export default function App() {
     setTaskSeed({ task, purpose });
     if (target.section === "media") setLastMediaPage(target.page);
     setRoute(target);
-  };
+  }, []);
+
+  const rerunTask = useCallback(
+    (task: TaskEnvelope) => seedTaskIntoWorkspace(task, "rerun"),
+    [seedTaskIntoWorkspace]
+  );
+  const reuseTask = useCallback(
+    (task: TaskEnvelope) => seedTaskIntoWorkspace(task, "reuse"),
+    [seedTaskIntoWorkspace]
+  );
 
   const renderNonWorkspacePage = () => {
     if (route.section === "tasks") {
-      return (
-        <TasksPage
-          onRerun={(task) => seedTaskIntoWorkspace(task, "rerun")}
-          onReuse={(task) => seedTaskIntoWorkspace(task, "reuse")}
-        />
-      );
+      return <TasksPage onRerun={rerunTask} onReuse={reuseTask} />;
     }
     if (route.section !== "settings") return null;
+    const settings = backend.settings;
+    if (!settings) return null;
     return (
       <SettingsShell
         page={route.page}
@@ -281,13 +254,13 @@ export default function App() {
       >
         {route.page === "general" ? (
           <GeneralSettingsPage
-            settings={backend.settings}
+            settings={settings}
             onSave={backend.saveSettings}
             onSetLanguage={changeLanguage}
           />
         ) : route.page === "dependencies" ? (
           <DependenciesSettingsPage
-            settings={backend.settings}
+            settings={settings}
             onSave={backend.saveSettings}
             dependencies={backend.dependencies}
             loading={backend.loadingDependencies}
@@ -309,7 +282,7 @@ export default function App() {
         <BilibiliPage
           active={active}
           seed={active && taskSeed?.task.feature === "bilibili" ? taskSeed : null}
-          onSeedConsumed={() => setTaskSeed(null)}
+          onSeedConsumed={consumeTaskSeed}
           onRetain={() => markWorkspaceRetained("bilibili", generation)}
           onSubmitted={() => markWorkspaceReleasable("bilibili", generation)}
           dependencyLabels={missingLabelsFor("bilibili")}
@@ -323,13 +296,13 @@ export default function App() {
         <NetworkVideoPage
           active={active}
           seed={active && taskSeed?.task.feature === "network" ? taskSeed : null}
-          onSeedConsumed={() => setTaskSeed(null)}
+          onSeedConsumed={consumeTaskSeed}
           onRetain={() => markWorkspaceRetained("network", generation)}
           onSubmitted={() => markWorkspaceReleasable("network", generation)}
           dependencyLabels={missingLabelsFor("network")}
           onOpenDependencies={openDependencySettings}
-          globalProxy={backend.settings.proxy}
-          cookieFiles={backend.settings.cookieFiles}
+          globalProxy={backend.settings?.proxy ?? null}
+          cookieFiles={backend.settings?.cookieFiles ?? []}
           onAddCookieFile={openGeneralSettings}
         />
       )
@@ -340,18 +313,16 @@ export default function App() {
         <MusicPage
           active={active}
           seed={active && taskSeed?.task.feature === "music" ? taskSeed : null}
-          onSeedConsumed={() => setTaskSeed(null)}
+          onSeedConsumed={consumeTaskSeed}
           dependency={backend.dependencyMap.get("musicdl") ?? null}
           pythonDependency={backend.dependencyMap.get("python") ?? null}
-          defaultOutputDirectory={backend.settings.defaultOutputDirectory}
-          globalProxy={backend.settings.proxy}
-          onPlaylist={downloadMusicPlaylist}
-          onDownload={downloadMusic}
+          defaultOutputDirectory={backend.settings?.defaultOutputDirectory ?? null}
+          globalProxy={backend.settings?.proxy ?? null}
           onRetain={() => markWorkspaceRetained("music", generation)}
           onSubmitted={() => markWorkspaceReleasable("music", generation)}
           dependencyLabels={missingLabelsFor("music")}
           onOpenDependencies={openDependencySettings}
-          cookieFiles={backend.settings.cookieFiles}
+          cookieFiles={backend.settings?.cookieFiles ?? []}
           onAddCookieFile={openGeneralSettings}
         />
       )
@@ -363,7 +334,7 @@ export default function App() {
           active={active}
           page={route.section === "media" ? route.page : lastMediaPage}
           seed={active && taskSeed?.task.feature === "media" ? taskSeed : null}
-          onSeedConsumed={() => setTaskSeed(null)}
+          onSeedConsumed={consumeTaskSeed}
           onNavigatePage={navigateSecondary}
           onRetain={() => markWorkspaceRetained("media", generation)}
           onSubmitted={() => markWorkspaceReleasable("media", generation)}
@@ -374,8 +345,6 @@ export default function App() {
     }
   ];
 
-  const secondaryItems: readonly never[] = [];
-
   if (!booted) return <SplashScreen />;
 
   return (
@@ -383,22 +352,11 @@ export default function App() {
       <AppShell
         route={route}
         primaryItems={L1_NAVIGATION}
-        secondaryItems={secondaryItems}
         onNavigatePrimary={navigatePrimary}
-        onNavigateSecondary={navigateSecondary}
         onBackFromSettings={() => navigatePrimary(lastMainSection)}
         onOpenUpdatePage={openUpdateSettings}
-        navigationStatuses={{
-          ...(activeTaskCount > 0
-            ? {
-                tasks: {
-                  count: activeTaskCount,
-                  label: t("app.activeTasksLabel", { count: activeTaskCount }),
-                  color: "blue"
-                }
-              }
-            : {}),
-          ...(missingDependencyCount > 0
+        navigationStatuses={
+          missingDependencyCount > 0
             ? {
                 settings: {
                   count: missingDependencyCount,
@@ -406,8 +364,8 @@ export default function App() {
                   color: "yellow"
                 }
               }
-            : {})
-        }}
+            : undefined
+        }
       >
         <WorkspaceSessionHost activeWorkspace={activeWorkspace} workspaces={workspaces} />
         {activeWorkspace === null ? (

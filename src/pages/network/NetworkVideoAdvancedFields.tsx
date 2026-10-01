@@ -1,7 +1,7 @@
 import { NumberInput, SegmentedControl, Stack, TextInput } from "@mantine/core";
 import { FieldRow, OptionGroup, SwitchTileGrid } from "../../components/common/FieldRow";
 import { t, type TranslationKey } from "../../locale";
-import type { NetworkFormState } from "./form";
+import { defaultNetworkForm, type NetworkFormState } from "./form";
 
 const MODE_OPTIONS: ReadonlyArray<{ value: NetworkFormState["mode"]; labelKey: TranslationKey }> = [
   { value: "video", labelKey: "network.mode.video" },
@@ -103,7 +103,9 @@ export function NetworkVideoAdvancedFields({
           <NumberInput
             min={0}
             value={form.retries}
-            onChange={(value) => onUpdate({ retries: typeof value === "number" ? value : 10 })}
+            onChange={(value) =>
+              onUpdate({ retries: typeof value === "number" ? value : defaultNetworkForm.retries })
+            }
             disabled={disabled}
           />
         </FieldRow>
@@ -112,7 +114,10 @@ export function NetworkVideoAdvancedFields({
             min={1}
             value={form.concurrentFragments}
             onChange={(value) =>
-              onUpdate({ concurrentFragments: typeof value === "number" ? value : 4 })
+              onUpdate({
+                concurrentFragments:
+                  typeof value === "number" ? value : defaultNetworkForm.concurrentFragments
+              })
             }
             disabled={disabled}
           />

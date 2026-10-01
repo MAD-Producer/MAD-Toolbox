@@ -1,35 +1,43 @@
-import { Button, Divider, Group, Stack, Text, Textarea } from "@mantine/core";
+import { Button, Group, Stack, Text, Textarea } from "@mantine/core";
 import { IconPencil, IconRotate } from "@tabler/icons-react";
-import { t } from "../../locale";
-import type { PreviewResult } from "./api";
-import { CommandPreview } from "../../components/common/CommandPreview";
+import type { PreviewResult } from "../../contracts/types";
+import { t, type TranslationKey } from "../../locale";
+import { CommandPreview } from "./CommandPreview";
 
-interface NetworkVideoCommandPanelProps {
+interface ExpertCommandPanelLabels {
+  previewTitle: TranslationKey;
+  expertTitle: TranslationKey;
+  restoreForm: TranslationKey;
+  editCommand: TranslationKey;
+  expertWarning: TranslationKey;
+}
+
+interface ExpertCommandPanelProps {
+  labels: ExpertCommandPanelLabels;
   expertText: string | null;
   preview: PreviewResult | null;
   previewError: string | null;
   onEnterExpert: () => void;
   onExitExpert: () => void;
   onExpertTextChange: (value: string) => void;
-  withDivider?: boolean;
 }
 
-export function NetworkVideoCommandPanel({
+export function ExpertCommandPanel({
+  labels,
   expertText,
   preview,
   previewError,
   onEnterExpert,
   onExitExpert,
-  onExpertTextChange,
-  withDivider
-}: NetworkVideoCommandPanelProps) {
+  onExpertTextChange
+}: ExpertCommandPanelProps) {
   const expertMode = expertText !== null;
 
   return (
     <Stack gap="xs">
       <Group justify="space-between">
         <Text size="sm" fw={500}>
-          {expertMode ? t("network.command.expertTitle") : t("network.command.previewTitle")}
+          {expertMode ? t(labels.expertTitle) : t(labels.previewTitle)}
         </Text>
         {expertMode ? (
           <Button
@@ -38,7 +46,7 @@ export function NetworkVideoCommandPanel({
             leftSection={<IconRotate size={14} />}
             onClick={onExitExpert}
           >
-            {t("network.command.restoreForm")}
+            {t(labels.restoreForm)}
           </Button>
         ) : (
           <Button
@@ -48,27 +56,26 @@ export function NetworkVideoCommandPanel({
             onClick={onEnterExpert}
             disabled={!preview}
           >
-            {t("network.command.edit")}
+            {t(labels.editCommand)}
           </Button>
         )}
       </Group>
       {expertMode ? (
         <>
           <Text size="xs" c="yellow">
-            {t("network.command.expertHint")}
+            {t(labels.expertWarning)}
           </Text>
           <Textarea
             autosize
             minRows={4}
             value={expertText}
             onChange={(event) => onExpertTextChange(event.currentTarget.value)}
-            styles={{ input: { fontFamily: "monospace", fontSize: 12 } }}
+            styles={{ input: { fontFamily: "monospace", fontSize: "var(--mantine-font-size-xs)" } }}
           />
         </>
       ) : (
         <CommandPreview display={preview?.display ?? null} error={previewError} />
       )}
-      {withDivider && <Divider my={4} />}
     </Stack>
   );
 }

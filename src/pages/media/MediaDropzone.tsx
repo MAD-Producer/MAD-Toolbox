@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, Text } from "@mantine/core";
+import { Text, UnstyledButton } from "@mantine/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { IconUpload } from "@tabler/icons-react";
 import { t } from "../../locale";
@@ -43,8 +43,7 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
   }, []);
 
   return (
-    <Box
-      component="button"
+    <UnstyledButton
       type="button"
       onClick={() => void onPickFiles()}
       aria-label={t("media.dropzone.ariaLabel")}
@@ -56,7 +55,6 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
         gap: 4,
         width: "100%",
         minHeight: 108,
-        font: "inherit",
         textAlign: "center",
         cursor: "pointer",
         borderRadius: "var(--mantine-radius-md)",
@@ -77,6 +75,6 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
       <Text size="xs" c="inherit" style={{ opacity: 0.75 }}>
         {t("media.dropzone.clickHint")}
       </Text>
-    </Box>
+    </UnstyledButton>
   );
 }

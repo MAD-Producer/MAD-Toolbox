@@ -1,11 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { TaskIntent } from "../../contracts/types";
+import type { PreviewResult, TaskIntent } from "../../contracts/types";
 
-export interface PreviewResult {
-  display: string;
-  argvRedacted: string[];
-  argv: string[];
-}
+export type { PreviewResult };
 
 export interface BatchSubmitResult {
   taskIds: string[];

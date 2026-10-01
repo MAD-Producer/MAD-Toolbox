@@ -17,7 +17,6 @@ interface PendingLoginEvents {
 type BilibiliLoginPhase = "idle" | "starting" | "running";
 
 interface BilibiliLoginStore {
-  initialized: boolean;
   phase: BilibiliLoginPhase;
   loggedIn: boolean;
   jobId: string | null;
@@ -78,7 +77,6 @@ export const useBilibiliLoginStore = create<BilibiliLoginStore>((set, get) => {
   };
 
   return {
-    initialized: false,
     phase: "idle",
     loggedIn: false,
     jobId: null,
@@ -92,7 +90,6 @@ export const useBilibiliLoginStore = create<BilibiliLoginStore>((set, get) => {
         );
         try {
           await listen<JobState>("job-state", ({ payload }) => handleJobState(payload));
-          set({ initialized: true });
         } catch (error) {
           unlistenQr();
           throw error;

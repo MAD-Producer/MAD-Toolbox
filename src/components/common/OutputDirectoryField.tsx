@@ -5,22 +5,20 @@ import { FieldWithActions } from "./FieldWithActions";
 
 interface OutputDirectoryFieldProps {
   value: string;
-  disabled: boolean;
+  disabled?: boolean;
   placeholder?: string;
   onChange: (value: string) => void;
   onBrowse: () => Promise<void>;
   resolveDefault?: () => Promise<string | null>;
-  bare?: boolean;
 }
 
 export function OutputDirectoryField({
   value,
-  disabled,
+  disabled = false,
   placeholder,
   onChange,
   onBrowse,
-  resolveDefault,
-  bare = false
+  resolveDefault
 }: OutputDirectoryFieldProps) {
   const actions = (
     <>
@@ -55,7 +53,7 @@ export function OutputDirectoryField({
     </>
   );
 
-  const field = (
+  return (
     <FieldWithActions actions={actions}>
       <Input
         placeholder={placeholder}
@@ -64,26 +62,5 @@ export function OutputDirectoryField({
         disabled={disabled}
       />
     </FieldWithActions>
-  );
-
-  if (bare) {
-    return field;
-  }
-
-  return (
-    <Input.Wrapper
-      label={t("common.outputDirectory")}
-      description={t("common.outputDirectoryHint")}
-    >
-      <FieldWithActions mt="calc(var(--mantine-spacing-xs) / 2)" actions={actions}>
-        <Input
-          placeholder={placeholder}
-          value={value}
-          onChange={(event) => onChange(event.currentTarget.value)}
-          disabled={disabled}
-          style={{ marginTop: 0 }}
-        />
-      </FieldWithActions>
-    </Input.Wrapper>
   );
 }

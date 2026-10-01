@@ -1,9 +1,8 @@
 import { Alert, Box, Card, Group, Loader, Stack, Text } from "@mantine/core";
-import { IconAdjustmentsHorizontal, IconListDetails } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { L2TabNav } from "../../components/common/L2TabNav";
@@ -18,8 +17,8 @@ import type { DependencyStatus } from "../../contracts/dependency";
 import type { CookieFileOption, TaskSeed } from "../../contracts/types";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
-import { useMusicSessionStore } from "../../stores/music-session";
-import { previewMusicCommand, type MusicdlPlaylistRequest, type SubmitResult } from "./api";
+import { isSearchBusy, useMusicSessionStore } from "../../stores/music-session";
+import { musicdlDownload, musicdlPlaylist, previewMusicCommand } from "./api";
 import {
   createInitialMusicForm,
   createMusicPlaylistRequest,
@@ -76,13 +75,6 @@ interface MusicPageProps {
   pythonDependency: DependencyStatus | null;
   defaultOutputDirectory: string | null;
   globalProxy: string | null;
-  onPlaylist: (request: MusicdlPlaylistRequest, form: MusicFormState) => Promise<SubmitResult>;
-  onDownload: (
-    sessionId: string,
-    indices: number[],
-    downsample: boolean,
-    form: MusicFormState
-  ) => Promise<SubmitResult>;
   onRetain?: () => void;
   onSubmitted?: () => void;
   dependencyLabels?: string[];
@@ -99,8 +91,6 @@ export function MusicPage({
   pythonDependency,
   defaultOutputDirectory,
   globalProxy,
-  onPlaylist,
-  onDownload,
   onRetain,
   onSubmitted,
   dependencyLabels,
@@ -215,16 +205,18 @@ export function MusicPage({
   }, [active, musicdlInstalled, prepared.cli, pythonInstalled]);
 
   const run = async () => {
-    setConfigurationError(prepared.error);
-    if (!prepared.cli || prepared.error) return;
+    if (!prepared.cli || prepared.error) {
+      setConfigurationError(prepared.error);
+      return;
+    }
+    setConfigurationError(null);
     const submittedRevision = draftRevisionRef.current;
     retainWorkspace();
 
     if (form.mode === "playlist") {
       setTaskSubmitting(true);
-      setConfigurationError(null);
       try {
-        await onPlaylist(createMusicPlaylistRequest(form, prepared.cli, denoise), form);
+        await musicdlPlaylist(createMusicPlaylistRequest(form, prepared.cli, denoise), form);
         notifications.show({ color: "green", message: t("music.playlistQueued") });
         if (
           draftRevisionRef.current === submittedRevision &&
@@ -240,7 +232,6 @@ export function MusicPage({
       return;
     }
 
-    setConfigurationError(null);
     try {
       await startSearch(createMusicSearchRequest(form, prepared.cli));
       setSelected([]);
@@ -256,7 +247,7 @@ export function MusicPage({
     setTaskSubmitting(true);
     setConfigurationError(null);
     try {
-      await onDownload(sessionId, indices, denoise, form);
+      await musicdlDownload(sessionId, indices, denoise, form);
       if (markQueued(sessionId, indices)) {
         setSelected((current) => current.filter((value) => !submittedSet.has(value)));
       }
@@ -388,6 +379,7 @@ export function MusicPage({
         >
           {searchResponse ? (
             <MusicSearchResults
+              key={searchResponse.sessionId}
               response={searchResponse}
               selected={selected}
               queuedIndices={queuedIndices}
@@ -398,9 +390,7 @@ export function MusicPage({
               onDownload={() => void downloadSelected()}
               onEndSession={() => void endSearchSession()}
             />
-          ) : sessionPhase === "starting" ||
-            sessionPhase === "searching" ||
-            sessionPhase === "canceling" ? (
+          ) : isSearchBusy(sessionPhase) ? (
             <Group gap="sm" justify="center" py="lg">
               <Loader size="xs" />
               <Text size="sm" c="dimmed">

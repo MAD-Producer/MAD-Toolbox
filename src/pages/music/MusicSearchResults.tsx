@@ -1,6 +1,6 @@
 import { Badge, Button, Checkbox, Chip, Group, Stack, Table, Text } from "@mantine/core";
 import { IconDownload } from "@tabler/icons-react";
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { t } from "../../locale";
 import type { MusicdlSearchResponse, MusicdlSearchResult } from "./api";
 import { musicSourceLabel } from "./configuration";
@@ -53,9 +53,6 @@ export function MusicSearchResults({
   const queuedSet = useMemo(() => new Set(queuedIndices), [queuedIndices]);
 
   const [formats, setFormats] = useState<string[]>([]);
-  useEffect(() => {
-    setFormats([]);
-  }, [response.sessionId]);
 
   const formatCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -178,7 +175,12 @@ export function MusicSearchResults({
                   onClick={() => toggleResult(result.index)}
                 >
                   <Table.Td w={36}>
-                    <Checkbox checked={checked} readOnly tabIndex={-1} />
+                    <Checkbox
+                      aria-label={result.songName}
+                      checked={checked}
+                      onChange={() => toggleResult(result.index)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">

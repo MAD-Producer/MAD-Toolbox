@@ -7,36 +7,28 @@ import {
   IconSettings
 } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
-import type { L1NavigationItem, L2NavigationItem } from "../../app/navigation";
+import type { L1NavigationItem } from "../../app/navigation";
 import type { AppRoute } from "../../app/route";
 import { t } from "../../locale";
 import { useUpdateStore } from "../../stores/update";
 import { AppBrand } from "./AppBrand";
 import { HeaderActionsProvider, headerTooltipProps } from "./HeaderActions";
-import { LeftNavigation } from "./LeftNavigation";
 import { TopNavigation } from "./TopNavigation";
 import type { NavigationStatus } from "./TopNavigation";
 import { WorkspaceFrame } from "./WorkspaceFrame";
 
 type AppSection = AppRoute["section"];
-type SecondaryPage = Extract<AppRoute, { page: string }>["page"];
 
 const FEEDBACK_URL = "https://link.mad.org.cn/r8katw";
 
 interface AppShellProps {
   route: AppRoute;
   primaryItems: readonly L1NavigationItem[];
-  secondaryItems: readonly L2NavigationItem[];
   onNavigatePrimary: (section: AppSection) => void;
-  onNavigateSecondary: (page: SecondaryPage) => void;
   onBackFromSettings: () => void;
   onOpenUpdatePage?: () => void;
   navigationStatuses?: Partial<Record<AppSection, NavigationStatus>>;
   children: ReactNode;
-}
-
-function secondaryPage(route: AppRoute): SecondaryPage | null {
-  return "page" in route ? route.page : null;
 }
 
 function HeaderSettingsButton({
@@ -56,15 +48,11 @@ function HeaderSettingsButton({
   return (
     <Group gap={4} wrap="nowrap">
       <Tooltip
+        {...headerTooltipProps}
         label={status ? `${label} · ${status.label}` : label}
-        position="bottom"
-        withArrow
-        arrowSize={5}
-        offset={4}
         openDelay={300}
         closeDelay={100}
         events={{ hover: true, focus: true, touch: false }}
-        styles={{ tooltip: { padding: "3px 7px", fontSize: 11, lineHeight: 1.2 } }}
       >
         <Indicator
           disabled={!status || status.count === 0}
@@ -106,17 +94,12 @@ function HeaderSettingsButton({
 export function AppShell({
   route,
   primaryItems,
-  secondaryItems,
   onNavigatePrimary,
-  onNavigateSecondary,
   onBackFromSettings,
   onOpenUpdatePage,
   navigationStatuses,
   children
 }: AppShellProps) {
-  const activeSecondaryPage = secondaryPage(route);
-  const hasSecondaryNavigation = secondaryItems.length > 0 && activeSecondaryPage !== null;
-
   const settingsHeader = route.section === "settings";
   const [headerActionsEl, setHeaderActionsEl] = useState<HTMLDivElement | null>(null);
 
@@ -192,19 +175,7 @@ export function AppShell({
           )}
         </Box>
 
-        <WorkspaceFrame
-          navigation={
-            hasSecondaryNavigation ? (
-              <LeftNavigation
-                items={secondaryItems}
-                active={activeSecondaryPage}
-                onNavigate={onNavigateSecondary}
-              />
-            ) : undefined
-          }
-        >
-          {children}
-        </WorkspaceFrame>
+        <WorkspaceFrame>{children}</WorkspaceFrame>
       </Box>
     </HeaderActionsProvider>
   );

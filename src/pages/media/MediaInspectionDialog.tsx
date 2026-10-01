@@ -1,4 +1,4 @@
-import { Modal, ScrollArea, Text } from "@mantine/core";
+import { Code, Modal, ScrollArea } from "@mantine/core";
 import { t } from "../../locale";
 
 interface MediaInspectionDialogProps {
@@ -16,9 +16,9 @@ export function MediaInspectionDialog({ active, summary, onClose }: MediaInspect
       size="lg"
     >
       <ScrollArea h={360}>
-        <Text size="xs" component="pre" style={{ whiteSpace: "pre-wrap" }}>
+        <Code block style={{ whiteSpace: "pre-wrap" }}>
           {summary}
-        </Text>
+        </Code>
       </ScrollArea>
     </Modal>
   );

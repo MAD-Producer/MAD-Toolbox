@@ -31,7 +31,7 @@ export function MediaEncodingFields({
         <FieldRow label={t("media.fields.container")}>
           <Select
             data={containers}
-            value={containers.includes(form.container) ? form.container : containers[0]}
+            value={form.container}
             onChange={(value) => value && onUpdate({ container: value })}
             disabled={disabled}
             allowDeselect={false}

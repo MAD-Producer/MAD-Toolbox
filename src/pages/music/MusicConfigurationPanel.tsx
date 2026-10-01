@@ -5,7 +5,7 @@ import { OutputDirectoryField } from "../../components/common/OutputDirectoryFie
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import type { CookieFileOption } from "../../contracts/types";
-import type { MusicFormPatch, MusicFormState } from "./configuration";
+import { DEFAULT_SEARCH_SIZE, type MusicFormPatch, type MusicFormState } from "./configuration";
 
 interface MusicConfigurationPanelProps {
   form: MusicFormState;
@@ -28,31 +28,31 @@ export function MusicConfigurationPanel({
   cookieFiles,
   onAddCookieFile
 }: MusicConfigurationPanelProps) {
+  const isSearch = form.mode === "search";
+
   return (
     <Stack gap="md">
       <FieldRow
-        label={form.mode === "search" ? t("music.keyword.label") : t("music.playlistUrl.label")}
-        hint={form.mode === "playlist" ? t("music.playlistUrl.description") : undefined}
+        label={isSearch ? t("music.keyword.label") : t("music.playlistUrl.label")}
+        hint={isSearch ? undefined : t("music.playlistUrl.description")}
       >
-        {form.mode === "search" ? (
-          <TextInput
-            placeholder={t("music.keyword.placeholder")}
-            value={form.keyword}
-            onChange={(event) => onChange({ keyword: event.currentTarget.value })}
-          />
-        ) : (
-          <TextInput
-            placeholder="https://music.163.com/#/playlist?id=..."
-            value={form.playlistUrl}
-            onChange={(event) => onChange({ playlistUrl: event.currentTarget.value })}
-          />
-        )}
+        <TextInput
+          placeholder={
+            isSearch ? t("music.keyword.placeholder") : "https://music.163.com/#/playlist?id=..."
+          }
+          value={isSearch ? form.keyword : form.playlistUrl}
+          onChange={(event) =>
+            onChange(
+              isSearch
+                ? { keyword: event.currentTarget.value }
+                : { playlistUrl: event.currentTarget.value }
+            )
+          }
+        />
       </FieldRow>
       <FieldRow label={t("music.outputDirectory")} hint={t("common.outputDirectoryHint")}>
         <OutputDirectoryField
-          bare
           value={form.outputDirectory}
-          disabled={false}
           placeholder={t("music.outputDirectory.placeholder")}
           onChange={(outputDirectory) => onChange({ outputDirectory })}
           onBrowse={async () => onPickOutputDirectory()}
@@ -68,7 +68,9 @@ export function MusicConfigurationPanel({
           min={1}
           max={100}
           value={form.searchSize}
-          onChange={(value) => onChange({ searchSize: typeof value === "number" ? value : 5 })}
+          onChange={(value) =>
+            onChange({ searchSize: typeof value === "number" ? value : DEFAULT_SEARCH_SIZE })
+          }
         />
       </FieldRow>
       <FieldRow label={t("music.proxy.label")}>

@@ -1,17 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { RunResult } from "../../contracts/job";
-import type { TaskIntent } from "../../contracts/types";
+import type { PreviewResult, SubmitResult, TaskIntent } from "../../contracts/types";
 
-export interface PreviewResult {
-  display: string;
-  argvRedacted: string[];
-
-  argv: string[];
-}
-
-export interface SubmitResult {
-  taskId: string;
-}
+export type { PreviewResult, SubmitResult };
 
 export function bilibiliPreview(intent: TaskIntent): Promise<PreviewResult> {
   return invoke<PreviewResult>("bilibili_preview", { intent });

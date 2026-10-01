@@ -21,6 +21,7 @@ import {
 import { t } from "../../locale";
 
 const DISMISSED_AT_KEY = "mad-toolbox:startup-tips-dismissed-at";
+const TIPS_LAST_SLIDE = 2;
 
 function localDateKey(): string {
   const now = new Date();
@@ -141,7 +142,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
         >
           <IconChevronLeft size={18} />
         </ActionIcon>
-        <span style={{ visibility: slide === 2 ? "visible" : "hidden" }}>
+        <span style={{ visibility: slide === TIPS_LAST_SLIDE ? "visible" : "hidden" }}>
           <Button variant="light" onClick={dismissForToday}>
             {t("startup.dismissToday")}
           </Button>
@@ -151,7 +152,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           radius="sm"
           w={44}
           h={32}
-          disabled={slide === 2}
+          disabled={slide === TIPS_LAST_SLIDE}
           onClick={() => embla?.scrollNext()}
           aria-label={t("startup.next")}
         >

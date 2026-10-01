@@ -1,15 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { TaskIntent } from "../../contracts/types";
+import type { PreviewResult, SubmitResult, TaskIntent } from "../../contracts/types";
 
-export interface PreviewResult {
-  display: string;
-  argvRedacted: string[];
-  argv: string[];
-}
-
-export interface SubmitResult {
-  taskId: string;
-}
+export type { PreviewResult, SubmitResult };
 
 export type ProbeKind = "formats" | "metadata" | "cookie";
 

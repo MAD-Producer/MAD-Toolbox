@@ -25,7 +25,7 @@ import {
   IconTrash,
   IconWorld
 } from "@tabler/icons-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 import type { CookieFileOption } from "../../contracts/types";
 import { t, type LanguageChoice } from "../../locale";
@@ -56,13 +56,6 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
   const [saving, setSaving] = useState(false);
   const [language, setLanguage] = useState<LanguageChoice>(settings.language ?? "auto");
   const [cookieFiles, setCookieFiles] = useState<CookieFileOption[]>(settings.cookieFiles);
-
-  useEffect(() => {
-    setDirectory(settings.defaultOutputDirectory || "");
-    setProxy(settings.proxy || "");
-    setLanguage(settings.language ?? "auto");
-    setCookieFiles(settings.cookieFiles);
-  }, [settings.cookieFiles, settings.defaultOutputDirectory, settings.proxy, settings.language]);
 
   const save = async () => {
     const normalizedCookieFiles = cookieFiles.map((cookieFile) => ({

@@ -3,12 +3,12 @@ import { create } from "zustand";
 export const WORKSPACE_IDS = ["bilibili", "network", "music", "media"] as const;
 
 export type WorkspaceId = (typeof WORKSPACE_IDS)[number];
-export type WorkspacePhase = "retained" | "releasable";
+
+export type WorkspaceStatus = "unmounted" | "retained" | "releasable";
 
 export interface WorkspaceSession {
-  mounted: boolean;
+  status: WorkspaceStatus;
   generation: number;
-  phase: WorkspacePhase;
 }
 
 type WorkspaceSessions = Record<WorkspaceId, WorkspaceSession>;
@@ -24,7 +24,7 @@ interface WorkspacesStore {
 
 const createInitialSessions = (): WorkspaceSessions =>
   Object.fromEntries(
-    WORKSPACE_IDS.map((id) => [id, { mounted: false, generation: 0, phase: "releasable" }])
+    WORKSPACE_IDS.map((id) => [id, { status: "unmounted", generation: 0 }])
   ) as WorkspaceSessions;
 
 export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
@@ -33,11 +33,11 @@ export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
   visit: (id) => {
     set((state) => {
       const current = state.sessions[id];
-      if (current.mounted && current.phase === "retained") return state;
+      if (current.status === "retained") return state;
       return {
         sessions: {
           ...state.sessions,
-          [id]: { ...current, mounted: true, phase: "retained" }
+          [id]: { ...current, status: "retained" }
         }
       };
     });
@@ -47,16 +47,16 @@ export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
     set((state) => {
       const current = state.sessions[id];
       if (
-        !current.mounted ||
+        current.status === "unmounted" ||
         current.generation !== expectedGeneration ||
-        current.phase === "retained"
+        current.status === "retained"
       ) {
         return state;
       }
       return {
         sessions: {
           ...state.sessions,
-          [id]: { ...current, phase: "retained" }
+          [id]: { ...current, status: "retained" }
         }
       };
     });
@@ -66,16 +66,16 @@ export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
     set((state) => {
       const current = state.sessions[id];
       if (
-        !current.mounted ||
+        current.status === "unmounted" ||
         current.generation !== expectedGeneration ||
-        current.phase === "releasable"
+        current.status === "releasable"
       ) {
         return state;
       }
       return {
         sessions: {
           ...state.sessions,
-          [id]: { ...current, phase: "releasable" }
+          [id]: { ...current, status: "releasable" }
         }
       };
     });
@@ -84,14 +84,13 @@ export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
   evictIfReleasable: (id) => {
     set((state) => {
       const current = state.sessions[id];
-      if (!current.mounted || current.phase !== "releasable") return state;
+      if (current.status !== "releasable") return state;
       return {
         sessions: {
           ...state.sessions,
           [id]: {
-            mounted: false,
-            generation: current.generation + 1,
-            phase: "releasable"
+            status: "unmounted",
+            generation: current.generation + 1
           }
         }
       };
@@ -105,9 +104,8 @@ export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
         sessions: {
           ...state.sessions,
           [id]: {
-            mounted: current.mounted,
-            generation: current.generation + 1,
-            phase: current.mounted ? "retained" : "releasable"
+            status: current.status === "unmounted" ? "unmounted" : "retained",
+            generation: current.generation + 1
           }
         }
       };

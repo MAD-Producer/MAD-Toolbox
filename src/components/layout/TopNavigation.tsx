@@ -3,6 +3,8 @@ import { Box, Indicator, Tooltip } from "@mantine/core";
 import type { AppRoute } from "../../app/route";
 import type { L1NavigationItem } from "../../app/navigation";
 import { t } from "../../locale";
+import { useTasksStore } from "../../stores/tasks";
+import { headerTooltipProps } from "./HeaderActions";
 
 type AppSection = AppRoute["section"];
 
@@ -22,8 +24,20 @@ export interface NavigationStatus {
 const DRAW_DURATION_MS = 700;
 const DRAW_EASING = "cubic-bezier(0.45, 0, 0.2, 1)";
 
+const ACTIVE_TASK_STATUSES = ["queued", "running", "canceling"];
+
+function useTasksStatus(): NavigationStatus | null {
+  const count = useTasksStore(
+    (state) =>
+      Object.values(state.tasks).filter((task) => ACTIVE_TASK_STATUSES.includes(task.status)).length
+  );
+  if (count === 0) return null;
+  return { count, label: t("app.activeTasksLabel", { count }), color: "blue" };
+}
+
 export function TopNavigation({ items, active, onNavigate, statuses }: TopNavigationProps) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tasksStatus = useTasksStatus();
 
   const drawIcon = (index: number) => {
     const node = itemRefs.current[index];
@@ -56,19 +70,16 @@ export function TopNavigation({ items, active, onNavigate, statuses }: TopNaviga
       >
         {items.map(({ section, labelKey, icon: Icon }, index) => {
           const isActive = active === section;
-          const status = statuses?.[section];
+          const status = section === "tasks" ? tasksStatus : statuses?.[section];
           const running = section === "tasks" && (status?.count ?? 0) > 0;
           const label = t(labelKey);
           return (
             <Tooltip
               key={section}
-              label={status ? `${label} · ${status.label}` : label}
+              {...headerTooltipProps}
               position="top"
-              withArrow
-              arrowSize={5}
-              offset={4}
+              label={status ? `${label} · ${status.label}` : label}
               events={{ hover: true, focus: true, touch: false }}
-              styles={{ tooltip: { padding: "3px 7px", fontSize: 11, lineHeight: 1.2 } }}
             >
               <Box
                 component="button"

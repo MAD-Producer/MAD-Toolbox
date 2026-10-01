@@ -38,7 +38,6 @@ export function BilibiliDownloadFields({
       </FieldRow>
       <FieldRow label={t("common.outputDirectory")} hint={t("common.outputDirectoryHint")}>
         <OutputDirectoryField
-          bare
           value={form.outputDirectory}
           disabled={disabled}
           placeholder={t("bilibili.fields.outputPlaceholder")}
