@@ -33,7 +33,10 @@
         "installMode": "currentUser",
         "languages": ["SimpChinese", "English"],
         "displayLanguageSelector": false,
-        "compression": "lzma"
+        "compression": "lzma",
+        "installerHooks": "./windows/installer-hooks.nsh",
+        "headerImage": "./icons/installer-header.bmp",
+        "sidebarImage": "./icons/installer-sidebar.bmp"
       }
     }
   }

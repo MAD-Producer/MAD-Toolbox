@@ -93,6 +93,65 @@ Credential Manager. Templates are ordinary WebView application data.
 Exported task logs preserve original CLI output and may therefore contain
 cookies, passwords, tokens, proxy credentials, URLs and local paths.
 
+## Installer appearance and hooks
+
+The NSIS wizard is branded and customizable:
+
+- `scripts/build/installer-branding.ps1` regenerates the installer bitmaps
+  (`src-tauri/icons/installer-header.bmp`, 300x114, and
+  `src-tauri/icons/installer-sidebar.bmp`, 328x628, shown on the Welcome and
+  Finish pages) from the app icon and the theme brand color. Re-run it after
+  changing either, and keep the dimensions and 24-bit BMP format. Both are 2x
+  supersampled: MUI2 stretches bitmaps onto DPI-scaled controls, so a 1x
+  (150x57 / 164x314) bitmap blurs on any display above 100% scaling, while a
+  2x source is downscaled everywhere. The header stays icon-only because the
+  page title is NSIS-drawn text; bitmap text would be clipped by the control.
+- `src-tauri/windows/installer-hooks.nsh` provides the official install and
+  uninstall hook points (`NSIS_HOOK_PREINSTALL`, `NSIS_HOOK_POSTINSTALL`,
+  `NSIS_HOOK_PREUNINSTALL`, `NSIS_HOOK_POSTUNINSTALL`). Keep hook bodies free
+  of UI such as `MessageBox` so silent installs never block.
+- Beyond these, the full NSIS template can be replaced
+  (`bundle.windows.nsis.template`) and installer wording can be overridden per
+  language (`customLanguageFiles`); see the
+  [Windows Installer guide](https://v2.tauri.app/distribute/windows-installer/).
+
+## Silent install and uninstall
+
+The installer supports the standard NSIS switches, verified locally with a full
+install/uninstall cycle (exit code 0 both ways):
+
+```powershell
+"MAD Toolbox_2.0.0_x64-setup.exe" /S                      # silent install
+"MAD Toolbox_2.0.0_x64-setup.exe" /S /D=D:\Apps\MADToolbox # silent install, custom dir
+                                                          # (/D must be last and unquoted)
+& "$env:LOCALAPPDATA\Programs\MAD Toolbox\uninstall.exe" /S _?="$env:LOCALAPPDATA\Programs\MAD Toolbox"  # silent uninstall
+```
+
+Silent uninstall removes files, the Start Menu shortcut and the registry
+entry; only `uninstall.exe` itself remains in the directory (NSIS cannot
+delete the running uninstaller), which is standard NSIS behavior. Existing
+installs are upgraded in place; the installer reuses the previous install
+directory recorded in the registry.
+
+## Microsoft Store
+
+The Store does not host the binaries: a Win32 product ("EXE or MSI app" in
+Partner Center) links to an installer you host yourself, and the Store
+installs it silently. Submission requirements and how this project meets them:
+
+| Requirement                              | Status                                                                                                           |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Silent install (`/S`)                    | Supported out of the box; enter `/S` as the installer parameter in Partner Center                                |
+| Offline WebView2 install                 | Use the Full edition (it embeds the offline installer; Lite skips WebView2)                                      |
+| Auto-update handling                     | The Tauri updater already ships (`tauri.updater.conf.json`, enabled when CI injects `TAURI_SIGNING_PRIVATE_KEY`) |
+| Code signing                             | **Not yet done** — a paid code-signing certificate is required for submission                                    |
+| Publisher name differs from product name | Derived publisher is `madproducer` (from the identifier); consider setting `bundle.publisher` explicitly         |
+
+See the official [Microsoft Store guide](https://v2.tauri.app/distribute/microsoft-store/)
+for the Partner Center flow. Package the Store build with
+`tauri build --no-bundle` plus `tauri bundle --config` if Store-specific
+settings ever need to diverge from the GitHub-distributed installers.
+
 ## Unsigned distribution
 
 The installer does not require a paid code-signing certificate. An unsigned
