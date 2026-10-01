@@ -469,7 +469,7 @@
   "startup.bilibiliQuality.p2": "哔哩哔哩页右上角的按钮会显示当前登录状态：显示「扫码登录」即代表当前未登录，或之前的登录已过期；显示「已登录」则无需重复扫码。",
   "startup.bilibiliQuality.p3": "下载时默认选择能够获取到的最高规格画质。",
   "startup.bilibiliQuality.title": "Bilibili 下载画质与登录状态相关",
-  "startup.dismissToday": "今日不再提醒",
+  "startup.dismiss": "不再提示",
   "startup.flac.p1": "音乐搜索结果中体积明显偏大的无损文件，可能只是通过升高采样率把体积撑大，多出的体积都是无效信息。这是音源站返回的文件本身如此，工具侧无法解决，请结合体积与时长自行判断是否下载。",
   "startup.flac.p2": "也可以在「音乐下载」页标题旁开启「自动去杂」开关：下载完成后自动把高于 48kHz 的音频统一降至 48kHz。但受API限制，不保证所有都能探测准确，且少数官方发行版本高于 48kHz 的音乐音质可能有所影响，请按需取舍。",
   "startup.flac.title": "体积偏大的 FLAC 可能是「假无损」",

@@ -469,7 +469,7 @@
   "startup.bilibiliQuality.p2": "The button at the top right of the Bilibili page shows the current login status: \"QR Login\" means you are not signed in, or the previous login has expired; \"Signed In\" means no re-login is needed.",
   "startup.bilibiliQuality.p3": "Downloads always pick the highest quality profile available.",
   "startup.bilibiliQuality.title": "Bilibili download quality depends on login status",
-  "startup.dismissToday": "Don't remind me today",
+  "startup.dismiss": "Don't show again",
   "startup.flac.p1": "Lossless files with an unusually large size in music search results may simply be upsampled to inflate the file size; the extra size carries no useful information. This comes from the source site's files and cannot be fixed by this tool; judge whether to download by size and duration yourself.",
   "startup.flac.p2": "You can also turn on the \"Auto Refine\" switch next to the Music page title: after a download finishes, audio above 48 kHz is automatically downsampled to 48 kHz. Due to API limitations, detection is not guaranteed to be accurate, and a few official releases above 48 kHz may be affected; weigh the trade-offs yourself.",
   "startup.flac.title": "Oversized FLAC files may be \"fake lossless\"",

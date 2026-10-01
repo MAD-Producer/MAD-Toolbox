@@ -11,10 +11,7 @@ import { checkForUpdate } from "../pages/settings/api";
 import { useUpdateStore } from "../stores/update";
 import { AppShell } from "../components/layout/AppShell";
 import { SplashScreen } from "../components/layout/SplashScreen";
-import {
-  StartupTipsModal,
-  isStartupTipsDismissedToday
-} from "../components/layout/StartupTipsModal";
+import { StartupTipsModal, isStartupTipsDismissed } from "../components/layout/StartupTipsModal";
 import {
   WorkspaceSessionHost,
   type WorkspaceDefinition
@@ -118,7 +115,7 @@ export default function App() {
 
   useEffect(() => {
     setBooted(true);
-    if (!isStartupTipsDismissedToday()) setTipsOpened(true);
+    if (!isStartupTipsDismissed()) setTipsOpened(true);
   }, []);
 
   useEffect(() => onLanguageChanged(() => setLang(currentLanguage())), []);
