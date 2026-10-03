@@ -106,6 +106,70 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
   return (
     <Stack gap="lg">
       <SettingsSectionCard>
+        <SettingsRow title={t("settings.general.themeTitle")}>
+          <SegmentedControl
+            w={CONTROL_WIDTH}
+            radius="md"
+            value={colorScheme}
+            onChange={(value) => setColorScheme(value as MantineColorScheme)}
+            data={[
+              {
+                value: "light",
+                label: themeOptionLabel(
+                  <IconSun size={15} stroke={1.7} />,
+                  t("settings.general.themeLight")
+                )
+              },
+              {
+                value: "dark",
+                label: themeOptionLabel(
+                  <IconMoon size={15} stroke={1.7} />,
+                  t("settings.general.themeDark")
+                )
+              },
+              {
+                value: "auto",
+                label: themeOptionLabel(
+                  <IconDeviceDesktop size={15} stroke={1.7} />,
+                  t("settings.general.themeAuto")
+                )
+              }
+            ]}
+          />
+        </SettingsRow>
+        <Divider />
+        <SettingsRow title={t("settings.general.languageTitle")}>
+          <SegmentedControl
+            w={CONTROL_WIDTH}
+            radius="md"
+            value={language}
+            onChange={(value) => {
+              const choice = value as LanguageChoice;
+              setLanguage(choice);
+              onSetLanguage(choice);
+            }}
+            data={[
+              {
+                value: "zh",
+                label: themeOptionLabel(<IconLanguage size={15} stroke={1.7} />, "简体中文")
+              },
+              {
+                value: "en",
+                label: themeOptionLabel(<IconWorld size={15} stroke={1.7} />, "English")
+              },
+              {
+                value: "auto",
+                label: themeOptionLabel(
+                  <IconDeviceDesktop size={15} stroke={1.7} />,
+                  t("settings.general.languageAuto")
+                )
+              }
+            ]}
+          />
+        </SettingsRow>
+      </SettingsSectionCard>
+
+      <SettingsSectionCard>
         <SettingsRow
           title={t("settings.general.outputDirectoryTitle")}
           description={t("settings.general.outputDirectoryHint")}
@@ -229,70 +293,6 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
             </Group>
           ))}
         </Stack>
-      </SettingsSectionCard>
-
-      <SettingsSectionCard>
-        <SettingsRow title={t("settings.general.themeTitle")}>
-          <SegmentedControl
-            w={CONTROL_WIDTH}
-            radius="md"
-            value={colorScheme}
-            onChange={(value) => setColorScheme(value as MantineColorScheme)}
-            data={[
-              {
-                value: "light",
-                label: themeOptionLabel(
-                  <IconSun size={15} stroke={1.7} />,
-                  t("settings.general.themeLight")
-                )
-              },
-              {
-                value: "dark",
-                label: themeOptionLabel(
-                  <IconMoon size={15} stroke={1.7} />,
-                  t("settings.general.themeDark")
-                )
-              },
-              {
-                value: "auto",
-                label: themeOptionLabel(
-                  <IconDeviceDesktop size={15} stroke={1.7} />,
-                  t("settings.general.themeAuto")
-                )
-              }
-            ]}
-          />
-        </SettingsRow>
-        <Divider />
-        <SettingsRow title={t("settings.general.languageTitle")}>
-          <SegmentedControl
-            w={CONTROL_WIDTH}
-            radius="md"
-            value={language}
-            onChange={(value) => {
-              const choice = value as LanguageChoice;
-              setLanguage(choice);
-              onSetLanguage(choice);
-            }}
-            data={[
-              {
-                value: "zh",
-                label: themeOptionLabel(<IconLanguage size={15} stroke={1.7} />, "简体中文")
-              },
-              {
-                value: "en",
-                label: themeOptionLabel(<IconWorld size={15} stroke={1.7} />, "English")
-              },
-              {
-                value: "auto",
-                label: themeOptionLabel(
-                  <IconDeviceDesktop size={15} stroke={1.7} />,
-                  t("settings.general.languageAuto")
-                )
-              }
-            ]}
-          />
-        </SettingsRow>
       </SettingsSectionCard>
 
       <Group justify="flex-end">
