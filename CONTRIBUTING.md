@@ -36,29 +36,27 @@ Both platforms share the same entry command, which selects the native flow for
 the current host automatically:
 
 ```bash
-npm run tauri:build:lite    # or tauri:build:full
+npm run tauri:build
 ```
 
 Pass an explicit target to skip host detection. The target must match the host;
 cross-building is not supported:
 
 ```bash
-npm run tauri:build:lite -- win
-npm run tauri:build:full -- mac --ci
+npm run tauri:build -- win
+npm run tauri:build -- mac --ci
 ```
 
-Any arguments after the target are passed through to `tauri build`. Both
-commands first run the TypeScript and `cargo check` preflights, then verify the
-sidecars required by that platform and edition (downloading missing Windows Full
-ones) and produce the platform installer. CI release builds use the same
-commands with an explicit target.
+Any arguments after the target are passed through to `tauri build`. The command
+runs TypeScript and `cargo check` preflights and produces the native application
+installer without downloading or packaging command-line dependencies. CI uses
+the same command with an explicit target.
 
 The automation lives in `scripts/`, split by responsibility:
 
 ```text
 scripts/
-├── build/          # build.js entry, windows.ps1 + windows-tools.ps1,
-│                   # macos.sh + macos-tools.sh, pinned-sha256.sh
+├── build/          # build.js entry, windows.ps1, macos.sh
 └── version/        # bump.js, check.js
 ```
 
@@ -94,8 +92,8 @@ git push origin main v1.2.2
 
 Tags must match `vX.Y.Z`. The release workflow verifies that the tag, all
 tracked version references and the corresponding `CHANGELOG.md` section agree.
-It then builds the Windows and macOS Full/Lite packages, creates the updater
-manifests and checksums, and publishes a GitHub Release using that changelog
+It then builds the Windows and macOS installers, creates the unified `latest.json` updater
+manifest and checksums, and publishes a GitHub Release using that changelog
 section as the release notes. A failed validation or build does not publish a
 partial release; the workflow can also be run manually for an existing tag.
 
@@ -115,7 +113,7 @@ and CI checks the whole repository too. Rust code continues to use `cargo fmt`.
 Keep changes focused and explain:
 
 - what changed and why;
-- which platforms and distribution modes are affected;
+- which platforms and dependency sources are affected;
 - how the change was tested;
 - whether third-party licenses, sources or checksums changed.
 

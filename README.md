@@ -52,13 +52,12 @@ in-app updater.
 
 MAD Toolbox currently supports the following platforms:
 
-| Platform | OS Version | Architecture | Distribution Types |
-| -------- | ---------- | ------------ | ------------------ |
-| Windows  | 10+        | `x86_64`     | Full / Lite `.exe` |
-| macOS    | 14+        | `aarch64`    | Full / Lite `.dmg` |
+| Platform | OS Version | Architecture | Distribution Types      |
+| -------- | ---------- | ------------ | ----------------------- |
+| Windows  | 10+        | `x86_64`     | Single installer `.exe` |
+| macOS    | 14+        | `aarch64`    | Single installer `.dmg` |
 
-BBDown is bundled in all macOS packages and the Windows FULL package. Windows
-LITE installs it separately with WinGet.
+Application installers no longer bundle command-line dependencies. Settings offers CDN installation and independent updates for app-managed tools, alongside the system installation commands below. Python and musicdl remain system-only.
 
 ### Installing Third-party Dependencies
 
@@ -81,6 +80,8 @@ winget install --id DenoLand.Deno -e
 ```bash
 brew install ffmpeg yt-dlp media-info deno
 ```
+
+BBDown can also be installed with an existing .NET SDK: `dotnet tool install --global BBDown`.
 
 ## Development & Contribution
 
@@ -108,8 +109,8 @@ We warmly welcome contributions from every developer!
 ### Developer Documentation
 
 - [Windows compatibility, build and security notes](docs/WINDOWS.md)
-- [Lite dependency installation](docs/DEPENDENCIES.md)
-- [Full build packaging and redistribution policy](docs/FULL_BUILD.md)
+- [Dependency installation and independent releases](docs/DEPENDENCIES.md)
+- [Dependency repository and Actions implementation handoff (Chinese)](docs/DEPENDENCY_RELEASE_HANDOFF.md)
 - [Third-party notices and licenses](THIRD_PARTY_NOTICES.md)
 - [Contributing](CONTRIBUTING.md)
 - [Reporting security issues](SECURITY.md)
@@ -126,6 +127,6 @@ Copyright © 2026 MAD Producer Studio.
 
 ## License
 
-MAD Toolbox source code is licensed under the MIT License. All bundled tools retain their respective licenses, copyrights and attributions; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MAD Toolbox source code is licensed under the MIT License. External tools retain their respective licenses, copyrights and attributions; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 <img src="src/assets/organization_logo.png" alt="MAD Toolbox" />

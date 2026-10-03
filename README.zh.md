@@ -53,12 +53,12 @@
 
 MAD Toolbox 目前支持以下平台：
 
-| 平台    | 系统版本  | 架构      | 提供的分发类型         |
-| ------- | --------- | --------- | ---------------------- |
-| Windows | 10 及以上 | `x86_64`  | Full版 / Lite版 `.exe` |
-| macOS   | 14 及以上 | `aarch64` | Full版 / Lite版 `.dmg` |
+| 平台    | 系统版本  | 架构      | 提供的分发类型    |
+| ------- | --------- | --------- | ----------------- |
+| Windows | 10 及以上 | `x86_64`  | 统一安装包 `.exe` |
+| macOS   | 14 及以上 | `aarch64` | 统一安装包 `.dmg` |
 
-macOS 的 FULL版和LITE版以及 Windows FULL版内置 BBDown；Windows LITE版通过 WinGet 单独安装。
+应用安装包不再内置工具依赖。设置提供应用管理版本的 CDN 安装与独立更新，也保留下方系统安装命令；Python 和 musicdl 仅通过系统命令安装。
 
 ### 第三方依赖下载
 
@@ -81,6 +81,8 @@ winget install --id DenoLand.Deno -e
 ```bash
 brew install ffmpeg yt-dlp media-info deno
 ```
+
+BBDown 也可通过已安装的 .NET SDK 执行 `dotnet tool install --global BBDown`。
 
 ## 开发与贡献
 
@@ -108,8 +110,8 @@ npm run tauri:dev
 ### 开发文档
 
 - [Windows 兼容性、构建与安全说明](docs/WINDOWS.md)
-- [Lite 版依赖安装](docs/DEPENDENCIES.md)
-- [Full 版打包和再分发规则](docs/FULL_BUILD.md)
+- [依赖安装与独立发布](docs/DEPENDENCIES.md)
+- [独立依赖仓库与 Actions 实施交接](docs/DEPENDENCY_RELEASE_HANDOFF.md)
 - [第三方软件署名和许可证](THIRD_PARTY_NOTICES.md)
 - [参与贡献](CONTRIBUTING.md)
 - [安全问题报告](SECURITY.md)
@@ -126,7 +128,7 @@ npm run tauri:dev
 
 ## 许可证
 
-MAD Toolbox 源代码使用 MIT License。所有内置工具保留各自的许可证、
+MAD Toolbox 源代码使用 MIT License。外部工具保留各自的许可证、
 版权和署名，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 <img src="src/assets/organization_logo.png" alt="MAD Toolbox" />

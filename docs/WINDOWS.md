@@ -32,56 +32,33 @@ npm ci
 npm run tauri:dev
 ```
 
-## Full and Lite installers
+## Unified installer
 
-Full bundles BBDown, FFmpeg/ffprobe, MediaInfo CLI, yt-dlp and Deno, and embeds
-the WebView2 offline installer. After the Full installer has been downloaded,
-installation and application startup do not require an internet connection.
-Bundled tools are grouped under the installation directory as follows:
+The installer contains no command-line dependencies. System tools installed
+with WinGet and other supported locations remain usable. App-managed tools
+are resolved from the application data directory, not the installation directory;
+Settings supports CDN installation and independent updates for app-managed binary tools;
+system tools remain available but are not upgraded by Toolbox.
 
-```text
-dependencies/
-├── BBDown/BBDown.exe
-├── Deno/deno.exe
-├── FFmpeg/ffmpeg.exe
-├── FFmpeg/ffprobe.exe
-├── MediaInfo/mediainfo.exe
-├── MediaInfo/LIBCURL.DLL
-└── yt-dlp/yt-dlp.exe
-```
+The NSIS configuration uses WebView2's download bootstrapper. Existing WebView2
+is reused; a missing runtime requires network access during installation.
 
-Lite bundles no command-line tools and finds BBDown and the other programs from
-WinGet/system and other known Windows installation locations, so those dependencies
-must be installed separately. Lite also skips the WebView2 installation step and
-uses the system WebView2 Runtime, so it does not show a WebView2 setup dialog or
-carry the Full installer's offline runtime payload. Windows 10 22H2 and Windows
-11 normally include the runtime; if it is missing, install it separately or use
-Full. Settings allows either installer to prefer a newer system version.
-
-Prepare and build:
+Build on Windows x64:
 
 ```powershell
 npm ci
-npm run tauri:build:lite
-npm run tauri:build:full
+npm run tauri:build
 ```
 
-The package scripts select the Windows x64 build flow on a Windows x64 host;
-append `-- win` (for example `npm run tauri:build:lite -- win`) to pin the
-target explicitly. The flow runs on Windows PowerShell 5.1, which ships with
-Windows, so PowerShell 7 is not required. Every build first runs the TypeScript
-and cargo checks, then `scripts/build/windows-tools.ps1` downloads and verifies
-missing pinned artifacts for Full builds. Lite builds do not download
-command-line tools. The output is a per-user bilingual NSIS installer. The Full
-build machine needs network access when a pinned artifact or the WebView2
-offline package is not already cached; this does not create a network
-requirement for the shipped Full installer. Lite does not download or package
-the WebView2 offline installer.
+Use `npm run tauri:build -- win` to select the Windows flow explicitly.
+The entry runs TypeScript and cargo preflights, then invokes
+`scripts/build/windows.ps1` with `src-tauri/tauri.windows.conf.json`.
+No tool download or source-archive packaging runs as part of this build.
 
 ## CLI state and diagnostics
 
-The Full package's bundled BBDown and the Lite package's WinGet BBDown are
-launched directly from their executable directories. Later downloads use that
+The selected app-managed or system BBDown is launched directly from its
+executable directory. Later downloads use that
 same executable and working directory, so BBDown reads `BBDown.data` exactly as
 in the original CLI. GUI QR login uses
 BBDown's official web endpoints only to complete that native data file from the
@@ -117,8 +94,8 @@ The NSIS wizard is branded and customizable:
 
 ## Silent install and uninstall
 
-The installer supports the standard NSIS switches, verified locally with a full
-install/uninstall cycle (exit code 0 both ways):
+The installer uses the standard NSIS switches. A complete install/uninstall
+cycle for the unified package still needs platform validation:
 
 ```powershell
 "MAD Toolbox_2.0.0_x64-setup.exe" /S                      # silent install
@@ -142,7 +119,7 @@ installs it silently. Submission requirements and how this project meets them:
 | Requirement                              | Status                                                                                                           |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Silent install (`/S`)                    | Supported out of the box; enter `/S` as the installer parameter in Partner Center                                |
-| Offline WebView2 install                 | Use the Full edition (it embeds the offline installer; Lite skips WebView2)                                      |
+| WebView2 installation                    | Downloads the bootstrapper if needed; an offline runtime installer is not bundled                                |
 | Auto-update handling                     | The Tauri updater already ships (`tauri.updater.conf.json`, enabled when CI injects `TAURI_SIGNING_PRIVATE_KEY`) |
 | Code signing                             | **Not yet done** — a paid code-signing certificate is required for submission                                    |
 | Publisher name differs from product name | Derived publisher is `madproducer` (from the identifier); consider setting `bundle.publisher` explicitly         |
