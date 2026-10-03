@@ -42,7 +42,7 @@ jobs:
           fi
 
   build:
-    name: ${{ matrix.platform }} ${{ matrix.edition }}
+    name: ${{ matrix.platform }}
     needs: prepare
     if: needs.prepare.outputs.should_build == 'true'
     runs-on: ${{ matrix.runner }}
@@ -54,26 +54,10 @@ jobs:
             platform_id: windows
             runner: windows-2022
             rust_target: x86_64-pc-windows-msvc
-            edition: Full
-            build_script: tauri:build:full
-          - platform: Windows x64
-            platform_id: windows
-            runner: windows-2022
-            rust_target: x86_64-pc-windows-msvc
-            edition: Lite
-            build_script: tauri:build:lite
           - platform: macOS Apple Silicon
             platform_id: macos
             runner: macos-15
             rust_target: aarch64-apple-darwin
-            edition: Full
-            build_script: tauri:build:full
-          - platform: macOS Apple Silicon
-            platform_id: macos
-            runner: macos-15
-            rust_target: aarch64-apple-darwin
-            edition: Lite
-            build_script: tauri:build:lite
 
     steps:
       - name: Check out source
@@ -100,7 +84,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: nightly-${{ matrix.platform_id }}-${{ matrix.edition }}
+          key: nightly-${{ matrix.platform_id }}
 
       - name: Install frontend packages
         run: npm ci
@@ -110,13 +94,13 @@ jobs:
 
       - name: Build Windows installer
         if: matrix.platform_id == 'windows'
-        run: npm run ${{ matrix.build_script }} -- win --ci
+        run: npm run tauri:build -- win --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
       - name: Build macOS image
         if: matrix.platform_id == 'macos'
-        run: npm run ${{ matrix.build_script }} -- mac --ci
+        run: npm run tauri:build -- mac --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
@@ -145,7 +129,7 @@ jobs:
         if: matrix.platform_id == 'windows'
         uses: actions/upload-artifact@v7
         with:
-          name: nightly-${{ matrix.platform_id }}-${{ matrix.edition }}
+          name: nightly-${{ matrix.platform_id }}
           path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
           if-no-files-found: error
           retention-days: 7
@@ -154,7 +138,7 @@ jobs:
         if: matrix.platform_id == 'macos'
         uses: actions/upload-artifact@v7
         with:
-          name: nightly-${{ matrix.platform_id }}-${{ matrix.edition }}
+          name: nightly-${{ matrix.platform_id }}
           path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
           retention-days: 7
@@ -174,7 +158,7 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ needs.prepare.outputs.target_sha }}
           fetch-depth: 0
 
       - name: Download installers
@@ -200,19 +184,14 @@ jobs:
             cp "${files[0]}" "dist/$output"
           }
 
-          copy_single staging/nightly-windows-Full '*.exe' MAD.Toolbox_nightly_x64-Full-setup.exe
-          copy_single staging/nightly-windows-Lite '*.exe' MAD.Toolbox_nightly_x64-Lite-setup.exe
-          copy_single staging/nightly-macos-Full '*.dmg' MAD.Toolbox_nightly_aarch64-Full.dmg
-          copy_single staging/nightly-macos-Lite '*.dmg' MAD.Toolbox_nightly_aarch64-Lite.dmg
-          test "$(sha256sum third_party/source_archives/ffmpeg-8.1.2.tar.xz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg") | .artifactSha256' third_party/sources.json)"
-          test "$(sha256sum third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .sourceArchiveSha256' third_party/windows-sources.json)"
-          test "$(sha256sum third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .buildRecipeArchiveSha256' third_party/windows-sources.json)"
-          cp third_party/source_archives/ffmpeg-8.1.2.tar.xz dist/
-          cp third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz dist/
-          cp third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz dist/
-          (cd dist && sha256sum *.exe *.dmg ffmpeg-*.tar.xz ffmpeg-*.tar.gz btbn-*.tar.gz > SHA256SUMS.txt)
-
+          version=$(node -p "require('./package.json').version")
           short_sha=${TARGET_SHA:0:7}
+          windows_name="MAD.Toolbox_${version}_nightly_${short_sha}_x64-setup.exe"
+          macos_name="MAD.Toolbox_${version}_nightly_${short_sha}_aarch64.dmg"
+          copy_single staging/nightly-windows '*.exe' "$windows_name"
+          copy_single staging/nightly-macos '*.dmg' "$macos_name"
+          (cd dist && sha256sum *.exe *.dmg > SHA256SUMS.txt)
+
           printf '%s\n\n%s\n\n%s\n' \
             'Automated installable snapshot of the `main` branch.' \
             "Commit: [${short_sha}](https://github.com/${GITHUB_REPOSITORY}/commit/${TARGET_SHA})" \
@@ -224,10 +203,10 @@ jobs:
             printf '%s\n' \
               '## Downloads' \
               '' \
-              '| | Full | Lite |' \
-              '| --- | --- | --- |' \
-              "| Windows x64 | [![Windows Full setup](https://img.shields.io/badge/Full-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_nightly_x64-Full-setup.exe) | [![Windows Lite setup](https://img.shields.io/badge/Lite-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_nightly_x64-Lite-setup.exe) |" \
-              "| macOS Apple Silicon | [![macOS Full image](https://img.shields.io/badge/Full-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_nightly_aarch64-Full.dmg) | [![macOS Lite image](https://img.shields.io/badge/Lite-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_nightly_aarch64-Lite.dmg) |" \
+              '| Platform | Download |' \
+              '| --- | --- |' \
+              "| Windows x64 | [Setup.exe](${download_base}/${windows_name}) |" \
+              "| macOS Apple Silicon | [Disk.dmg](${download_base}/${macos_name}) |" \
               ''
             printf '%s\n' \
               "不知道下载哪个版本？可以查看 [版本推荐](https://github.com/${GITHUB_REPOSITORY}/blob/nightly/docs/VERSION_RECOMMENDATION.md)" \
@@ -262,3 +241,12 @@ jobs:
               --repo "$GITHUB_REPOSITORY"
           fi
           gh release upload nightly dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          while IFS= read -r asset; do
+            case "$asset" in
+              MAD.Toolbox_*.exe|MAD.Toolbox_*.dmg)
+                if [ ! -f "dist/$asset" ]; then
+                  gh release delete-asset nightly "$asset" --yes --repo "$GITHUB_REPOSITORY"
+                fi
+                ;;
+            esac
+          done < <(gh release view nightly --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')

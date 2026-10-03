@@ -17,16 +17,10 @@
   },
   "bundle": {
     "targets": ["nsis"],
-    "externalBin": [],
-    "resources": {
-      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
-      "../third_party/windows-sources.json": "third_party/windows-sources.json",
-      "../third_party/licenses/BBDown-MIT.txt": "licenses/BBDown-MIT.txt",
-      "resources/musicdl-adapter.py": "musicdl-adapter.py"
-    },
     "windows": {
       "webviewInstallMode": {
-        "type": "skip"
+        "type": "downloadBootstrapper",
+        "silent": true
       },
       "allowDowngrades": false,
       "nsis": {

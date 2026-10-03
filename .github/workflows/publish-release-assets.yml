@@ -75,7 +75,7 @@ jobs:
           retention-days: 30
 
   build:
-    name: ${{ matrix.platform }} ${{ matrix.edition }}
+    name: ${{ matrix.platform }}
     needs: prepare
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -86,26 +86,10 @@ jobs:
             platform_id: windows
             runner: windows-2022
             rust_target: x86_64-pc-windows-msvc
-            edition: Full
-            build_script: tauri:build:full
-          - platform: Windows x64
-            platform_id: windows
-            runner: windows-2022
-            rust_target: x86_64-pc-windows-msvc
-            edition: Lite
-            build_script: tauri:build:lite
           - platform: macOS Apple Silicon
             platform_id: macos
             runner: macos-15
             rust_target: aarch64-apple-darwin
-            edition: Full
-            build_script: tauri:build:full
-          - platform: macOS Apple Silicon
-            platform_id: macos
-            runner: macos-15
-            rust_target: aarch64-apple-darwin
-            edition: Lite
-            build_script: tauri:build:lite
 
     steps:
       - name: Check out release commit
@@ -132,7 +116,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: release-${{ matrix.platform_id }}-${{ matrix.edition }}
+          key: release-${{ matrix.platform_id }}
 
       - name: Install frontend packages
         run: npm ci
@@ -142,13 +126,13 @@ jobs:
 
       - name: Build Windows installer
         if: matrix.platform_id == 'windows'
-        run: npm run ${{ matrix.build_script }} -- win --ci
+        run: npm run tauri:build -- win --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
       - name: Build macOS image
         if: matrix.platform_id == 'macos'
-        run: npm run ${{ matrix.build_script }} -- mac --ci
+        run: npm run tauri:build -- mac --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
@@ -185,7 +169,7 @@ jobs:
         if: matrix.platform_id == 'windows'
         uses: actions/upload-artifact@v7
         with:
-          name: release-${{ matrix.platform_id }}-${{ matrix.edition }}
+          name: release-${{ matrix.platform_id }}
           path: |
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe.sig
@@ -196,7 +180,7 @@ jobs:
         if: matrix.platform_id == 'macos'
         uses: actions/upload-artifact@v7
         with:
-          name: release-${{ matrix.platform_id }}-${{ matrix.edition }}
+          name: release-${{ matrix.platform_id }}
           path: |
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
             src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
@@ -257,60 +241,39 @@ jobs:
             cp "${files[0]}" "dist/$output"
           }
 
-          copy_single staging/release-windows-Full '*.exe' "MAD.Toolbox_${VERSION}_x64-Full-setup.exe"
-          copy_single staging/release-windows-Lite '*.exe' "MAD.Toolbox_${VERSION}_x64-Lite-setup.exe"
-          copy_single staging/release-windows-Full '*.exe.sig' "MAD.Toolbox_${VERSION}_x64-Full-setup.exe.sig"
-          copy_single staging/release-windows-Lite '*.exe.sig' "MAD.Toolbox_${VERSION}_x64-Lite-setup.exe.sig"
-          copy_single staging/release-macos-Full '*.dmg' "MAD.Toolbox_${VERSION}_aarch64-Full.dmg"
-          copy_single staging/release-macos-Lite '*.dmg' "MAD.Toolbox_${VERSION}_aarch64-Lite.dmg"
-          copy_single staging/release-macos-Full '*.app.tar.gz' "MAD.Toolbox_${VERSION}_aarch64-Full.app.tar.gz"
-          copy_single staging/release-macos-Lite '*.app.tar.gz' "MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz"
-          copy_single staging/release-macos-Full '*.app.tar.gz.sig' "MAD.Toolbox_${VERSION}_aarch64-Full.app.tar.gz.sig"
-          copy_single staging/release-macos-Lite '*.app.tar.gz.sig' "MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz.sig"
+          copy_single staging/release-windows '*.exe' "MAD.Toolbox_${VERSION}_x64-setup.exe"
+          copy_single staging/release-windows '*.exe.sig' "MAD.Toolbox_${VERSION}_x64-setup.exe.sig"
+          copy_single staging/release-macos '*.dmg' "MAD.Toolbox_${VERSION}_aarch64.dmg"
+          copy_single staging/release-macos '*.app.tar.gz' "MAD.Toolbox_${VERSION}_aarch64.app.tar.gz"
+          copy_single staging/release-macos '*.app.tar.gz.sig' "MAD.Toolbox_${VERSION}_aarch64.app.tar.gz.sig"
           copy_single staging/release-notes 'release-notes.md' release-notes.md
-          test "$(sha256sum third_party/source_archives/ffmpeg-8.1.2.tar.xz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg") | .artifactSha256' third_party/sources.json)"
-          test "$(sha256sum third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .sourceArchiveSha256' third_party/windows-sources.json)"
-          test "$(sha256sum third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz | awk '{print $1}')" = "$(jq -r '.tools[] | select(.name == "FFmpeg and ffprobe") | .buildRecipeArchiveSha256' third_party/windows-sources.json)"
-          cp third_party/source_archives/ffmpeg-8.1.2.tar.xz dist/
-          cp third_party/source_archives/ffmpeg-9b6c8969e05b4f0b29f0f85cd501be6b3e582e6b.tar.gz dist/
-          cp third_party/source_archives/btbn-ffmpeg-builds-a99e8230.tar.gz dist/
           mv dist/release-notes.md release-notes.md
 
           download_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
           pub_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          make_manifest() {
-            local edition="$1" out="$2" win_sig_file="$3" mac_sig_file="$4"
-            jq -n \
-              --arg version "$VERSION" \
-              --arg pub_date "$pub_date" \
-              --arg win_url "$download_base/MAD.Toolbox_${VERSION}_x64-${edition}-setup.exe" \
-              --arg win_sig "$(cat "$win_sig_file")" \
-              --arg mac_url "$download_base/MAD.Toolbox_${VERSION}_aarch64-${edition}.app.tar.gz" \
-              --arg mac_sig "$(cat "$mac_sig_file")" \
-              '{version: $version, pub_date: $pub_date,
-                platforms: {
-                  "windows-x86_64": {signature: $win_sig, url: $win_url},
-                  "darwin-aarch64": {signature: $mac_sig, url: $mac_url}
-                }}' > "$out"
-          }
+          jq -n \
+            --arg version "$VERSION" \
+            --arg pub_date "$pub_date" \
+            --arg win_url "$download_base/MAD.Toolbox_${VERSION}_x64-setup.exe" \
+            --arg win_sig "$(cat "dist/MAD.Toolbox_${VERSION}_x64-setup.exe.sig")" \
+            --arg mac_url "$download_base/MAD.Toolbox_${VERSION}_aarch64.app.tar.gz" \
+            --arg mac_sig "$(cat "dist/MAD.Toolbox_${VERSION}_aarch64.app.tar.gz.sig")" \
+            '{version: $version, pub_date: $pub_date,
+              platforms: {
+                "windows-x86_64": {signature: $win_sig, url: $win_url},
+                "darwin-aarch64": {signature: $mac_sig, url: $mac_url}
+              }}' > dist/latest.json
 
-          make_manifest Full dist/latest-full.json \
-            "dist/MAD.Toolbox_${VERSION}_x64-Full-setup.exe.sig" \
-            "dist/MAD.Toolbox_${VERSION}_aarch64-Full.app.tar.gz.sig"
-          make_manifest Lite dist/latest-lite.json \
-            "dist/MAD.Toolbox_${VERSION}_x64-Lite-setup.exe.sig" \
-            "dist/MAD.Toolbox_${VERSION}_aarch64-Lite.app.tar.gz.sig"
-
-          (cd dist && sha256sum *.exe *.dmg *.app.tar.gz ffmpeg-*.tar.xz ffmpeg-*.tar.gz btbn-*.tar.gz > SHA256SUMS.txt)
+          (cd dist && sha256sum *.exe *.dmg *.app.tar.gz > SHA256SUMS.txt)
 
           {
             printf '%s\n' \
               '## Downloads' \
               '' \
-              '| | Full | Lite |' \
-              '| --- | --- | --- |' \
-              "| Windows x64 | [![Windows Full setup](https://img.shields.io/badge/Full-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_${VERSION}_x64-Full-setup.exe) | [![Windows Lite setup](https://img.shields.io/badge/Lite-Setup.exe-0078D6?logo=windows)](${download_base}/MAD.Toolbox_${VERSION}_x64-Lite-setup.exe) |" \
-              "| macOS Apple Silicon | [![macOS Full image](https://img.shields.io/badge/Full-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_${VERSION}_aarch64-Full.dmg) | [![macOS Lite image](https://img.shields.io/badge/Lite-Disk.dmg-000000?logo=apple)](${download_base}/MAD.Toolbox_${VERSION}_aarch64-Lite.dmg) |" \
+              '| Platform | Download |' \
+              '| --- | --- |' \
+              "| Windows x64 | [Setup.exe](${download_base}/MAD.Toolbox_${VERSION}_x64-setup.exe) |" \
+              "| macOS Apple Silicon | [Disk.dmg](${download_base}/MAD.Toolbox_${VERSION}_aarch64.dmg) |" \
               ''
             printf '%s\n' \
               "不知道下载哪个版本？可以查看 [版本推荐](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/VERSION_RECOMMENDATION.md)" \

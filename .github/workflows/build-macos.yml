@@ -8,13 +8,8 @@ permissions:
 
 jobs:
   build:
-    name: macOS Apple Silicon ${{ matrix.edition }}
+    name: macOS Apple Silicon
     runs-on: macos-15
-    strategy:
-      fail-fast: false
-      matrix:
-        edition: [Full, Lite]
-
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -37,7 +32,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: macos-arm64-${{ matrix.edition }}
+          key: macos-arm64
 
       - name: Install frontend packages
         run: npm ci
@@ -48,15 +43,8 @@ jobs:
       # TypeScript and cargo checks run as the preflight of the build command
       # itself (scripts/build/build.js).
 
-      - name: Build Lite DMG
-        if: matrix.edition == 'Lite'
-        run: npm run tauri:build:lite -- mac --ci
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-
-      - name: Build Full DMG
-        if: matrix.edition == 'Full'
-        run: npm run tauri:build:full -- mac --ci
+      - name: Build DMG
+        run: npm run tauri:build -- mac --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
@@ -73,7 +61,7 @@ jobs:
       - name: Upload DMG
         uses: actions/upload-artifact@v7
         with:
-          name: MAD-Toolbox-macOS-Apple-Silicon-${{ matrix.edition }}
+          name: MAD-Toolbox-macOS-Apple-Silicon
           path: |
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
             src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz

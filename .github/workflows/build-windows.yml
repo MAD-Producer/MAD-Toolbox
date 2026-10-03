@@ -8,17 +8,8 @@ permissions:
 
 jobs:
   build:
-    name: Windows x64 ${{ matrix.edition }}
+    name: Windows x64
     runs-on: windows-2022
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - edition: Full
-            build_script: tauri:build:full
-          - edition: Lite
-            build_script: tauri:build:lite
-
     steps:
       - name: Check out source
         uses: actions/checkout@v5
@@ -38,7 +29,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          key: windows-x64-${{ matrix.edition }}
+          key: windows-x64
 
       - name: Install frontend packages
         run: npm ci
@@ -47,7 +38,7 @@ jobs:
         run: npm run format:check
 
       - name: Build NSIS installer
-        run: npm run ${{ matrix.build_script }} -- win --ci
+        run: npm run tauri:build -- win --ci
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
@@ -63,7 +54,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
-          name: MAD-Toolbox-Windows-x64-${{ matrix.edition }}
+          name: MAD-Toolbox-Windows-x64
           path: |
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe.sig
