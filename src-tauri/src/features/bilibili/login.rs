@@ -1,7 +1,7 @@
 //! bilibili 原生扫码登录（自 lib.rs 回迁）。
 //! 注意：这不是 spawn BBDown 进程——QR 生成/轮询/凭证校验是 Rust 原生 reqwest 流，
 //! QR 以 SVG dataUrl 经事件推送（架构文档 §4.2 扩展点的实际形态）。
-//! BBDown.data 按原 CLI 语义保存在随应用附带的 BBDown 可执行文件目录。
+//! BBDown.data 按原 CLI 语义保存在当前使用的 BBDown 可执行文件目录。
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use qrcode::QrCode;

@@ -16,9 +16,10 @@ pub(crate) struct CookieFileSetting {
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum DependencyPreference {
-    #[default]
-    Bundled,
     System,
+    #[default]
+    #[serde(other)]
+    Managed,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]

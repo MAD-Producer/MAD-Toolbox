@@ -1,31 +1,64 @@
-# Dependency installation
+# Dependency installation and independent releases
 
-## macOS Lite build
+Application packages no longer bundle command-line tools or distinguish distribution editions.
+Settings selects app-managed or system executables, with fallback when the preferred
+source is unavailable. System installations are not overwritten or upgraded by Toolbox.
+System install commands remain available when only an app-managed copy exists, so users
+can install a system copy without removing the managed one first.
 
-BBDown is already included. Install all other dependencies:
+## Current integration status
 
-```bash
-brew install ffmpeg yt-dlp media-info deno
-```
+The unified packaging flow, source resolution, schema 1 manifest parsing and mirror
+installation/update UI are implemented. The independent repository has a public Release
+with ten ZIPs and `version.json`; the OpenList manifest endpoint has returned valid JSON.
+Real installation checks and platform runtime validation are reported separately.
 
-MAD Toolbox searches `/opt/homebrew/bin`, `/usr/local/bin` and the process
-`PATH`. Finder-launched applications therefore still find Apple Silicon
-Homebrew tools.
+On 2026-10-03, the Windows backend downloaded the current MediaInfo ZIP (about 4 MB)
+from the live share, verified its hash, extracted it, installed it into an isolated
+temporary directory and confirmed that its installation record matches the latest package.
+The full Rust test suite passes on Windows (23 tests; one live-CDN test is ignored by
+default). The live-CDN test was also run explicitly, and TypeScript/i18n checks passed. Browser checks using
+Tauri's IPC/event mocks cover dual-source buttons, managed-only updates, progress across
+navigation, installation failure/retry and manifest failure recovery at widths 600/900/1280.
+These checks do not install tools into the user's environment or validate macOS execution.
 
-Official pages:
+At startup and on Re-check, Toolbox fetches the latest manifest independently of local
+tool detection. Only app-managed installation records are compared with the selected
+package's filename and SHA-256, including same-version packaging fixes. Available updates
+are announced once per app session and shown in Settings → Dependencies. System-only
+installations do not produce mirror update reminders.
 
-- FFmpeg current Homebrew build: https://formulae.brew.sh/formula/ffmpeg
-- FFmpeg 7: https://formulae.brew.sh/formula/ffmpeg%407
-- FFmpeg 6: https://formulae.brew.sh/formula/ffmpeg%406
-- FFmpeg 5: https://formulae.brew.sh/formula/ffmpeg%405
-- FFmpeg source and historical releases: https://ffmpeg.org/download.html
-- yt-dlp: https://github.com/yt-dlp/yt-dlp/releases
-- MediaInfo CLI: https://mediaarea.net/MediaInfo/Download/Mac_OS
-- Deno: https://docs.deno.com/runtime/getting_started/installation/
+Each binary tool offers CDN installation alongside the system command option when a
+system copy is missing. FFprobe is installed and updated with FFmpeg. Python and musicdl
+offer system commands only. Download progress remains available when leaving and
+returning to settings. A failed manifest check does not invalidate local dependencies.
 
-## Windows x64 Lite build
+App-managed files belong under `<app data>/dependencies/<tool>/`, not inside the
+application bundle. `ffmpeg` and `ffprobe` share one package directory. Toolbox's local
+`installation.json` records its installed version, ZIP identity and relative executable
+paths; this record is not the remote `version.json` schema.
 
-On Windows 10 22H2 or Windows 11 x64, install the required tools with WinGet:
+The mirror command accepts a tool identifier and reads the current manifest in the
+backend before installing. It downloads the selected ZIP from the dependency share
+with the configured proxy, verifies SHA-256,
+then extracts it into a temporary directory. Only archive boundaries and required files
+are checked; installation does not run tools or parse their version output. FFmpeg requires
+both executables, and macOS executable permissions are restored. `installation.json` is
+reserved for Toolbox and must not be included in a dependency ZIP.
+
+Replacement checks relevant queued/running tasks before downloading and again before
+switching directories. BBDown login data is copied at the switch, not from an earlier
+download-time snapshot. A failed switch restores the old directory; if restoration fails,
+the old files are retained at the path reported in the error. This temporary recovery does
+not expose historical dependency versions or a rollback feature. SHA-256 checks integrity,
+not publisher identity; it is not a manifest-signing implementation.
+
+The backend emits `dependency-download-progress` (`tool`, `received`, optional `total`)
+and the existing `dependency-install-finished` event. Windows tests use tiny local ZIPs
+and a loopback HTTP server for download, hash mismatch, archive/file checks, state
+preservation and failed replacement. They do not verify real CDN assets or macOS runtime.
+
+## Windows x64: system installation
 
 ```powershell
 winget install --id nilaoda.BBDown -e
@@ -35,67 +68,47 @@ winget install --id MediaArea.MediaInfo -e
 winget install --id DenoLand.Deno -e
 ```
 
-MAD Toolbox searches the inherited `PATH`, the application directory,
-WindowsApps, WinGet Links and the supported packages under WinGet Packages,
-Scoop/Chocolatey shims, pipx locations, and the Python 3.13 location used by the
-in-app installer. It does not reread the registry `PATH` while running; restart
-the app to detect tools newly installed into other locations. Use Settings to
-choose whether bundled or system tools are preferred.
+Toolbox searches PATH and the supported WinGet, Scoop, Chocolatey, pipx and Python
+locations. Restart the application when installation modifies PATH outside the known
+locations. Missing WebView2 is installed using the bootstrapper; the application
+installer no longer contains an offline runtime payload.
 
-The Windows Lite installer does not install WebView2. It uses the system
-WebView2 Runtime, which is normally present on Windows 10 22H2 and Windows 11;
-install the runtime separately if it is missing. Use the Full installer when a
-network-free WebView2 installation is required.
+## macOS arm64: system installation
 
-Official or project-designated release pages:
+```sh
+brew install ffmpeg yt-dlp media-info deno
+dotnet tool install --global BBDown
+```
 
-- BBDown: https://github.com/nilaoda/BBDown/releases
-- FFmpeg official build index: https://ffmpeg.org/download.html
-- Gyan Windows builds: https://www.gyan.dev/ffmpeg/builds/
-- BtbN Windows builds: https://github.com/BtbN/FFmpeg-Builds/releases
-- yt-dlp: https://github.com/yt-dlp/yt-dlp/releases
-- MediaInfo CLI: https://mediaarea.net/MediaInfo/Download/Windows
-- Deno: https://github.com/denoland/deno/releases
+BBDown's command requires an existing .NET SDK. Toolbox searches Homebrew locations,
+PATH, `~/.local/bin` and `~/.dotnet/tools`. System BBDown is supported on macOS;
+it is no longer restricted to an application-bundled executable.
 
-Windows binaries may also be selected from a local folder in the GUI.
+## Python and musicdl
 
-## Windows x64 Full build
+Python and musicdl remain system-only dependencies. Settings generates the existing
+Python/pipx installation or repair command and provides it for copying or terminal
+execution. Missing music dependencies do not disable video features.
 
-The Full installer contains pinned x64 builds of BBDown, FFmpeg/ffprobe,
-MediaInfo CLI, yt-dlp and Deno. No commands above are required. Its exact
-downloads, archive and executable SHA-256 values are recorded in
-`third_party/windows-sources.json`. The Windows Full installer also embeds the
-WebView2 offline installer, so installing and launching it does not require an
-internet connection. Network access is still required for network-video tasks
-themselves.
+Toolbox reuses a runnable Python 3.10+ interpreter with venv support and explicitly
+passes it to pipx. If none is found, the installer selects Python 3.13. The interpreter
+recorded in the musicdl launcher is authoritative. Failed imports are reported;
+automatic repair is only offered for a confirmed pipx environment. Custom pipx
+home and launcher directories are retained during repair.
 
-The current FFmpeg sidecars use BtbN's LGPL static Windows x64 build. This
-keeps GPL and nonfree components out of the distributed package. The exact
-FFmpeg source revision and BtbN build-recipe snapshot are published beside each
-release as separate downloads and linked from `THIRD_PARTY_NOTICES.md`.
+## Independent dependency publication
 
-Python and musicdl remain external in both modes. Use Settings → Dependencies
-for the command generated for your environment. The displayed command and the
-install button share the backend installation rules. Windows commands use
-PowerShell 5.1 or newer; macOS commands use `sh`.
+See [the implementation handoff](DEPENDENCY_RELEASE_HANDOFF.md) for upstream sources,
+ZIP packaging, lightweight verification, complete Release publication and OpenList
+configuration. The dependency share is separate from the application update share:
 
-Settings → Dependencies lists each tool's purpose instead of a global optional
-label. Unavailable tools appear first and automatically expand the status panel,
-including Python and musicdl. You can still collapse it manually; newly missing
-tools or re-checking while tools are missing expand it again. The summary counts
-all unavailable tools; each row explains which feature needs the tool or which
-fallback is available. Missing music tools do not prevent using video features.
+- Application updates: `/sd/mt/latest.json`.
+- Dependency manifest: `/sd/mt_dependencies/version.json`.
 
-For musicdl, the app reuses a runnable Python 3.10+ interpreter with the `venv`
-module and explicitly passes its path to pipx. If none is found, it installs
-Python 3.13 (WinGet on Windows, `python@3.13` on Homebrew). Package dependency
-compatibility is still checked by pip during installation. Existing pipx is
-reused; otherwise it is installed with Python/pip on Windows or Homebrew on macOS.
+Schema 1 uses `platforms.windows-x64` and `platforms.macos-arm64`, each containing the
+five binary packages. Each entry supplies `version`, `fileName`, `sha256`, `size` and
+relative `executables`. Publisher provenance fields and `generatedAt` do not gate updates.
+See the dependency repository README for the authoritative publication contract.
 
-The app reads the interpreter recorded in the musicdl launcher instead of
-guessing which Python owns it. Failed imports show their error output. A
-reinstall command is offered only when the launcher's environment contains
-pipx metadata for musicdl; other environments must be repaired manually.
-Custom pipx environment and exposed-launcher directories are retained during
-repair. After installation, re-check dependencies in Settings if the status
-has not refreshed automatically.
+Release installers include the application version in their filenames. Nightly installers
+also include the source commit prefix, so snapshots of the same version can be distinguished.

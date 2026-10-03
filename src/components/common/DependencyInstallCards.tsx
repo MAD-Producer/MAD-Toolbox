@@ -38,14 +38,15 @@ interface DependencyInstallCardsProps {
 const tooltipEvents = { hover: true, focus: true, touch: false } as const;
 
 export function DependencyInstallCards({ dependencies }: DependencyInstallCardsProps) {
-  const missing = dependencies.filter(
-    (item) => !item.available && (item.installCommand || item.installHint)
+  const installable = dependencies.filter(
+    (item) =>
+      (!item.systemAvailable || !item.available) && (item.installCommand || item.installHint)
   );
-  if (missing.length === 0) return null;
+  if (installable.length === 0) return null;
 
   return (
     <Stack gap="md">
-      {missing.map((dependency) => {
+      {installable.map((dependency) => {
         const command = dependency.installCommand;
         return (
           <Card
@@ -64,6 +65,11 @@ export function DependencyInstallCards({ dependencies }: DependencyInstallCardsP
               {dependency.tool === "musicdl" && (
                 <Text size="sm" c="dimmed">
                   {t("deps.musicdlPipxNote")}
+                </Text>
+              )}
+              {command && dependency.installHint && (
+                <Text size="sm" c="dimmed">
+                  {dependency.installHint}
                 </Text>
               )}
               {command && (

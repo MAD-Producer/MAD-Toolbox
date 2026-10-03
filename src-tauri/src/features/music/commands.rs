@@ -20,7 +20,7 @@ use super::types::{
     MusicdlSearchResponse,
 };
 use super::{cli, runtime};
-use crate::core::deps::{command_path, musicdl_python, resolve_tool, ToolName};
+use crate::core::deps::{execution_path, musicdl_python, resolve_tool, ToolName};
 use crate::core::process::spawn_tree;
 use crate::core::query::{JobState, RunResult};
 use crate::core::settings::{load_app_settings, unified_output_directory};
@@ -165,7 +165,7 @@ pub(crate) async fn musicdl_search(
         request_path.to_string_lossy().into_owned(),
         state_path.to_string_lossy().into_owned(),
     ];
-    let env_path = command_path();
+    let env_path = execution_path(&app);
     let proxy = load_app_settings(&app).proxy;
     let mut child =
         spawn_tree(&python, &argv, None, Some(&env_path), proxy.as_deref()).map_err(|error| {
@@ -419,7 +419,7 @@ pub(crate) async fn musicdl_download(
             .clone()
             .map(|d| vec![d])
             .unwrap_or_default(),
-        env_path: Some(command_path()),
+        env_path: Some(execution_path(&app)),
         intent: TaskIntent::Form(serde_json::json!({
             "musicdl": "download",
             "sessionId": session_id,
@@ -526,7 +526,7 @@ pub(crate) async fn musicdl_playlist(
         argv,
         cwd: Some(std::path::PathBuf::from(output_directory.clone())),
         output_paths: vec![output_directory.clone()],
-        env_path: Some(command_path()),
+        env_path: Some(execution_path(&app)),
         intent: TaskIntent::Form(serde_json::json!({
             "musicdl": "playlist",
             "playlistUrl": request.playlist_url,

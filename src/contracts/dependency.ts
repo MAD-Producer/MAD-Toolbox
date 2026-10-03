@@ -5,10 +5,9 @@ export interface DependencyStatus {
   tool: ToolName;
   label: string;
   available: boolean;
-  bundled: boolean;
-  bundledAvailable: boolean;
+  managedAvailable: boolean;
   systemAvailable: boolean;
-  source: "bundled" | "system" | null;
+  source: "managed" | "system" | null;
   path: string | null;
   version: string | null;
   healthCheckFailed: boolean;
@@ -17,4 +16,24 @@ export interface DependencyStatus {
   installShell: "PowerShell" | "sh";
   required: boolean;
   installHint: string | null;
+}
+
+export interface ManagedDependency {
+  version: string;
+  fileName: string;
+  sha256: string;
+  executables: Partial<Record<ToolName, string>>;
+}
+
+export interface DependencyDownloadProgress {
+  tool: ToolName;
+  received: number;
+  total: number | null;
+}
+
+export interface MirrorDependencyStatus extends ManagedDependency {
+  tool: ToolName;
+  size: number;
+  installedVersion: string | null;
+  updateAvailable: boolean;
 }

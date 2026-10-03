@@ -10,7 +10,7 @@ use tokio::sync::Semaphore;
 
 use super::adapter::{self, NetworkCtx, ProbeKind};
 use crate::core::adapter::{preview_result, PreviewResult, SubmitResult};
-use crate::core::deps::{command_path, resolve_tool, ToolName};
+use crate::core::deps::{execution_path, resolve_tool, ToolName};
 use crate::core::settings::load_app_settings;
 use crate::core::task::types::{CwdPolicy, Feature, TaskIntent};
 use crate::core::task::{TaskHub, TaskSpec};
@@ -61,7 +61,7 @@ pub fn network_submit(
         argv_redacted: plan.argv_redacted,
         cwd,
         output_paths: plan.output_paths,
-        env_path: Some(command_path()),
+        env_path: Some(execution_path(&app)),
         intent: adapter::sanitize_intent(&intent),
         parser,
         cleanup_dir: None,
@@ -92,7 +92,7 @@ pub async fn network_probe(
         .map_err(|_| rust_i18n::t!("backend.network.commands.probe_channel_closed").to_string())?;
     let mut cmd = tokio::process::Command::new(&tool_path);
     cmd.args(&argv)
-        .env("PATH", command_path())
+        .env("PATH", execution_path(&app))
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())

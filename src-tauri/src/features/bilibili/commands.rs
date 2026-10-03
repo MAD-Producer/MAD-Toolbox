@@ -6,7 +6,7 @@ use tauri::{AppHandle, State};
 
 use super::{adapter, login};
 use crate::core::adapter::{preview_result, PreviewResult, SubmitResult};
-use crate::core::deps::{command_path, resolve_tool, ToolName};
+use crate::core::deps::{execution_path, resolve_tool, ToolName};
 use crate::core::query::RunResult;
 use crate::core::task::types::{CwdPolicy, Feature, TaskIntent};
 use crate::core::task::{TaskHub, TaskSpec};
@@ -53,7 +53,7 @@ pub fn bilibili_submit(
     intent: TaskIntent,
 ) -> Result<SubmitResult, String> {
     let plan = adapter::plan(&intent).map_err(|e| e.to_string())?;
-    let (tool_path, _bundled) = resolve_tool(&app, &ToolName::Bbdown)
+    let (tool_path, _managed) = resolve_tool(&app, &ToolName::Bbdown)
         .ok_or_else(|| rust_i18n::t!("backend.bilibili.commands.bbdown_not_found").to_string())?;
     let cwd = match plan.cwd {
         CwdPolicy::ExeDir => Some(login::bbdown_directory(&tool_path)?),
@@ -71,7 +71,7 @@ pub fn bilibili_submit(
         argv_redacted: plan.argv_redacted,
         cwd,
         output_paths: plan.output_paths,
-        env_path: Some(command_path()),
+        env_path: Some(execution_path(&app)),
         // 落库的意图必须先脱敏（§4.5）；本次执行用的完整 argv 不受影响
         intent: adapter::sanitize_intent(&intent),
         parser: None, // BBDown 进度解析待样板后接入

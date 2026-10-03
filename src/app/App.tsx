@@ -125,11 +125,6 @@ export default function App() {
     if (resolveChoice(backendChoice) !== currentLanguage()) setLanguageChoice(backendChoice);
   }, [backend.settings?.language]);
 
-  const distributionMode =
-    backend.dependencies.some((item) => item.required) &&
-    backend.dependencies.every((item) => !item.required || item.bundledAvailable)
-      ? "Full"
-      : "Lite";
   const missingDependencyCount = backend.dependencies.filter(
     (dependency) => dependency.required && !dependency.available
   ).length;
@@ -171,6 +166,21 @@ export default function App() {
       })
     });
   }, [backend.loadingDependencies, backend.dependencies, dependenciesReady]);
+
+  const mirrorUpdatesNotifiedRef = useRef(false);
+  useEffect(() => {
+    if (backend.loadingMirror || backend.mirrorError || mirrorUpdatesNotifiedRef.current) return;
+    const updates = backend.mirrorDependencies.filter((dependency) => dependency.updateAvailable);
+    if (updates.length === 0) return;
+    mirrorUpdatesNotifiedRef.current = true;
+    notifications.show({
+      color: "blue",
+      title: t("deps.updatesAvailable"),
+      message: t("deps.updatesAvailableBody", {
+        names: updates.map((dependency) => dependency.tool).join(", ")
+      })
+    });
+  }, [backend.loadingMirror, backend.mirrorError, backend.mirrorDependencies]);
 
   const showError = (error: unknown) => {
     notifications.show({
@@ -261,8 +271,15 @@ export default function App() {
             onSave={backend.saveSettings}
             dependencies={backend.dependencies}
             loading={backend.loadingDependencies}
-            distributionMode={distributionMode}
-            onRefresh={() => void backend.refreshDependencies()}
+            onRefresh={() => {
+              void backend.refreshDependencies();
+              void backend.refreshMirrorDependencies();
+            }}
+            mirrorDependencies={backend.mirrorDependencies}
+            loadingMirror={backend.loadingMirror}
+            mirrorError={backend.mirrorError}
+            mirrorInstallation={backend.mirrorInstallation}
+            onMirrorInstall={backend.installMirror}
           />
         ) : (
           <AboutSettingsPage />
