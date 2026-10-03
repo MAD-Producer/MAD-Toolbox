@@ -29,9 +29,14 @@ are announced once per app session and shown in Settings → Dependencies. Syste
 installations do not produce mirror update reminders.
 
 Each binary tool offers CDN installation alongside the system command option when a
-system copy is missing. FFprobe is installed and updated with FFmpeg. Python and musicdl
+system copy is missing. Settings shows only FFmpeg and excludes ffprobe from its status
+cards and readiness counts. FFprobe is installed and updated with FFmpeg. Python and musicdl
 offer system commands only. Download progress remains available when leaving and
 returning to settings. A failed manifest check does not invalidate local dependencies.
+
+Install actions appear in each tool's title row, before the source indicator. Cloud and
+device icons distinguish app-managed and system sources; installation actions use cloud
+download and terminal icons. Separate command hint cards are no longer displayed.
 
 App-managed files belong under `<app data>/dependencies/<tool>/`, not inside the
 application bundle. `ffmpeg` and `ffprobe` share one package directory. Toolbox's local
@@ -87,8 +92,8 @@ it is no longer restricted to an application-bundled executable.
 ## Python and musicdl
 
 Python and musicdl remain system-only dependencies. Settings generates the existing
-Python/pipx installation or repair command and provides it for copying or terminal
-execution. Missing music dependencies do not disable video features.
+Python/pipx installation or repair command and opens a terminal to execute it.
+Missing music dependencies do not disable video features.
 
 Toolbox reuses a runnable Python 3.10+ interpreter with venv support and explicitly
 passes it to pipx. If none is found, the installer selects Python 3.13. The interpreter

@@ -12,5 +12,3 @@ export function resolveDefaultOutputDirectory(): Promise<string | null> {
     .catch(() => null);
   return defaultOutputDirectoryPromise;
 }
-
-export const pipCommand = isWindows ? "py -m pip" : "python3 -m pip";

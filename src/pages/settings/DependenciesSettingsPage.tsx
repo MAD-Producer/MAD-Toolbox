@@ -1,6 +1,5 @@
 import { Alert, SegmentedControl, Stack } from "@mantine/core";
 import { notifications } from "../../lib/notifications";
-import { DependencyInstallCards } from "../../components/common/DependencyInstallCards";
 import { DependencyStatusPanel } from "../../components/common/DependencyStatusPanel";
 import type {
   DependencyDownloadProgress,
@@ -104,7 +103,6 @@ export function DependenciesSettingsPage({
         installation={mirrorInstallation}
         onMirrorInstall={(tool) => void onMirrorInstall(tool)}
       />
-      <DependencyInstallCards dependencies={dependencies} />
     </Stack>
   );
 }

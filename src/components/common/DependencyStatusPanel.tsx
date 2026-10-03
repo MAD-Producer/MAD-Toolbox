@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, Card, Group, Progress, Stack, Text } from "@mantine/core";
-import { IconCircleCheck, IconDownload, IconRefresh } from "@tabler/icons-react";
+import {
+  IconCircleCheck,
+  IconCloud,
+  IconCloudDownload,
+  IconDeviceLaptop,
+  IconRefresh,
+  IconTerminal2
+} from "@tabler/icons-react";
 import type {
   DependencyDownloadProgress,
   DependencyStatus,
@@ -40,10 +47,11 @@ export function DependencyStatusPanel({
   installation,
   onMirrorInstall
 }: DependencyStatusPanelProps) {
-  const missing = dependencies.filter((item) => !item.available);
+  const visibleDependencies = dependencies.filter((item) => item.tool !== "ffprobe");
+  const missing = visibleDependencies.filter((item) => !item.available);
   const missingTools = missing.map((item) => item.tool).join(",");
   const [opened, setOpened] = useState(missing.length > 0);
-  const sortedDependencies = [...missing, ...dependencies.filter((item) => item.available)];
+  const sortedDependencies = [...missing, ...visibleDependencies.filter((item) => item.available)];
   const mirrors = new Map(mirrorDependencies.map((dependency) => [dependency.tool, dependency]));
   const updateCount = mirrorDependencies.filter((dependency) => dependency.updateAvailable).length;
 
@@ -95,32 +103,74 @@ export function DependencyStatusPanel({
           const installable =
             (!dependency.systemAvailable || !dependency.available) &&
             Boolean(dependency.installCommand);
-          const mirror = mirrors.get(dependency.tool === "ffprobe" ? "ffmpeg" : dependency.tool);
-          const installing =
-            installation?.tool === (dependency.tool === "ffprobe" ? "ffmpeg" : dependency.tool);
+          const mirror = mirrors.get(dependency.tool);
+          const installing = installation?.tool === dependency.tool;
           const total = installation?.total;
           const received = installation?.received ?? 0;
           const progress = total ? Math.min(100, (received / total) * 100) : 0;
           return (
             <Card key={dependency.tool} withBorder radius="md" padding="sm">
               <Stack gap="xs">
-                <Group justify="space-between" wrap="nowrap">
+                <Group justify="space-between">
                   <Text size="sm" fw={600}>
                     {dependency.label}
                   </Text>
-                  <Badge
-                    color={dependency.available ? "teal" : "yellow"}
-                    variant="transparent"
-                    style={{ flexShrink: 0 }}
-                  >
-                    {dependency.available
-                      ? dependency.source === "managed"
-                        ? t("deps.managed")
-                        : t("deps.system")
-                      : dependency.healthCheckFailed
-                        ? t("deps.environmentBroken")
-                        : t("deps.notReady")}
-                  </Badge>
+                  <Group gap="xs" justify="flex-end" style={{ marginInlineStart: "auto" }}>
+                    {mirror && (
+                      <Button
+                        size="compact-sm"
+                        variant="light"
+                        loading={installing}
+                        disabled={installation !== null}
+                        leftSection={<IconCloudDownload size={14} />}
+                        onClick={() => onMirrorInstall(dependency.tool)}
+                      >
+                        {mirror.updateAvailable
+                          ? t("deps.mirrorUpdate")
+                          : dependency.managedAvailable
+                            ? t("deps.mirrorReinstall")
+                            : t("deps.mirrorInstall")}
+                      </Button>
+                    )}
+                    {installable && (
+                      <Button
+                        size="compact-sm"
+                        variant="subtle"
+                        color="teal"
+                        disabled={installation !== null}
+                        leftSection={<IconTerminal2 size={14} />}
+                        aria-label={t(
+                          dependency.healthCheckFailed ? "deps.repairAria" : "deps.installAria",
+                          { name: dependency.label }
+                        )}
+                        onClick={() => onInstall(dependency)}
+                      >
+                        {dependency.healthCheckFailed ? t("deps.repair") : t("deps.install")}
+                      </Button>
+                    )}
+                    <Badge
+                      color={dependency.available ? "teal" : "yellow"}
+                      variant="transparent"
+                      style={{ flexShrink: 0 }}
+                      leftSection={
+                        dependency.available ? (
+                          dependency.source === "managed" ? (
+                            <IconCloud size={14} />
+                          ) : (
+                            <IconDeviceLaptop size={14} />
+                          )
+                        ) : undefined
+                      }
+                    >
+                      {dependency.available
+                        ? dependency.source === "managed"
+                          ? t("deps.managed")
+                          : t("deps.system")
+                        : dependency.healthCheckFailed
+                          ? t("deps.environmentBroken")
+                          : t("deps.notReady")}
+                    </Badge>
+                  </Group>
                 </Group>
                 <Text size="xs" c="dimmed">
                   {t(TOOL_PURPOSES[dependency.tool])}
@@ -146,7 +196,7 @@ export function DependencyStatusPanel({
                     {dependency.healthCheckError}
                   </Text>
                 )}
-                {mirror && dependency.tool !== "ffprobe" && (
+                {mirror && (
                   <Group gap="xs">
                     <Text size="xs" c="dimmed">
                       {t("deps.mirrorVersion", {
@@ -161,12 +211,7 @@ export function DependencyStatusPanel({
                     )}
                   </Group>
                 )}
-                {dependency.tool === "ffprobe" && (
-                  <Text size="xs" c="dimmed">
-                    {t("deps.ffprobeShared")}
-                  </Text>
-                )}
-                {installing && installation && dependency.tool !== "ffprobe" && (
+                {installing && installation && (
                   <Stack gap="xs" aria-live="polite">
                     <Progress
                       value={total ? progress : 100}
@@ -185,39 +230,6 @@ export function DependencyStatusPanel({
                     </Text>
                   </Stack>
                 )}
-                <Group gap="xs" wrap="wrap">
-                  {mirror && dependency.tool !== "ffprobe" && (
-                    <Button
-                      size="compact-sm"
-                      variant="light"
-                      loading={installing}
-                      disabled={installation !== null}
-                      leftSection={<IconDownload size={14} />}
-                      onClick={() => onMirrorInstall(dependency.tool)}
-                    >
-                      {mirror.updateAvailable
-                        ? t("deps.mirrorUpdate")
-                        : dependency.managedAvailable
-                          ? t("deps.mirrorReinstall")
-                          : t("deps.mirrorInstall")}
-                    </Button>
-                  )}
-                  {installable && (
-                    <Button
-                      size="compact-sm"
-                      variant="subtle"
-                      color="teal"
-                      disabled={installation !== null}
-                      aria-label={t(
-                        dependency.healthCheckFailed ? "deps.repairAria" : "deps.installAria",
-                        { name: dependency.label }
-                      )}
-                      onClick={() => onInstall(dependency)}
-                    >
-                      {dependency.healthCheckFailed ? t("deps.repair") : t("deps.install")}
-                    </Button>
-                  )}
-                </Group>
               </Stack>
             </Card>
           );
