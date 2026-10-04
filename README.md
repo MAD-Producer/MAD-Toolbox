@@ -17,8 +17,9 @@
 
 ---
 
-> [!INFO]
+> [!NOTE]
 > MAD Toolbox for Windows is now live on the Microsoft Store 🥳! Simply search `MAD-Toolbox` to download and install with a single click. Feel free to check it out!
+>
 > <a href="https://get.microsoft.com/installer/download/xpdm0jg6rxrgt5?referrer=appbadge" target="_self" >
 > <img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
 > </a>
