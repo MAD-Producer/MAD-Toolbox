@@ -164,6 +164,11 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
   !define MUI_UNICON "${UNINSTALLERICON}"
 !endif
 
+; Re-stretch branding bitmaps with GDI HALFTONE at runtime; the built-in
+; SetBrandingImage/LoadAndSetImage scaling is nearest-neighbor and looks
+; jagged on displays above 100% DPI.
+!define MUI_CUSTOMFUNCTION_GUIINIT SmoothHeaderImage
+
 ; Define registry key to store installer language
 !define MUI_LANGDLL_REGISTRY_ROOT "HKCU"
 !define MUI_LANGDLL_REGISTRY_KEY "${MANUPRODUCTKEY}"
@@ -172,13 +177,16 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 ; Installer pages, must be ordered as they appear
 ; 1. Welcome Page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW SmoothWizardImage
 !insertmacro MUI_PAGE_WELCOME
 
-; 2. License Page (if defined)
-!if "${LICENSE}" != ""
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-  !insertmacro MUI_PAGE_LICENSE "${LICENSE}"
-!endif
+; 2. Privacy policy page: acceptance is required to continue; skipped for
+;    passive installs (silent installs skip all pages)
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!define MUI_LICENSEPAGE_RADIOBUTTONS
+!define MUI_LICENSEPAGE_TEXT_TOP "$(MADPrivacyTop)"
+!define MUI_LICENSEPAGE_TEXT_BOTTOM "$(MADPrivacyBottom)"
+!insertmacro MUI_PAGE_LICENSE "$(MADPrivacy)"
 
 ; 3. Install mode (if it is set to `both`)
 !if "${INSTALLMODE}" == "both"
@@ -419,6 +427,7 @@ Var AppStartMenuFolder
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION RunMainBinary
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW SmoothFinishImage
 !insertmacro MUI_PAGE_FINISH
 
 Function RunMainBinary
@@ -914,6 +923,58 @@ Function SkipIfPassive
 FunctionEnd
 Function un.SkipIfPassive
   ${IfThen} $PassiveMode = 1  ${|} Abort ${|}
+FunctionEnd
+
+; Re-stretch a static bitmap control's image with GDI HALFTONE filtering
+; (mode 4). MUI2's built-in scaling is nearest-neighbor and jagged above
+; 100% DPI. ${CONTROL} must already hold a loaded bitmap; ${PATH} is the
+; source BMP file extracted to $PLUGINSDIR.
+!macro MAD_SMOOTHIMAGE CONTROL PATH
+  System::Alloc 16
+  Pop $0
+  System::Call "user32::GetClientRect(p ${CONTROL}, pr0)"
+  System::Call "*$0(i .r1, i .r2, i .r3, i .r4)"
+  System::Free $0
+  IntOp $3 $3 - $1
+  IntOp $4 $4 - $2
+  IntCmp $3 0 mads_done mads_done mads_go
+mads_go:
+  System::Call `gdi32::LoadImage(p 0, t "${PATH}", i 0, i 0, i 0, i 0x10) p .r5`
+  IntCmp $5 0 mads_done mads_done mads_load
+mads_load:
+  System::Call "user32::GetDC(p ${CONTROL}) p .r6"
+  System::Call "gdi32::CreateCompatibleDC(p r6) p .r7"
+  System::Call "gdi32::CreateCompatibleBitmap(p r6, i r3, i r4) p .r8"
+  System::Call "gdi32::SelectObject(p r7, p r8)"
+  System::Call "gdi32::SetStretchBltMode(p r7, i 4)"
+  System::Call "gdi32::SetBrushOrgEx(p r7, i 0, i 0, p 0)"
+  System::Call "gdi32::CreateCompatibleDC(p r6) p .r9"
+  System::Call "gdi32::SelectObject(p r9, p r5)"
+  System::Alloc 24
+  Pop $0
+  System::Call "gdi32::GetObjectW(p r5, i 24, pr0)"
+  System::Call "*$0(i .r1, i .r10, i .r11)"
+  System::Free $0
+  System::Call "gdi32::StretchBlt(p r7, i 0, i 0, i r3, i r4, p r9, i 0, i 0, i r10, i r11, i 0x00CC0020)"
+  System::Call "gdi32::DeleteDC(p r9)"
+  System::Call "gdi32::DeleteObject(p r5)"
+  System::Call "user32::SendMessage(p ${CONTROL}, i 0x0172, i 0, p r8) p .r0"
+  System::Call "gdi32::DeleteObject(p r0)"
+  System::Call "gdi32::DeleteDC(p r7)"
+  System::Call "user32::ReleaseDC(p ${CONTROL}, p r6)"
+mads_done:
+!macroend
+
+Function SmoothHeaderImage
+  !insertmacro MAD_SMOOTHIMAGE $mui.Header.Image "$PLUGINSDIR\modern-header.bmp"
+FunctionEnd
+
+Function SmoothWizardImage
+  !insertmacro MAD_SMOOTHIMAGE $mui.WelcomePage.Image "$PLUGINSDIR\modern-wizard.bmp"
+FunctionEnd
+
+Function SmoothFinishImage
+  !insertmacro MAD_SMOOTHIMAGE $mui.FinishPage.Image "$PLUGINSDIR\modern-wizard.bmp"
 FunctionEnd
 
 Function CreateOrUpdateStartMenuShortcut

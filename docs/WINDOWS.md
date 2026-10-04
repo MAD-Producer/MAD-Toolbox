@@ -77,24 +77,45 @@ The NSIS wizard is branded and customizable:
 - `scripts/build/installer-branding.ps1` regenerates the installer bitmaps
   (`src-tauri/icons/installer-header.bmp`, 300x114, and
   `src-tauri/icons/installer-sidebar.bmp`, 328x628, shown on the Welcome and
-  Finish pages) from the app icon and the theme brand color. Re-run it after
-  changing either, and keep the dimensions and 24-bit BMP format. Both are 2x
-  supersampled: MUI2 stretches bitmaps onto DPI-scaled controls, so a 1x
-  (150x57 / 164x314) bitmap blurs on any display above 100% scaling, while a
-  2x source is downscaled everywhere. The header stays icon-only because the
-  page title is NSIS-drawn text; bitmap text would be clipped by the control.
+  Finish pages) by rasterizing the vector logo `assets/logo.svg` with Edge or
+  Chrome headless at the final pixel sizes. Both use the brand blue with the
+  icon; the header adds a stacked two-line "MAD Toolbox" wordmark. Re-run it
+  after changing the logo or a lockup, and keep the dimensions and 24-bit BMP
+  format. Both are 2x supersampled: MUI2 stretches bitmaps onto DPI-scaled
+  controls, so a 1x (150x57 / 164x314) bitmap blurs on any display above 100%
+  scaling, while a 2x source is downscaled everywhere. The page title is
+  NSIS-drawn text and is never part of the bitmaps.
 - `src-tauri/windows/installer-hooks.nsh` provides the official install and
   uninstall hook points (`NSIS_HOOK_PREINSTALL`, `NSIS_HOOK_POSTINSTALL`,
   `NSIS_HOOK_PREUNINSTALL`, `NSIS_HOOK_POSTUNINSTALL`). Keep hook bodies free
-  of UI such as `MessageBox` so silent installs never block.
+  of UI such as `MessageBox` so silent installs never block. The file also
+  carries the bilingual privacy-policy strings consumed by the installer's
+  privacy page.
 - `src-tauri/windows/installer.nsi` is the full NSIS template, vendored from
-  tauri-bundler (@tauri-apps/cli v2.11.4). The only local change is
-  `ShowInstDetails show`, so the install page expands its file list by default
-  instead of hiding it behind the "Show details" button. On every
-  @tauri-apps/cli upgrade, re-sync the file from upstream and re-apply that
-  single line; installer wording can also be overridden per language
+  tauri-bundler (@tauri-apps/cli v2.11.4). Local changes: `ShowInstDetails
+  show`; runtime GDI HALFTONE re-stretching of the header and welcome/finish
+  bitmaps (the built-in scaling is nearest-neighbor and jagged above 100%
+  DPI); and the privacy policy page replacing the optional license page. On
+  every @tauri-apps/cli upgrade, re-sync the file from upstream and re-apply
+  these changes; installer wording can also be overridden per language
   (`customLanguageFiles`), see the
   [Windows Installer guide](https://v2.tauri.app/distribute/windows-installer/).
+
+## Privacy policy page
+
+After the Welcome page the installer shows the privacy policy and requires
+selecting "I accept" before Next is enabled (MUI2 radio buttons). The policy
+is shown in Chinese or English following the installer language. The page is
+skipped for passive (`/P`) and silent (`/S`) installs, so in-app updates and
+Microsoft Store installations never block on it.
+
+The policy text has a single source: `src/data/privacy.ts` in the
+madtool-box-site website repository. Regenerate the installer's RTF copies
+after changing it, and commit them:
+
+```powershell
+node scripts/build/privacy-rtf.mjs   # writes src-tauri/windows/licenses/privacy-*.rtf
+```
 
 ## Silent install and uninstall
 

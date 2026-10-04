@@ -15,7 +15,9 @@ All notable changes to MAD Toolbox are documented here.
 - delete: 移除重复的依赖安装提示卡片、旧版内置二进制和 FULL/LITE 打包配置
 - ci: 应用更新统一使用 latest.json，发行包文件名保留版本号，Nightly 安装包增加提交标识
 - feat: 启动提示支持永久关闭，不再每天重复显示
-- fix: 优化 Windows 安装器品牌图片的清晰度，移除重复的标题文字
+- fix: Windows 安装器品牌图片改由 SVG 矢量源直接渲染，消除高 DPI 下的锯齿，并重做侧栏文字排版
+- feat: Windows 安装器新增隐私政策页，需选择「我接受」才能继续；内容与官网隐私政策同源，按安装语言显示中英文
+- feat: 安装器头部品牌图加入 MAD Toolbox 字标并统一品牌蓝背景，头部与欢迎页图片改为高质量拉伸
 - feat: Windows 安装器安装页默认展开详细信息，无需手动点击"显示详细信息"
 
 ## 2.0.0
