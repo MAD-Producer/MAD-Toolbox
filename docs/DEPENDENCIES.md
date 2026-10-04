@@ -108,9 +108,12 @@ home and launcher directories are retained during repair.
 
 ## Independent dependency publication
 
-See [the implementation handoff](DEPENDENCY_RELEASE_HANDOFF.md) for upstream sources,
-ZIP packaging, lightweight verification, complete Release publication and OpenList
-configuration. The dependency share is separate from the application update share:
+Dependencies are published from
+[MAD-Producer/mt_dependencies](https://github.com/MAD-Producer/mt_dependencies), whose
+README is the authoritative contract for upstream sources, ZIP packaging, lightweight
+verification, Release publication and OpenList configuration. Windows FFmpeg uses the
+Gyan Release full static build; macOS uses the Martin Riedel arm64 release. The dependency
+share is separate from the application update share:
 
 - Application updates: `/sd/mt/latest.json`.
 - Dependency manifest: `/sd/mt_dependencies/version.json`.
@@ -118,7 +121,6 @@ configuration. The dependency share is separate from the application update shar
 Schema 1 uses `platforms.windows-x64` and `platforms.macos-arm64`, each containing the
 five binary packages. Each entry supplies `version`, `fileName`, `sha256`, `size` and
 relative `executables`. Publisher provenance fields and `generatedAt` do not gate updates.
-See the dependency repository README for the authoritative publication contract.
 
 Release installers include the application version in their filenames. Nightly installers
 also include the source commit prefix, so snapshots of the same version can be distinguished.

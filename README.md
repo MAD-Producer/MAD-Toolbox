@@ -119,7 +119,6 @@ We warmly welcome contributions from every developer!
 
 - [Windows compatibility, build and security notes](docs/WINDOWS.md)
 - [Dependency installation and independent releases](docs/DEPENDENCIES.md)
-- [Dependency repository and Actions implementation handoff (Chinese)](docs/DEPENDENCY_RELEASE_HANDOFF.md)
 - [Third-party notices and licenses](THIRD_PARTY_NOTICES.md)
 - [Contributing](CONTRIBUTING.md)
 - [Reporting security issues](SECURITY.md)
@@ -128,9 +127,31 @@ We warmly welcome contributions from every developer!
 
 ![Contributors](https://contrib.rocks/image?repo=MAD-Producer/MAD-Toolbox "Contributors")
 
+## Sponsors
+
+<table>
+  <tr>
+    <td width="80" align="center" valign="middle">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="assets/FRAMENEO_logo_white.png">
+        <img src="assets/FRAMENEO_logo_black.png" width="44" alt="FRAMENEO logo">
+      </picture>
+    </td>
+    <td valign="middle">
+      <a href="https://www.frameneo.com/"><strong>FRAMENEO</strong></a><br>
+      Provides CDN delivery for MAD Toolbox, reducing origin bandwidth usage for downloads and updates.
+    </td>
+    <td valign="middle">
+      <a href="https://www.frameneo.com/">FRAMENEO Website</a>
+    </td>
+  </tr>
+</table>
+
 ## Copyright
 
 Copyright © 2026 MAD Producer Studio.
+
+The application collects no user data; see our [privacy policy](https://toolbox.madproducer.cn/privacy/) for details.
 
 **Note: MAD Toolbox is merely a GUI app developed for third-party tools and is intended for communication and learning purposes only. MAD Toolbox is not responsible for any copyright disputes arising from users' usage. Please use the third-party tools with caution, and do not privately redistribute or sell unauthorized material.**
 

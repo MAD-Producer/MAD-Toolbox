@@ -120,7 +120,6 @@ npm run tauri:dev
 
 - [Windows 兼容性、构建与安全说明](docs/WINDOWS.md)
 - [依赖安装与独立发布](docs/DEPENDENCIES.md)
-- [独立依赖仓库与 Actions 实施交接](docs/DEPENDENCY_RELEASE_HANDOFF.md)
 - [第三方软件署名和许可证](THIRD_PARTY_NOTICES.md)
 - [参与贡献](CONTRIBUTING.md)
 - [安全问题报告](SECURITY.md)
@@ -129,9 +128,31 @@ npm run tauri:dev
 
 ![贡献者](https://contrib.rocks/image?repo=MAD-Producer/MAD-Toolbox "贡献者")
 
+## 赞助商
+
+<table>
+  <tr>
+    <td width="80" align="center" valign="middle">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="assets/FRAMENEO_logo_white.png">
+        <img src="assets/FRAMENEO_logo_black.png" width="44" alt="FRAMENEO logo">
+      </picture>
+    </td>
+    <td valign="middle">
+      <a href="https://www.frameneo.com/"><strong>FRAMENEO</strong></a><br>
+      为 MAD Toolbox 提供 CDN 分发支持，降低软件下载与更新的源站流量消耗。
+    </td>
+    <td valign="middle">
+      <a href="https://www.frameneo.com/">FRAMENEO 官网</a>
+    </td>
+  </tr>
+</table>
+
 ## 版权声明
 
 版权所有 © 2026 MAD Producer Studio.
+
+本应用不收集任何用户数据，隐私政策详见 [https://toolbox.madproducer.cn/privacy/](https://toolbox.madproducer.cn/privacy/)。
 
 **注意：MAD ToolBox 仅仅是为第三方工具开发的GUI APP，仅供交流学习使用，用户在使用过程的造成的版权纠纷均不由 MAD Toolbox 承担责任。请谨慎使用相关第三方工具，请勿私自转发或售卖未经授权的资料。**
 
