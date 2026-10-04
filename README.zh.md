@@ -18,6 +18,14 @@
 
 ---
 
+> [!INFO]
+> MAD Toolbox Windows 版已经成功上架微软应用商店🥳，直接搜索 `MAD-Toolbox` 即可一键下载安装，欢迎大家前往使用！
+> <a href="https://get.microsoft.com/installer/download/xpdm0jg6rxrgt5?referrer=appbadge" target="_self" >
+> <img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
+> </a>
+
+---
+
 [ENGLISH](README.md) · 简体中文
 
 ## 功能特性
