@@ -28,6 +28,7 @@
         "languages": ["SimpChinese", "English"],
         "displayLanguageSelector": false,
         "compression": "lzma",
+        "template": "./windows/installer.nsi",
         "installerHooks": "./windows/installer-hooks.nsh",
         "headerImage": "./icons/installer-header.bmp",
         "sidebarImage": "./icons/installer-sidebar.bmp"

@@ -1,6 +1,6 @@
 # Windows x64 build
 
-MAD Toolbox 2.0.0 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
+MAD Toolbox 2.1.0 targets Windows 10 22H2 and Windows 11 on Intel/AMD x64
 processors (`x86_64-pc-windows-msvc`). ARM64 and 32-bit x86 installers are not
 currently produced.
 
@@ -87,9 +87,13 @@ The NSIS wizard is branded and customizable:
   uninstall hook points (`NSIS_HOOK_PREINSTALL`, `NSIS_HOOK_POSTINSTALL`,
   `NSIS_HOOK_PREUNINSTALL`, `NSIS_HOOK_POSTUNINSTALL`). Keep hook bodies free
   of UI such as `MessageBox` so silent installs never block.
-- Beyond these, the full NSIS template can be replaced
-  (`bundle.windows.nsis.template`) and installer wording can be overridden per
-  language (`customLanguageFiles`); see the
+- `src-tauri/windows/installer.nsi` is the full NSIS template, vendored from
+  tauri-bundler (@tauri-apps/cli v2.11.4). The only local change is
+  `ShowInstDetails show`, so the install page expands its file list by default
+  instead of hiding it behind the "Show details" button. On every
+  @tauri-apps/cli upgrade, re-sync the file from upstream and re-apply that
+  single line; installer wording can also be overridden per language
+  (`customLanguageFiles`), see the
   [Windows Installer guide](https://v2.tauri.app/distribute/windows-installer/).
 
 ## Silent install and uninstall
@@ -98,8 +102,8 @@ The installer uses the standard NSIS switches. A complete install/uninstall
 cycle for the unified package still needs platform validation:
 
 ```powershell
-"MAD Toolbox_2.0.0_x64-setup.exe" /S                      # silent install
-"MAD Toolbox_2.0.0_x64-setup.exe" /S /D=D:\Apps\MADToolbox # silent install, custom dir
+"MAD Toolbox_2.1.0_x64-setup.exe" /S                      # silent install
+"MAD Toolbox_2.1.0_x64-setup.exe" /S /D=D:\Apps\MADToolbox # silent install, custom dir
                                                           # (/D must be last and unquoted)
 & "$env:LOCALAPPDATA\Programs\MAD Toolbox\uninstall.exe" /S _?="$env:LOCALAPPDATA\Programs\MAD Toolbox"  # silent uninstall
 ```
