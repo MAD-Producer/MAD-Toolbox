@@ -2,6 +2,22 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 2.1.0
+
+- refactor: 工具依赖与工具箱解耦，Windows 和 macOS 均改为单一安装包，不再区分 FULL/LITE，也不再内置工具依赖
+- feat: Deno、MediaInfo、FFmpeg、BBDown 和 yt-dlp 支持从 FRAMENEO CDN 镜像安装，同时保留系统命令安装入口
+- feat: 应用管理的依赖支持独立检测更新、启动提醒和手动更新，无需升级工具箱；系统版本不参与自动更新检测
+- feat: 镜像安装增加下载进度展示，切换设置页面后仍可查看当前进度
+- feat: 设置页支持优先使用应用管理版本或系统版本，首选来源不可用时自动使用另一来源
+- feat: Python 和 musicdl 保留系统命令安装，继续支持现有 Python 环境与 pipx 安装、修复
+- fix: 镜像清单获取失败不影响本地依赖使用，安装失败不覆盖现有工具，更新 BBDown 时保留登录状态
+- refactor: 依赖安装按钮移到卡片标题右侧，来源与安装方式增加图标；FFmpeg 与 ffprobe 仅显示 FFmpeg 卡片
+- delete: 移除重复的依赖安装提示卡片、旧版内置二进制和 FULL/LITE 打包配置
+- ci: 应用更新统一使用 latest.json，发行包文件名保留版本号，Nightly 安装包增加提交标识
+- feat: 启动提示支持永久关闭，不再每天重复显示
+- fix: 优化 Windows 安装器品牌图片的清晰度，移除重复的标题文字
+- feat: Windows 安装器安装页默认展开详细信息，无需手动点击"显示详细信息"
+
 ## 2.0.0
 
 - ci: Windows LITE 版不再内置 BBDown，发布包体积更小
