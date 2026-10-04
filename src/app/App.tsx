@@ -6,7 +6,7 @@ import { useBackend } from "../hooks/useBackend";
 import { useTasksStore } from "../stores/tasks";
 import type { ToolName } from "../contracts/dependency";
 import type { TaskEnvelope, TaskSeed } from "../contracts/types";
-import { setAppLanguage, syncNativeWindowTheme } from "./api";
+import { syncNativeWindowTheme } from "./api";
 import { checkForUpdate } from "../pages/settings/api";
 import { useUpdateStore } from "../stores/update";
 import { AppShell } from "../components/layout/AppShell";
@@ -29,14 +29,7 @@ import { useBilibiliLoginStore } from "../stores/bilibili-login";
 import { useMusicSessionStore } from "../stores/music-session";
 import { useWorkspacesStore, type WorkspaceId } from "../stores/workspaces";
 import { L1_NAVIGATION } from "./navigation";
-import {
-  currentLanguage,
-  onLanguageChanged,
-  resolveChoice,
-  setLanguageChoice,
-  t,
-  type LanguageChoice
-} from "../locale";
+import { onLanguageChanged, setLanguageChoice, t, type LanguageChoice } from "../locale";
 import {
   DEFAULT_APP_ROUTE,
   routeForTask,
@@ -69,7 +62,7 @@ export default function App() {
   const [taskSeed, setTaskSeed] = useState<TaskSeed | null>(null);
   const [booted, setBooted] = useState(false);
   const [tipsOpened, setTipsOpened] = useState(false);
-  const [lang, setLang] = useState(currentLanguage());
+  const [, setLanguageRevision] = useState(0);
   const backend = useBackend();
   const initTasksStore = useTasksStore((s) => s.init);
   const initBilibiliLogin = useBilibiliLoginStore((state) => state.init);
@@ -118,11 +111,10 @@ export default function App() {
     if (!isStartupTipsDismissed()) setTipsOpened(true);
   }, []);
 
-  useEffect(() => onLanguageChanged(() => setLang(currentLanguage())), []);
+  useEffect(() => onLanguageChanged(() => setLanguageRevision((revision) => revision + 1)), []);
 
   useEffect(() => {
-    const backendChoice: LanguageChoice = backend.settings?.language ?? "auto";
-    if (resolveChoice(backendChoice) !== currentLanguage()) setLanguageChoice(backendChoice);
+    if (backend.settings) setLanguageChoice(backend.settings.language);
   }, [backend.settings?.language]);
 
   const missingDependencyCount = backend.dependencies.filter(
@@ -182,20 +174,17 @@ export default function App() {
     });
   }, [backend.loadingMirror, backend.mirrorError, backend.mirrorDependencies]);
 
-  const showError = (error: unknown) => {
-    notifications.show({
-      color: "red",
-      message: error instanceof Error ? error.message : String(error)
-    });
-  };
-
   const consumeTaskSeed = useCallback(() => setTaskSeed(null), []);
 
-  const changeLanguage = (choice: LanguageChoice) => {
+  const changeLanguage = async (choice: LanguageChoice) => {
+    const previousChoice = backend.settings?.language ?? "auto";
     setLanguageChoice(choice);
-    void setAppLanguage(choice)
-      .then(() => backend.refreshSettings())
-      .catch(showError);
+    try {
+      await backend.saveLanguage(choice);
+    } catch (error) {
+      setLanguageChoice(previousChoice);
+      throw error;
+    }
   };
 
   const navigatePrimary = (section: AppSection) => {
@@ -268,7 +257,7 @@ export default function App() {
         ) : route.page === "dependencies" ? (
           <DependenciesSettingsPage
             settings={settings}
-            onSave={backend.saveSettings}
+            onSave={backend.saveDependencyPreference}
             dependencies={backend.dependencies}
             loading={backend.loadingDependencies}
             onRefresh={() => {
@@ -362,7 +351,7 @@ export default function App() {
   if (!booted) return <SplashScreen />;
 
   return (
-    <Fragment key={lang}>
+    <Fragment>
       <AppShell
         route={route}
         primaryItems={L1_NAVIGATION}
@@ -383,7 +372,13 @@ export default function App() {
       >
         <WorkspaceSessionHost activeWorkspace={activeWorkspace} workspaces={workspaces} />
         {activeWorkspace === null ? (
-          <div key={route.section} className="workspace-enter">
+          <div
+            key={route.section}
+            className="workspace-enter"
+            style={{
+              height: route.section === "settings" && route.page === "general" ? "100%" : undefined
+            }}
+          >
             {renderNonWorkspacePage()}
           </div>
         ) : null}

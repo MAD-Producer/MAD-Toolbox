@@ -6,6 +6,11 @@ source is unavailable. System installations are not overwritten or upgraded by T
 System install commands remain available when only an app-managed copy exists, so users
 can install a system copy without removing the managed one first.
 
+Dependency source preference, language and theme changes take effect and are saved
+immediately. General settings shows its Save footer only when the output directory,
+proxy or Cookie files have unsaved changes. Saving those fields preserves the current
+language and dependency source preference.
+
 ## Current integration status
 
 The unified packaging flow, source resolution, schema 1 manifest parsing and mirror

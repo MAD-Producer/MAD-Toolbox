@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { setAppLanguage } from "../app/api";
 import { notifications } from "../lib/notifications";
 import type {
   DependencyDownloadProgress,
@@ -14,7 +15,9 @@ import {
   fetchMirrorDependencyStatus,
   installMirrorDependency,
   saveAppSettings,
-  type AppSettings
+  setDependencyPreference,
+  type AppSettings,
+  type GeneralSettingsDraft
 } from "../pages/settings/api";
 
 export function useBackend() {
@@ -30,6 +33,7 @@ export function useBackend() {
   const mirrorRequest = useRef<Promise<void> | null>(null);
   const mirrorInstalling = useRef(false);
   const progressListener = useRef<ReturnType<typeof listen> | null>(null);
+  const settingsUpdates = useRef<Promise<void>>(Promise.resolve());
 
   const refreshMirrorDependencies = useCallback(() => {
     if (mirrorRequest.current) return mirrorRequest.current;
@@ -66,11 +70,33 @@ export function useBackend() {
     }
   }, []);
 
-  const saveSettings = useCallback(async (next: AppSettings) => {
-    const saved = await saveAppSettings(next);
-    setSettings(saved);
-    return saved;
+  const updateSettings = useCallback((operation: () => Promise<AppSettings>) => {
+    const request = settingsUpdates.current.then(operation).then((saved) => {
+      setSettings(saved);
+      return saved;
+    });
+    settingsUpdates.current = request.then(
+      () => {},
+      () => {}
+    );
+    return request;
   }, []);
+
+  const saveSettings = useCallback(
+    (next: GeneralSettingsDraft) => updateSettings(() => saveAppSettings(next)),
+    [updateSettings]
+  );
+
+  const saveDependencyPreference = useCallback(
+    (preference: AppSettings["dependencyPreference"]) =>
+      updateSettings(() => setDependencyPreference(preference)),
+    [updateSettings]
+  );
+
+  const saveLanguage = useCallback(
+    (language: AppSettings["language"]) => updateSettings(() => setAppLanguage(language)),
+    [updateSettings]
+  );
 
   const installMirror = useCallback(
     async (tool: ToolName) => {
@@ -139,6 +165,8 @@ export function useBackend() {
     loadingDependencies,
     settings,
     saveSettings,
+    saveDependencyPreference,
+    saveLanguage,
     refreshSettings,
     refreshDependencies,
     mirrorDependencies,

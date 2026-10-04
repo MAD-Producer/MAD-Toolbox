@@ -1,4 +1,5 @@
 import { Alert, SegmentedControl, Stack } from "@mantine/core";
+import { useEffect, useState } from "react";
 import { notifications } from "../../lib/notifications";
 import { DependencyStatusPanel } from "../../components/common/DependencyStatusPanel";
 import type {
@@ -14,7 +15,7 @@ import { SettingsRow, SettingsSectionCard } from "./SettingsBlocks";
 
 interface DependenciesSettingsPageProps {
   settings: AppSettings;
-  onSave: (settings: AppSettings) => Promise<AppSettings>;
+  onSave: (preference: AppSettings["dependencyPreference"]) => Promise<AppSettings>;
   dependencies: DependencyStatus[];
   loading: boolean;
   onRefresh: () => void;
@@ -37,17 +38,28 @@ export function DependenciesSettingsPage({
   mirrorInstallation,
   onMirrorInstall
 }: DependenciesSettingsPageProps) {
+  const [preference, setPreference] = useState(settings.dependencyPreference);
+  const [changingPreference, setChangingPreference] = useState(false);
+
+  useEffect(() => {
+    if (!changingPreference) setPreference(settings.dependencyPreference);
+  }, [settings.dependencyPreference, changingPreference]);
+
   const changePreference = async (value: string) => {
-    const preference = value as AppSettings["dependencyPreference"];
-    if (preference === settings.dependencyPreference) return;
+    const nextPreference = value as AppSettings["dependencyPreference"];
+    if (changingPreference || nextPreference === preference) return;
+    setPreference(nextPreference);
+    setChangingPreference(true);
     try {
-      await onSave({ ...settings, dependencyPreference: preference });
+      await onSave(nextPreference);
       onRefresh();
     } catch (error) {
       notifications.show({
         message: t("settings.saveFailed", { error: String(error) }),
         color: "red"
       });
+    } finally {
+      setChangingPreference(false);
     }
   };
 
@@ -75,7 +87,8 @@ export function DependenciesSettingsPage({
         >
           <SegmentedControl
             radius="md"
-            value={settings.dependencyPreference}
+            value={preference}
+            disabled={changingPreference}
             onChange={(value) => void changePreference(value)}
             data={[
               { value: "managed", label: t("settings.deps.preferManaged") },

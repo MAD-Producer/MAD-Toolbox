@@ -14,6 +14,11 @@ export interface AppSettings {
   cookieFiles: CookieFileOption[];
 }
 
+export type GeneralSettingsDraft = Pick<
+  AppSettings,
+  "defaultOutputDirectory" | "proxy" | "cookieFiles"
+>;
+
 export interface UpdateCheck {
   currentVersion: string;
   latestVersion: string;
@@ -25,8 +30,14 @@ export function fetchAppSettings(): Promise<AppSettings> {
   return invoke<AppSettings>("app_settings");
 }
 
-export function saveAppSettings(settings: AppSettings): Promise<AppSettings> {
+export function saveAppSettings(settings: GeneralSettingsDraft): Promise<AppSettings> {
   return invoke<AppSettings>("save_app_settings", { settings });
+}
+
+export function setDependencyPreference(
+  preference: AppSettings["dependencyPreference"]
+): Promise<AppSettings> {
+  return invoke<AppSettings>("set_dependency_preference", { preference });
 }
 
 export function checkForUpdate(): Promise<UpdateCheck> {
