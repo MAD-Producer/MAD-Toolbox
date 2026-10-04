@@ -68,6 +68,7 @@ jobs:
           cache: npm
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
+          cache: false
           components: rustfmt
       - run: npm ci
       - name: Check version references
@@ -102,10 +103,13 @@ jobs:
       - name: Set up Rust (macOS)
         if: matrix.platform == 'macos-14'
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
       - name: Set up Rust (Windows)
         if: matrix.platform == 'windows-2022'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
+          cache: false
           target: x86_64-pc-windows-msvc
 
       - uses: Swatinem/rust-cache@v2

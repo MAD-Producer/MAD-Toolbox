@@ -52,6 +52,11 @@ runs TypeScript and `cargo check` preflights and produces the native application
 installer without downloading or packaging command-line dependencies. CI uses
 the same command with an explicit target.
 
+CI disables the built-in cache in `actions-rust-lang/setup-rust-toolchain` and
+uses the separate `Swatinem/rust-cache` step with `workspaces: src-tauri`.
+Keep this single cache configuration: the repository root has no `Cargo.toml`,
+so the setup action's default root-level cache fails during post-job cleanup.
+
 The automation lives in `scripts/`, split by responsibility:
 
 ```text

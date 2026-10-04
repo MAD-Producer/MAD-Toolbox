@@ -93,7 +93,7 @@ The NSIS wizard is branded and customizable:
   privacy page.
 - `src-tauri/windows/installer.nsi` is the full NSIS template, vendored from
   tauri-bundler (@tauri-apps/cli v2.11.4). Local changes: `ShowInstDetails
-  show`; runtime GDI HALFTONE re-stretching of the header and welcome/finish
+show`; runtime GDI HALFTONE re-stretching of the header and welcome/finish
   bitmaps (the built-in scaling is nearest-neighbor and jagged above 100%
   DPI); and the privacy policy page replacing the optional license page. On
   every @tauri-apps/cli upgrade, re-sync the file from upstream and re-apply
