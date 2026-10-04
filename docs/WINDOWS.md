@@ -133,6 +133,78 @@ for the Partner Center flow. Package the Store build with
 `tauri build --no-bundle` plus `tauri bundle --config` if Store-specific
 settings ever need to diverge from the GitHub-distributed installers.
 
+### Automated Store updates
+
+`.github/workflows/publish-microsoft-store.yml` checks the latest stable GitHub
+Release at minutes 7 and 37 of every hour. It runs independently of the release
+build, so OpenList's 30-minute cache does not hold up GitHub publishing.
+The workflow must be on the default branch for scheduled runs to execute.
+
+Configure these repository Actions secrets:
+
+- `STORE_APP_ID`: the application's Partner Center product ID.
+- `STORE_SELLER_ID`: the account's Seller ID.
+- `STORE_TENANT_ID`: the associated Microsoft Entra tenant ID.
+- `STORE_CLIENT_ID`: the Entra application's client ID.
+- `STORE_CLIENT_SECRET`: its client secret value.
+
+The Entra application must be associated with Partner Center and have the
+Manager role. The Store product must already have an x64 EXE package configured;
+its languages, silent-install parameters and other package settings are preserved.
+
+Keep the latest-only OpenList `/mt` mount unchanged. Create a separate GitHub
+Releases mount `/mt_store` for `MAD-Producer/MAD-Toolbox`, enable all versions,
+and share it under the ID `mt_store` without a password or expiry. Installer
+URLs have the form
+`https://openlist.frameneo.com/sd/mt_store/v2.1.0/MAD.Toolbox_2.1.0_x64-setup.exe`.
+Keep the referenced GitHub releases and installer assets available and unchanged.
+
+Only the unified `MAD.Toolbox_<version>_x64-setup.exe` is submitted. Releases
+without that asset (including the existing FULL/LITE releases) are skipped.
+The mirror check uses HEAD, checks the response type and advertised size, and
+does not download the installer. A missing mirror waits for the next scheduled run.
+
+The script follows the official
+[MSI/EXE submission API](https://learn.microsoft.com/en-us/windows/apps/publish/store-submission-api):
+update the existing package, commit it, check processing readiness, and submit.
+It saves a small `microsoft-store-submission.json` asset on the corresponding
+GitHub Release with the package URL and submission ID. This persists prepared
+packages and submitted updates across runs without committing state to the repository.
+Do not delete this asset while the workflow is managing the submission.
+
+Before submission, the workflow fills each existing listing language's `whatsNew`
+field from the GitHub Release's Markdown bullet items, which the release workflow
+generates from the version's CHANGELOG section. Download tables and introductory
+text are excluded. The same original notes are used in every listing language;
+no automatic translation is performed. Notes over the Store's 1,500-character
+limit are truncated with an ellipsis; absent change items leave existing notes
+unchanged. This intentionally replaces any manually entered `whatsNew`, using
+a field-only metadata PATCH that preserves descriptions, screenshots, pricing
+and other listing settings. Metadata processing resumes on the next run if needed.
+
+The submission API submits the **entire current draft**, not just the package
+and `whatsNew`. Manually saved description or other draft changes are therefore
+included in certification when the workflow submits a new version. Runs that
+skip a version or only check an active submission do not submit those changes.
+
+Manual runs default to `dry_run=true`, which performs read-only checks. Set it
+to false to submit immediately. An active submission is left to finish; an
+already published version is skipped. Rejected submissions fail the workflow
+instead of being resubmitted automatically: read the Partner Center certification
+report, fix the cause, then run manually with `dry_run=false` and
+`retry_failed=true`. Submission success means accepted for certification,
+not that the update is already live. Package processing is checked once per run
+and resumed on the next run if necessary; no runner waits through certification.
+If the package URL already matches but its submission record is missing, the
+workflow reports `untracked-package` without submitting again. Inspect Partner
+Center before using the same manual retry option to resume an untracked draft.
+
+Run the focused script tests with:
+
+```powershell
+node --test scripts/release/microsoft-store.test.js
+```
+
 ## Unsigned distribution
 
 The installer does not require a paid code-signing certificate. An unsigned

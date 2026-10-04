@@ -72,6 +72,8 @@ jobs:
       - run: npm ci
       - name: Check version references
         run: npm run version:check
+      - name: Check Microsoft Store publishing script
+        run: node --test scripts/release/microsoft-store.test.js
       - name: Check formatting (Prettier)
         run: npm run format:check
       - name: Type check (tsc, incl. vite.config.ts)

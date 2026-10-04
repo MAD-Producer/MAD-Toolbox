@@ -1,0 +1,48 @@
+name: Publish Microsoft Store
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Check release, mirror and Store without making changes
+        type: boolean
+        default: true
+      retry_failed:
+        description: Retry a rejected submission after fixing its cause
+        type: boolean
+        default: false
+
+concurrency:
+  group: microsoft-store
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Check mirror and submit Store update
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out publishing script
+        uses: actions/checkout@v5
+
+      - name: Synchronize Microsoft Store submission
+        uses: actions/github-script@v8
+        env:
+          STORE_APP_ID: ${{ secrets.STORE_APP_ID }}
+          STORE_SELLER_ID: ${{ secrets.STORE_SELLER_ID }}
+          STORE_TENANT_ID: ${{ secrets.STORE_TENANT_ID }}
+          STORE_CLIENT_ID: ${{ secrets.STORE_CLIENT_ID }}
+          STORE_CLIENT_SECRET: ${{ secrets.STORE_CLIENT_SECRET }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+          RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && inputs.retry_failed || false }}
+        with:
+          script: |
+            const { pathToFileURL } = require("node:url");
+            const scriptUrl = pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/release/microsoft-store.js`);
+            const { syncMicrosoftStore } = await import(scriptUrl.href);
+            await syncMicrosoftStore({ github, context, core });
