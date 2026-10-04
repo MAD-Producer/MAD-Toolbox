@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "MAD Toolbox",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "identifier": "org.madproducer.toolbox",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -36,10 +36,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/BBDown"],
     "resources": {
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
-      "../third_party/licenses/BBDown-MIT.txt": "licenses/BBDown-MIT.txt",
       "resources/musicdl-adapter.py": "musicdl-adapter.py"
     },
     "category": "Utility",
@@ -53,7 +51,7 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY0QTM3ODE0QkI1NjFBRjkKUldUNUdsYTdGSGlqWlA1dEFnbncyeDV1djFnT3RiYUkvOU1icDFFcnpkYXUzVC9VNUhGK1FGWSsK",
-      "endpoints": ["https://openlist.frameneo.com/sd/mt/latest-full.json"],
+      "endpoints": ["https://openlist.frameneo.com/sd/mt/latest.json"],
       "windows": {
         "installMode": "passive"
       }

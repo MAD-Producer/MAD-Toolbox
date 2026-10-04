@@ -48,10 +48,6 @@ void i18next.init({
   interpolation: { escapeValue: false }
 });
 
-export function languageChoice(): LanguageChoice {
-  return readStoredChoice();
-}
-
 export function currentLanguage(): Locale {
   return i18next.language?.startsWith("zh") ? "zh" : "en";
 }
@@ -60,8 +56,9 @@ export function setLanguageChoice(choice: LanguageChoice): void {
   try {
     localStorage.setItem(STORAGE_KEY, choice);
   } catch {}
-  void i18next.changeLanguage(resolveChoice(choice));
-  document.documentElement.lang = currentLanguage();
+  void i18next.changeLanguage(resolveChoice(choice)).then(() => {
+    document.documentElement.lang = currentLanguage();
+  });
 }
 
 export function onLanguageChanged(listener: () => void): () => void {

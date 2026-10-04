@@ -1,24 +1,22 @@
-import { Code, Divider, Stack, Text } from "@mantine/core";
+import { Stack, Text } from "@mantine/core";
+import { CommandPreview } from "../../components/common/CommandPreview";
 import { t } from "../../locale";
-import type { MusicSessionPhase } from "../../stores/music-session";
+import { isSearchBusy, type MusicSessionPhase } from "../../stores/music-session";
 
 interface MusicCommandPanelProps {
   preview: string | null;
   previewError: string | null;
   sessionPhase: MusicSessionPhase;
   sourceCount: number;
-  withDivider?: boolean;
 }
 
 export function MusicCommandPanel({
   preview,
   previewError,
   sessionPhase,
-  sourceCount,
-  withDivider
+  sourceCount
 }: MusicCommandPanelProps) {
-  const searchInProgress =
-    sessionPhase === "starting" || sessionPhase === "searching" || sessionPhase === "canceling";
+  const searchInProgress = isSearchBusy(sessionPhase);
 
   return (
     <Stack gap="xs">
@@ -28,15 +26,7 @@ export function MusicCommandPanel({
       <Text size="xs" c="dimmed">
         {t("music.preview.hint")}
       </Text>
-      {previewError ? (
-        <Text size="sm" c="red">
-          {previewError}
-        </Text>
-      ) : (
-        <Code block style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-          {preview ?? "…"}
-        </Code>
-      )}
+      <CommandPreview display={preview} error={previewError} />
       {searchInProgress && (
         <Text size="sm" c="dimmed">
           {sessionPhase === "starting"
@@ -46,7 +36,6 @@ export function MusicCommandPanel({
               : t("music.preview.searching", { count: sourceCount })}
         </Text>
       )}
-      {withDivider && <Divider my={4} />}
     </Stack>
   );
 }

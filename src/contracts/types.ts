@@ -2,6 +2,16 @@ export type Feature = "bilibili" | "network" | "media" | "music";
 
 export type Pool = "download" | "local";
 
+export type MediaOperation =
+  | "remux"
+  | "transcode"
+  | "video-extract"
+  | "audio"
+  | "subtitle-extract"
+  | "thumbnail"
+  | "gif"
+  | "frames";
+
 export interface CookieFileOption {
   alias: string;
   path: string;
@@ -43,6 +53,16 @@ export interface TaskEnvelope {
 export interface TaskSeed {
   task: TaskEnvelope;
   purpose: "rerun" | "reuse";
+}
+
+export interface PreviewResult {
+  display: string;
+  argvRedacted: string[];
+  argv: string[];
+}
+
+export interface SubmitResult {
+  taskId: string;
 }
 
 export type LogStream = "stdout" | "stderr" | "system";

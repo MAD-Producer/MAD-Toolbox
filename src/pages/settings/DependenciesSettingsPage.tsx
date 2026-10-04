@@ -1,8 +1,13 @@
-import { Badge, Divider, SegmentedControl, Stack } from "@mantine/core";
+import { Alert, SegmentedControl, Stack } from "@mantine/core";
+import { useEffect, useState } from "react";
 import { notifications } from "../../lib/notifications";
-import { DependencyInstallCards } from "../../components/common/DependencyInstallCards";
 import { DependencyStatusPanel } from "../../components/common/DependencyStatusPanel";
-import type { DependencyStatus } from "../../contracts/dependency";
+import type {
+  DependencyDownloadProgress,
+  DependencyStatus,
+  MirrorDependencyStatus,
+  ToolName
+} from "../../contracts/dependency";
 import { isWindows } from "../../lib/platform";
 import { t } from "../../locale";
 import { installDependency, type AppSettings } from "./api";
@@ -10,11 +15,15 @@ import { SettingsRow, SettingsSectionCard } from "./SettingsBlocks";
 
 interface DependenciesSettingsPageProps {
   settings: AppSettings;
-  onSave: (settings: AppSettings) => Promise<AppSettings>;
+  onSave: (preference: AppSettings["dependencyPreference"]) => Promise<AppSettings>;
   dependencies: DependencyStatus[];
   loading: boolean;
-  distributionMode: "Lite" | "Full";
   onRefresh: () => void;
+  mirrorDependencies: MirrorDependencyStatus[];
+  loadingMirror: boolean;
+  mirrorError: string | null;
+  mirrorInstallation: DependencyDownloadProgress | null;
+  onMirrorInstall: (tool: ToolName) => Promise<void>;
 }
 
 export function DependenciesSettingsPage({
@@ -22,20 +31,35 @@ export function DependenciesSettingsPage({
   onSave,
   dependencies,
   loading,
-  distributionMode,
-  onRefresh
+  onRefresh,
+  mirrorDependencies,
+  loadingMirror,
+  mirrorError,
+  mirrorInstallation,
+  onMirrorInstall
 }: DependenciesSettingsPageProps) {
+  const [preference, setPreference] = useState(settings.dependencyPreference);
+  const [changingPreference, setChangingPreference] = useState(false);
+
+  useEffect(() => {
+    if (!changingPreference) setPreference(settings.dependencyPreference);
+  }, [settings.dependencyPreference, changingPreference]);
+
   const changePreference = async (value: string) => {
-    const preference = value as AppSettings["dependencyPreference"];
-    if (preference === settings.dependencyPreference) return;
+    const nextPreference = value as AppSettings["dependencyPreference"];
+    if (changingPreference || nextPreference === preference) return;
+    setPreference(nextPreference);
+    setChangingPreference(true);
     try {
-      await onSave({ ...settings, dependencyPreference: preference });
+      await onSave(nextPreference);
       onRefresh();
     } catch (error) {
       notifications.show({
         message: t("settings.saveFailed", { error: String(error) }),
         color: "red"
       });
+    } finally {
+      setChangingPreference(false);
     }
   };
 
@@ -63,10 +87,11 @@ export function DependenciesSettingsPage({
         >
           <SegmentedControl
             radius="md"
-            value={settings.dependencyPreference}
+            value={preference}
+            disabled={changingPreference}
             onChange={(value) => void changePreference(value)}
             data={[
-              { value: "bundled", label: t("settings.deps.preferBundled") },
+              { value: "managed", label: t("settings.deps.preferManaged") },
               {
                 value: "system",
                 label: isWindows
@@ -76,27 +101,21 @@ export function DependenciesSettingsPage({
             ]}
           />
         </SettingsRow>
-        <Divider />
-        <SettingsRow
-          title={t("settings.deps.distributionTitle")}
-          description={t("settings.deps.distributionHint")}
-        >
-          <Badge
-            variant="transparent"
-            color={distributionMode === "Full" ? "green" : "yellow"}
-            size="lg"
-          >
-            {distributionMode}
-          </Badge>
-        </SettingsRow>
       </SettingsSectionCard>
+      {mirrorError && (
+        <Alert color="yellow" title={t("deps.mirrorCheckFailed")}>
+          {mirrorError}
+        </Alert>
+      )}
       <DependencyStatusPanel
         dependencies={dependencies}
-        loading={loading}
+        loading={loading || loadingMirror}
         onRefresh={onRefresh}
         onInstall={(dependency) => void onInstall(dependency)}
+        mirrorDependencies={mirrorDependencies}
+        installation={mirrorInstallation}
+        onMirrorInstall={(tool) => void onMirrorInstall(tool)}
       />
-      <DependencyInstallCards dependencies={dependencies} />
     </Stack>
   );
 }

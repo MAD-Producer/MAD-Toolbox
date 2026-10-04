@@ -1,13 +1,21 @@
 import { Badge, Box, Card, Stack } from "@mantine/core";
 import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
 import { t } from "../../locale";
+import { ExpertCommandPanel } from "../../components/common/ExpertCommandPanel";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { BilibiliAdvancedFields } from "./BilibiliAdvancedFields";
-import { BilibiliCommandPanel } from "./BilibiliCommandPanel";
 import { BilibiliDownloadFields } from "./BilibiliDownloadFields";
 import { BilibiliLoginDialog } from "./BilibiliLoginDialog";
 import { BilibiliPageHeader } from "./BilibiliPageHeader";
 import { useBilibiliWorkspace, type BilibiliPageProps } from "./useBilibiliWorkspace";
+
+const COMMAND_LABELS = {
+  previewTitle: "bilibili.command.previewTitle",
+  expertTitle: "bilibili.command.expertTitle",
+  restoreForm: "bilibili.command.restoreForm",
+  editCommand: "bilibili.command.editCommand",
+  expertWarning: "bilibili.command.expertWarning"
+} as const;
 
 export function BilibiliPage(props: BilibiliPageProps) {
   const workspace = useBilibiliWorkspace(props);
@@ -53,7 +61,8 @@ export function BilibiliPage(props: BilibiliPageProps) {
         >
           <Stack gap="md">
             <Card withBorder padding="md" radius="md">
-              <BilibiliCommandPanel
+              <ExpertCommandPanel
+                labels={COMMAND_LABELS}
                 expertText={workspace.expertText}
                 preview={workspace.preview}
                 previewError={workspace.previewError}

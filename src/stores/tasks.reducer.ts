@@ -65,14 +65,14 @@ export function removeTasks(state: TasksState, ids: string[]): TasksState {
   return { tasks, logs };
 }
 
-export function poolOccupancy(state: TasksState, pool: Pool): number {
-  return Object.values(state.tasks).filter(
+export function poolOccupancy(tasks: TasksState["tasks"], pool: Pool): number {
+  return Object.values(tasks).filter(
     (t) => t.pool === pool && (t.status === "running" || t.status === "canceling")
   ).length;
 }
 
-export function sortedTasks(state: TasksState): TaskEnvelope[] {
-  return Object.values(state.tasks).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+export function sortedTasks(tasks: TasksState["tasks"]): TaskEnvelope[] {
+  return Object.values(tasks).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export function splitByDay(tasks: TaskEnvelope[]): {

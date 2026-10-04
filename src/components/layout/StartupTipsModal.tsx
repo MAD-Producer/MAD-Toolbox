@@ -20,18 +20,12 @@ import {
 } from "@tabler/icons-react";
 import { t } from "../../locale";
 
-const DISMISSED_AT_KEY = "mad-toolbox:startup-tips-dismissed-at";
+const DISMISSED_KEY = "mad-toolbox:startup-tips-dismissed";
+const TIPS_LAST_SLIDE = 2;
 
-function localDateKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-    now.getDate()
-  ).padStart(2, "0")}`;
-}
-
-export function isStartupTipsDismissedToday(): boolean {
+export function isStartupTipsDismissed(): boolean {
   try {
-    return localStorage.getItem(DISMISSED_AT_KEY) === localDateKey();
+    return localStorage.getItem(DISMISSED_KEY) !== null;
   } catch {
     return false;
   }
@@ -50,9 +44,9 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
     if (opened) embla?.reInit();
   }, [opened, embla]);
 
-  const dismissForToday = () => {
+  const dismissForever = () => {
     try {
-      localStorage.setItem(DISMISSED_AT_KEY, localDateKey());
+      localStorage.setItem(DISMISSED_KEY, "1");
     } catch {}
     onClose();
   };
@@ -141,9 +135,9 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
         >
           <IconChevronLeft size={18} />
         </ActionIcon>
-        <span style={{ visibility: slide === 2 ? "visible" : "hidden" }}>
-          <Button variant="light" onClick={dismissForToday}>
-            {t("startup.dismissToday")}
+        <span style={{ visibility: slide === TIPS_LAST_SLIDE ? "visible" : "hidden" }}>
+          <Button variant="light" onClick={dismissForever}>
+            {t("startup.dismiss")}
           </Button>
         </span>
         <ActionIcon
@@ -151,7 +145,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
           radius="sm"
           w={44}
           h={32}
-          disabled={slide === 2}
+          disabled={slide === TIPS_LAST_SLIDE}
           onClick={() => embla?.scrollNext()}
           aria-label={t("startup.next")}
         >

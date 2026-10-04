@@ -1,4 +1,4 @@
-import type { TaskEnvelope } from "../contracts/types";
+import type { MediaOperation, TaskEnvelope } from "../contracts/types";
 
 export type MediaPageId =
   "pr-compatible" | "transcode" | "remux" | "extract" | "gif" | "image-export";
@@ -20,17 +20,7 @@ export type SettingsRoute = Extract<AppRoute, { section: "settings" }>;
 
 export const DEFAULT_APP_ROUTE = { section: "tasks" } as const satisfies AppRoute;
 
-type PersistedMediaOperation =
-  | "remux"
-  | "transcode"
-  | "video-extract"
-  | "audio"
-  | "subtitle-extract"
-  | "thumbnail"
-  | "gif"
-  | "frames";
-
-const MEDIA_PAGE_BY_OPERATION: Record<PersistedMediaOperation, MediaPageId> = {
+const MEDIA_PAGE_BY_OPERATION: Record<MediaOperation, MediaPageId> = {
   remux: "remux",
   transcode: "transcode",
   "video-extract": "extract",
@@ -50,7 +40,7 @@ function mediaPageForTask(task: TaskEnvelope): MediaPageId {
     return "transcode";
   }
 
-  return MEDIA_PAGE_BY_OPERATION[operation as PersistedMediaOperation];
+  return MEDIA_PAGE_BY_OPERATION[operation as MediaOperation];
 }
 
 export function routeForTask(task: TaskEnvelope): AppRoute {

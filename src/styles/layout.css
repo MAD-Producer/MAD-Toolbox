@@ -3,11 +3,13 @@ body {
   overscroll-behavior: none;
 }
 
-main {
+main,
+.general-settings-scroll {
   scrollbar-width: none;
   overscroll-behavior: none;
 }
 
-main::-webkit-scrollbar {
+main::-webkit-scrollbar,
+.general-settings-scroll::-webkit-scrollbar {
   display: none;
 }

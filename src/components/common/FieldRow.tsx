@@ -42,7 +42,7 @@ interface SwitchRowProps {
   onChange: (checked: boolean) => void;
 }
 
-export function SwitchRow({ label, checked, disabled, onChange }: SwitchRowProps) {
+function SwitchRow({ label, checked, disabled, onChange }: SwitchRowProps) {
   return (
     <Group justify="space-between" wrap="nowrap" align="center">
       <Text size="sm" fw={500}>

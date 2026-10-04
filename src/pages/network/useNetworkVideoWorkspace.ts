@@ -1,20 +1,14 @@
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { TaskIntent, TaskSeed } from "../../contracts/types";
 import type { CookieFileOption } from "../../contracts/types";
 import type { CookieVerificationStatus } from "../../components/common/CookieFileField";
-import {
-  networkPreview,
-  networkProbe,
-  networkSubmit,
-  type PreviewResult,
-  type ProbeKind
-} from "./api";
+import { parseExpertArgv, useDraftPreviewWorkspace } from "../../hooks/useDraftPreviewWorkspace";
+import { networkPreview, networkProbe, networkSubmit, type ProbeKind } from "./api";
 import { defaultNetworkForm, type NetworkFormState } from "./form";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
-import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 
 const NETWORK_FORM_STORAGE_KEY = "network.form";
@@ -37,12 +31,6 @@ export interface NetworkProbeResult {
   text: string;
 }
 
-interface RevisionedPreview {
-  revision: number;
-  result: PreviewResult | null;
-  error: string | null;
-}
-
 export function useNetworkVideoWorkspace({
   active,
   seed,
@@ -54,27 +42,29 @@ export function useNetworkVideoWorkspace({
     loadStoredForm(NETWORK_FORM_STORAGE_KEY, defaultNetworkForm)
   );
   const [advancedOpen, advanced] = useDisclosure(false);
-  const [expertText, setExpertTextState] = useState<string | null>(null);
-  const [draftRevision, setDraftRevision] = useState(0);
-  const [previewState, setPreviewState] = useState<RevisionedPreview | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [probeResult, setProbeResult] = useState<NetworkProbeResult | null>(null);
   const [probing, setProbing] = useState<ProbeKind | null>(null);
   const [verifyingCookie, setVerifyingCookie] = useState(false);
   const [cookieVerification, setCookieVerification] = useState<CookieVerificationStatus>("idle");
-  const draftRevisionRef = useRef(0);
-  const previewStateRef = useRef<RevisionedPreview | null>(null);
-  previewStateRef.current = previewState;
 
-  const reviseDraft = () => {
-    const nextRevision = draftRevisionRef.current + 1;
-    draftRevisionRef.current = nextRevision;
-    setDraftRevision(nextRevision);
-    onRetain?.();
-  };
+  const buildPreviewIntent = useCallback(
+    (): TaskIntent => ({ type: "form", data: { ...form } }),
+    [form]
+  );
+  const draft = useDraftPreviewWorkspace({
+    active,
+    onRetain,
+    buildPreviewIntent,
+    runPreview: networkPreview,
+    onDefaultOutputDirectory: (directory) =>
+      setForm((current) =>
+        current.outputDirectory ? current : { ...current, outputDirectory: directory }
+      )
+  });
 
   const update = (patch: Partial<NetworkFormState>) => {
-    reviseDraft();
+    draft.reviseDraft();
     if (patch.url !== undefined || patch.cookiesFile !== undefined) {
       setCookieVerification("idle");
     }
@@ -82,34 +72,16 @@ export function useNetworkVideoWorkspace({
   };
 
   useEffect(() => {
-    let canceled = false;
-    void resolveDefaultOutputDirectory().then((directory) => {
-      if (canceled || !directory) return;
-      setForm((current) =>
-        current.outputDirectory ? current : { ...current, outputDirectory: directory }
-      );
-    });
-    return () => {
-      canceled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     const { url, ...persisted } = form;
     saveStoredForm(NETWORK_FORM_STORAGE_KEY, persisted);
   }, [form]);
 
-  const setExpertText = (value: string | null) => {
-    reviseDraft();
-    setExpertTextState(value);
-  };
-
   useEffect(() => {
     if (!seed) return;
-    setPreviewState(null);
+    draft.resetPreview();
     setCookieVerification("idle");
     if (seed.task.intent.type === "form") {
-      setExpertTextState(null);
+      draft.restoreExpertText(null);
       const restored = {
         ...defaultNetworkForm,
         ...(seed.task.intent.data as Partial<NetworkFormState>)
@@ -117,7 +89,7 @@ export function useNetworkVideoWorkspace({
       if (seed.purpose === "reuse") restored.url = "";
       setForm(restored);
     } else {
-      setExpertTextState(seed.task.intent.data.argv.join("\n"));
+      draft.restoreExpertText(seed.task.intent.data.argv.join("\n"));
       if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
         notifications.show({
           color: "yellow",
@@ -128,55 +100,18 @@ export function useNetworkVideoWorkspace({
     onSeedConsumed?.();
   }, [seed, onSeedConsumed]);
 
-  useEffect(() => {
-    if (!active || expertText !== null) return;
-    let canceled = false;
-    const revision = draftRevision;
-    const handle = window.setTimeout(() => {
-      const intent: TaskIntent = { type: "form", data: { ...form } };
-      networkPreview(intent)
-        .then((result) => {
-          if (canceled) return;
-          setPreviewState({ revision, result, error: null });
-        })
-        .catch((error) => {
-          if (canceled) return;
-          setPreviewState({ revision, result: null, error: String(error) });
-        });
-    }, 150);
-    return () => {
-      canceled = true;
-      window.clearTimeout(handle);
-    };
-  }, [active, draftRevision, form, expertText]);
-
-  const enterExpert = () => {
-    const currentPreview = previewStateRef.current;
-    if (currentPreview?.revision === draftRevisionRef.current && currentPreview.result !== null) {
-      setExpertText(currentPreview.result.argv.join("\n"));
-    }
-  };
-
   const submit = async () => {
-    const submittedRevision = draftRevisionRef.current;
+    const submittedRevision = draft.draftRevisionRef.current;
     const intent: TaskIntent =
-      expertText !== null
-        ? {
-            type: "manual",
-            data: {
-              argv: expertText
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .filter(Boolean)
-            }
-          }
+      draft.expertText !== null
+        ? { type: "manual", data: { argv: parseExpertArgv(draft.expertText) } }
         : { type: "form", data: { ...form } };
     onRetain?.();
     setSubmitting(true);
     try {
       await networkSubmit(intent);
       notifications.show({ color: "green", message: t("network.submitted") });
-      if (draftRevisionRef.current === submittedRevision) onSubmitted?.();
+      if (draft.draftRevisionRef.current === submittedRevision) onSubmitted?.();
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });
     } finally {
@@ -185,11 +120,11 @@ export function useNetworkVideoWorkspace({
   };
 
   const probe = async (kind: ProbeKind) => {
-    const requestedRevision = draftRevisionRef.current;
+    const requestedRevision = draft.draftRevisionRef.current;
     setProbing(kind);
     try {
       const text = await networkProbe({ type: "form", data: { ...form } }, kind);
-      if (draftRevisionRef.current === requestedRevision) {
+      if (draft.draftRevisionRef.current === requestedRevision) {
         setProbeResult({
           title:
             kind === "formats" ? t("network.probe.formatsTitle") : t("network.probe.metadataTitle"),
@@ -197,7 +132,7 @@ export function useNetworkVideoWorkspace({
         });
       }
     } catch (error) {
-      if (draftRevisionRef.current === requestedRevision) {
+      if (draft.draftRevisionRef.current === requestedRevision) {
         notifications.show({ color: "red", message: String(error) });
       }
     } finally {
@@ -215,16 +150,16 @@ export function useNetworkVideoWorkspace({
       return;
     }
 
-    const requestedRevision = draftRevisionRef.current;
+    const requestedRevision = draft.draftRevisionRef.current;
     setCookieVerification("idle");
     setVerifyingCookie(true);
     try {
       await networkProbe({ type: "form", data: { ...form } }, "cookie");
-      if (draftRevisionRef.current !== requestedRevision) return;
+      if (draft.draftRevisionRef.current !== requestedRevision) return;
       setCookieVerification("valid");
       notifications.show({ color: "green", message: t("network.cookieVerify.valid") });
     } catch (error) {
-      if (draftRevisionRef.current !== requestedRevision) return;
+      if (draft.draftRevisionRef.current !== requestedRevision) return;
       setCookieVerification("invalid");
       const reason = String(error)
         .split(/\r?\n/)
@@ -252,21 +187,18 @@ export function useNetworkVideoWorkspace({
     if (typeof file === "string") update({ cookiesFile: file });
   };
 
-  const preview = previewState?.result ?? null;
-  const previewError = previewState?.error ?? null;
-
   return {
     active,
     form,
     update,
     advancedOpen,
     toggleAdvanced: advanced.toggle,
-    expertMode: expertText !== null,
-    expertText,
-    setExpertText,
-    enterExpert,
-    preview,
-    previewError,
+    expertMode: draft.expertText !== null,
+    expertText: draft.expertText,
+    setExpertText: draft.setExpertText,
+    enterExpert: draft.enterExpert,
+    preview: draft.preview,
+    previewError: draft.previewError,
     submitting,
     submit,
     probeResult,

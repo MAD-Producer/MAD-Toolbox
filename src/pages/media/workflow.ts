@@ -40,6 +40,11 @@ export const CONTAINER_BY_OPERATION: Partial<Record<MediaPageOperation, string[]
   "subtitle-extract": ["srt", "ass"]
 };
 
+export function containerForOperation(operation: MediaPageOperation, container: string): string {
+  const containers = CONTAINER_BY_OPERATION[operation];
+  return containers && !containers.includes(container) ? containers[0] : container;
+}
+
 export const VIDEO_CODECS = [
   "copy",
   "libx264",

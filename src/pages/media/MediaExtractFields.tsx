@@ -11,34 +11,26 @@ interface MediaExtractFieldsProps {
   onUpdate: (patch: Partial<MediaFormState>) => void;
 }
 
+const STREAM_INDEX_FIELD = {
+  audio: "audioStreamIndex",
+  "video-extract": "videoStreamIndex",
+  "subtitle-extract": "subtitleStreamIndex"
+} as const;
+
 export function MediaExtractFields({
   operation,
   form,
   disabled,
   onUpdate
 }: MediaExtractFieldsProps) {
-  if (operation !== "video-extract" && operation !== "audio" && operation !== "subtitle-extract") {
-    return null;
-  }
+  if (!(operation in STREAM_INDEX_FIELD)) return null;
 
-  const value =
-    operation === "audio"
-      ? form.audioStreamIndex
-      : operation === "video-extract"
-        ? form.videoStreamIndex
-        : form.subtitleStreamIndex;
-
-  const update = (nextValue: string) => {
-    if (operation === "audio") onUpdate({ audioStreamIndex: nextValue });
-    else if (operation === "video-extract") onUpdate({ videoStreamIndex: nextValue });
-    else onUpdate({ subtitleStreamIndex: nextValue });
-  };
-
+  const field = STREAM_INDEX_FIELD[operation as keyof typeof STREAM_INDEX_FIELD];
   return (
     <FieldRow label={t("media.fields.streamIndex")} hint={t("media.fields.streamIndexHint")}>
       <TextInput
-        value={value}
-        onChange={(event) => update(event.currentTarget.value)}
+        value={form[field]}
+        onChange={(event) => onUpdate({ [field]: event.currentTarget.value })}
         disabled={disabled}
       />
     </FieldRow>

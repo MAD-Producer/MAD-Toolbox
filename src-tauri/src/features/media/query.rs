@@ -15,7 +15,7 @@ use tokio::{
     time::{timeout, Duration},
 };
 
-use crate::core::deps::{background_command, command_path, resolve_tool, ToolName};
+use crate::core::deps::{background_command, command_path, execution_path, resolve_tool, ToolName};
 
 const PROCESS_QUERY_CONCURRENCY: usize = 4;
 const PROCESS_QUERY_TIMEOUT_SECONDS: u64 = 30;
@@ -346,7 +346,7 @@ pub(crate) async fn inspect_media(app: AppHandle, path: String) -> Result<MediaI
             return Err(rust_i18n::t!("backend.media.query.toolMissing").to_string());
         };
     let mut command = background_command(executable);
-    command.args(args).env("PATH", command_path());
+    command.args(args).env("PATH", execution_path(&app));
     let output =
         run_external_query(command, &rust_i18n::t!("backend.media.query.readOperation")).await?;
     if !output.status.success() {

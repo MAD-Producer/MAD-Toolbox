@@ -1,11 +1,12 @@
 import { SwitchTileGrid } from "../../components/common/FieldRow";
-import { t, type TranslationKey } from "../../locale";
+import { t } from "../../locale";
+import { mediaSwitchTileItems, type MediaSwitchSpec } from "./switchTiles";
 import type { MediaFormState } from "./form";
 
-const TASK_OPTION_SWITCHES: ReadonlyArray<[keyof MediaFormState, TranslationKey]> = [
-  ["mapAll", "media.options.mapAll"],
-  ["preserveMetadata", "media.options.preserveMetadata"],
-  ["overwrite", "media.options.overwrite"]
+const TASK_OPTION_SWITCHES: ReadonlyArray<MediaSwitchSpec> = [
+  { key: "mapAll", labelKey: "media.options.mapAll" },
+  { key: "preserveMetadata", labelKey: "media.options.preserveMetadata" },
+  { key: "overwrite", labelKey: "media.options.overwrite" }
 ];
 
 interface MediaTaskOptionsProps {
@@ -17,12 +18,7 @@ interface MediaTaskOptionsProps {
 export function MediaTaskOptions({ form, disabled, onUpdate }: MediaTaskOptionsProps) {
   return (
     <SwitchTileGrid
-      items={TASK_OPTION_SWITCHES.map(([key, labelKey]) => ({
-        key,
-        label: t(labelKey),
-        checked: form[key] as boolean,
-        onToggle: (checked) => onUpdate({ [key]: checked })
-      }))}
+      items={mediaSwitchTileItems(TASK_OPTION_SWITCHES, form, onUpdate)}
       columns={3}
       disabled={disabled}
     />

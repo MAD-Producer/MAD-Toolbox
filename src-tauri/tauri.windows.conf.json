@@ -1,0 +1,38 @@
+{
+  "app": {
+    "macOSPrivateApi": false,
+    "windows": [
+      {
+        "title": "MAD Toolbox",
+        "width": 1120,
+        "height": 760,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "zoomHotkeysEnabled": true
+      }
+    ]
+  },
+  "bundle": {
+    "targets": ["nsis"],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "allowDowngrades": false,
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": false,
+        "compression": "lzma",
+        "template": "./windows/installer.nsi",
+        "installerHooks": "./windows/installer-hooks.nsh",
+        "headerImage": "./icons/installer-header.bmp",
+        "sidebarImage": "./icons/installer-sidebar.bmp"
+      }
+    }
+  }
+}

@@ -11,7 +11,6 @@ import {
 } from "./tasks.reducer";
 
 interface TasksStore extends TasksState {
-  ready: boolean;
   init: () => Promise<void>;
   cancel: (taskId: string) => void;
   promote: (taskId: string) => void;
@@ -22,16 +21,20 @@ let initStarted = false;
 
 export const useTasksStore = create<TasksStore>((set, get) => ({
   ...emptyTasksState,
-  ready: false,
 
   init: async () => {
     if (initStarted) return;
     initStarted = true;
-    await listen<TaskEvent>("task-event", (event) => {
-      set((state) => applyTaskEvent(state, event.payload));
-    });
-    const snapshot = await fetchTasksSnapshot();
-    set((state) => ({ ...applySnapshot(state, snapshot), ready: true }));
+    try {
+      await listen<TaskEvent>("task-event", (event) => {
+        set((state) => applyTaskEvent(state, event.payload));
+      });
+      const snapshot = await fetchTasksSnapshot();
+      set((state) => applySnapshot(state, snapshot));
+    } catch (error) {
+      initStarted = false;
+      console.warn("tasks store init failed:", error);
+    }
   },
 
   cancel: (taskId) => {
@@ -51,5 +54,3 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
     return deleted;
   }
 }));
-
-export { poolOccupancy, sortedTasks } from "./tasks.reducer";

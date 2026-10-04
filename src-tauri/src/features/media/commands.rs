@@ -2,14 +2,14 @@
 //! 目录/多选展开与 ffprobe 探测归 query，参数决策归 adapter/policy。
 
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, time::SystemTime};
 use tauri::{AppHandle, State};
-use tokio::sync::OnceCell;
+use tokio::sync::Mutex;
 
 use super::adapter::{self, MediaCtx, PrProbe};
 use super::query;
 use crate::core::adapter::{preview_result, PreviewResult};
-use crate::core::deps::{command_path, ffmpeg_encoders, resolve_tool, ToolName};
+use crate::core::deps::{execution_path, ffmpeg_encoders, resolve_tool, ToolName};
 use crate::core::task::types::{CwdPolicy, Feature, TaskIntent};
 use crate::core::task::{TaskHub, TaskSpec};
 
@@ -25,24 +25,31 @@ const FALLBACK_PREFERENCE: [&str; 7] = [
 ];
 
 /// 编码器探测进程级缓存：预览随表单高频刷新，不能每次跑 ffmpeg -encoders。
-static ENCODER_FALLBACK: OnceCell<Option<String>> = OnceCell::const_new();
+static ENCODER_FALLBACK: Mutex<Option<(PathBuf, SystemTime, String)>> = Mutex::const_new(None);
 
 async fn media_ctx(app: &AppHandle) -> MediaCtx {
-    // 失败结果不缓存：一次瞬态探测失败不应把 None 钉死整个会话
-    let fallback = match ENCODER_FALLBACK.get() {
-        Some(fallback) => fallback.clone(),
-        None => {
-            let encoders = ffmpeg_encoders(app.clone()).await.unwrap_or_default();
-            let fallback = FALLBACK_PREFERENCE
-                .iter()
-                .find(|name| encoders.iter().any(|e| e == *name))
-                .map(|s| s.to_string());
-            if fallback.is_some() {
-                let _ = ENCODER_FALLBACK.set(fallback.clone());
-            }
-            fallback
+    let identity = resolve_tool(app, &ToolName::Ffmpeg).and_then(|(path, _)| {
+        let modified = std::fs::metadata(&path).ok()?.modified().ok()?;
+        Some((path, modified))
+    });
+    let mut cache = ENCODER_FALLBACK.lock().await;
+    if let (Some((cached_path, cached_modified, encoder)), Some((path, modified))) =
+        (cache.as_ref(), identity.as_ref())
+    {
+        if cached_path == path && cached_modified == modified {
+            return MediaCtx {
+                encoder_fallback: Some(encoder.clone()),
+            };
         }
-    };
+    }
+    let encoders = ffmpeg_encoders(app.clone()).await.unwrap_or_default();
+    let fallback = FALLBACK_PREFERENCE
+        .iter()
+        .find(|name| encoders.iter().any(|encoder| encoder == *name))
+        .map(|name| name.to_string());
+    *cache = identity
+        .zip(fallback.clone())
+        .map(|((path, modified), encoder)| (path, modified, encoder));
     MediaCtx {
         encoder_fallback: fallback,
     }
@@ -62,6 +69,7 @@ pub async fn media_preview(app: AppHandle, intent: TaskIntent) -> Result<Preview
 }
 
 fn ffmpeg_spec(
+    app: &AppHandle,
     plan: crate::core::adapter::AdapterPlan,
     tool_path: PathBuf,
     intent: TaskIntent,
@@ -82,7 +90,7 @@ fn ffmpeg_spec(
         argv_redacted: plan.argv_redacted,
         cwd,
         output_paths: plan.output_paths,
-        env_path: Some(command_path()),
+        env_path: Some(execution_path(app)),
         intent, // media 无敏感字段，intent 无需 sanitize
         parser: None,
         cleanup_dir: None,
@@ -103,7 +111,7 @@ pub async fn media_submit(
         let plan = adapter::plan(&intent, &ctx).map_err(|e| e.to_string())?;
         let (tool_path, _) = resolve_tool(&app, &ToolName::Ffmpeg)
             .ok_or_else(|| rust_i18n::t!("backend.media.commands.ffmpegMissing").to_string())?;
-        let id = hub.submit(ffmpeg_spec(plan, tool_path, intent.clone()));
+        let id = hub.submit(ffmpeg_spec(&app, plan, tool_path, intent.clone()));
         return Ok(BatchSubmitResult { task_ids: vec![id] });
     };
 
@@ -141,7 +149,7 @@ pub async fn media_submit(
             }
             let file_intent = TaskIntent::Form(file_data);
             let plan = adapter::plan(&file_intent, &ctx).map_err(|e| e.to_string())?;
-            Ok(ffmpeg_spec(plan, tool_path.clone(), file_intent))
+            Ok(ffmpeg_spec(&app, plan, tool_path.clone(), file_intent))
         })
         .collect::<Result<Vec<_>, String>>()?;
     let task_ids = specs.into_iter().map(|spec| hub.submit(spec)).collect();
@@ -204,7 +212,7 @@ pub async fn media_pr_submit(
 
     let specs = prepared
         .into_iter()
-        .map(|(plan, _, intent)| ffmpeg_spec(plan, tool_path.clone(), intent));
+        .map(|(plan, _, intent)| ffmpeg_spec(&app, plan, tool_path.clone(), intent));
     let task_ids = specs.map(|spec| hub.submit(spec)).collect();
     Ok(BatchSubmitResult { task_ids })
 }

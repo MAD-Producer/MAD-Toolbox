@@ -1,13 +1,13 @@
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { TaskIntent, TaskSeed } from "../../contracts/types";
 import { t } from "../../locale";
-import { bilibiliPreview, bilibiliSubmit, type PreviewResult } from "./api";
+import { parseExpertArgv, useDraftPreviewWorkspace } from "../../hooks/useDraftPreviewWorkspace";
+import { bilibiliPreview, bilibiliSubmit } from "./api";
 import { defaultBilibiliForm, type BilibiliFormState } from "./form";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
-import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { useBilibiliLoginStore } from "../../stores/bilibili-login";
 
 const BILIBILI_FORM_STORAGE_KEY = "bilibili.form";
@@ -22,12 +22,6 @@ export interface BilibiliPageProps {
   onOpenDependencies?: () => void;
 }
 
-interface RevisionedPreview {
-  revision: number;
-  result: PreviewResult | null;
-  error: string | null;
-}
-
 export function useBilibiliWorkspace({
   active,
   seed,
@@ -39,9 +33,6 @@ export function useBilibiliWorkspace({
     loadStoredForm(BILIBILI_FORM_STORAGE_KEY, defaultBilibiliForm)
   );
   const [advancedOpen, advanced] = useDisclosure(false);
-  const [expertText, setExpertTextState] = useState<string | null>(null);
-  const [draftRevision, setDraftRevision] = useState(0);
-  const [previewState, setPreviewState] = useState<RevisionedPreview | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const loginQr = useBilibiliLoginStore((state) => state.qrDataUrl);
   const loginPhase = useBilibiliLoginStore((state) => state.phase);
@@ -50,50 +41,37 @@ export function useBilibiliWorkspace({
   const refreshLoginStatus = useBilibiliLoginStore((state) => state.refresh);
   const logout = useBilibiliLoginStore((state) => state.logout);
   const dismissLoginQr = useBilibiliLoginStore((state) => state.dismissQr);
-  const draftRevisionRef = useRef(0);
-  const previewStateRef = useRef<RevisionedPreview | null>(null);
-  previewStateRef.current = previewState;
 
-  const reviseDraft = () => {
-    const nextRevision = draftRevisionRef.current + 1;
-    draftRevisionRef.current = nextRevision;
-    setDraftRevision(nextRevision);
-    onRetain?.();
-  };
-
-  const update = (patch: Partial<BilibiliFormState>) => {
-    reviseDraft();
-    setForm((current) => ({ ...current, ...patch }));
-  };
-
-  useEffect(() => {
-    let canceled = false;
-    void resolveDefaultOutputDirectory().then((directory) => {
-      if (canceled || !directory) return;
+  const buildPreviewIntent = useCallback(
+    (): TaskIntent => ({ type: "form", data: { ...form } }),
+    [form]
+  );
+  const draft = useDraftPreviewWorkspace({
+    active,
+    onRetain,
+    buildPreviewIntent,
+    runPreview: bilibiliPreview,
+    onDefaultOutputDirectory: (directory) =>
       setForm((current) =>
         current.outputDirectory ? current : { ...current, outputDirectory: directory }
-      );
-    });
-    return () => {
-      canceled = true;
-    };
-  }, []);
+      )
+  });
+
+  const update = (patch: Partial<BilibiliFormState>) => {
+    draft.reviseDraft();
+    setForm((current) => ({ ...current, ...patch }));
+  };
 
   useEffect(() => {
     const { url, ...persisted } = form;
     saveStoredForm(BILIBILI_FORM_STORAGE_KEY, persisted);
   }, [form]);
 
-  const setExpertText = (value: string | null) => {
-    reviseDraft();
-    setExpertTextState(value);
-  };
-
   useEffect(() => {
     if (!seed) return;
-    setPreviewState(null);
+    draft.resetPreview();
     if (seed.task.intent.type === "form") {
-      setExpertTextState(null);
+      draft.restoreExpertText(null);
       const restored = {
         ...defaultBilibiliForm,
         ...(seed.task.intent.data as Partial<BilibiliFormState>)
@@ -101,7 +79,7 @@ export function useBilibiliWorkspace({
       if (seed.purpose === "reuse") restored.url = "";
       setForm(restored);
     } else {
-      setExpertTextState(seed.task.intent.data.argv.join("\n"));
+      draft.restoreExpertText(seed.task.intent.data.argv.join("\n"));
       if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
         notifications.show({
           color: "yellow",
@@ -115,28 +93,6 @@ export function useBilibiliWorkspace({
   useEffect(() => {
     if (active) void refreshLoginStatus();
   }, [active, refreshLoginStatus]);
-
-  useEffect(() => {
-    if (!active || expertText !== null) return;
-    let canceled = false;
-    const revision = draftRevision;
-    const handle = window.setTimeout(() => {
-      const intent: TaskIntent = { type: "form", data: { ...form } };
-      bilibiliPreview(intent)
-        .then((result) => {
-          if (canceled) return;
-          setPreviewState({ revision, result, error: null });
-        })
-        .catch((error) => {
-          if (canceled) return;
-          setPreviewState({ revision, result: null, error: String(error) });
-        });
-    }, 150);
-    return () => {
-      canceled = true;
-      window.clearTimeout(handle);
-    };
-  }, [active, draftRevision, form, expertText]);
 
   const beginLogin = () => {
     void startLogin().catch((error) =>
@@ -153,38 +109,23 @@ export function useBilibiliWorkspace({
     }
   };
 
-  const enterExpert = () => {
-    const currentPreview = previewStateRef.current;
-    if (currentPreview?.revision === draftRevisionRef.current && currentPreview.result !== null) {
-      setExpertText(currentPreview.result.argv.join("\n"));
-    }
-  };
-
   const pickOutputDirectory = async () => {
     const directory = await openDialog({ directory: true });
     if (typeof directory === "string") update({ outputDirectory: directory });
   };
 
   const submit = async () => {
-    const submittedRevision = draftRevisionRef.current;
+    const submittedRevision = draft.draftRevisionRef.current;
     const intent: TaskIntent =
-      expertText !== null
-        ? {
-            type: "manual",
-            data: {
-              argv: expertText
-                .split(/\r?\n/)
-                .map((line) => line.trim())
-                .filter(Boolean)
-            }
-          }
+      draft.expertText !== null
+        ? { type: "manual", data: { argv: parseExpertArgv(draft.expertText) } }
         : { type: "form", data: { ...form } };
     onRetain?.();
     setSubmitting(true);
     try {
       await bilibiliSubmit(intent);
       notifications.show({ color: "green", message: t("bilibili.notice.queued") });
-      if (draftRevisionRef.current === submittedRevision) onSubmitted?.();
+      if (draft.draftRevisionRef.current === submittedRevision) onSubmitted?.();
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });
     } finally {
@@ -192,21 +133,18 @@ export function useBilibiliWorkspace({
     }
   };
 
-  const preview = previewState?.result ?? null;
-  const previewError = previewState?.error ?? null;
-
   return {
     active,
     form,
     update,
     advancedOpen,
     toggleAdvanced: advanced.toggle,
-    expertMode: expertText !== null,
-    expertText,
-    setExpertText,
-    enterExpert,
-    preview,
-    previewError,
+    expertMode: draft.expertText !== null,
+    expertText: draft.expertText,
+    setExpertText: draft.setExpertText,
+    enterExpert: draft.enterExpert,
+    preview: draft.preview,
+    previewError: draft.previewError,
     submitting,
     submit,
     loginQr,

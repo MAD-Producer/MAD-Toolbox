@@ -16,9 +16,10 @@ pub(crate) struct CookieFileSetting {
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum DependencyPreference {
-    #[default]
-    Bundled,
     System,
+    #[default]
+    #[serde(other)]
+    Managed,
 }
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -33,6 +34,14 @@ pub(crate) struct AppSettings {
     pub(crate) language: LanguageChoice,
     #[serde(default)]
     pub(crate) cookie_files: Vec<CookieFileSetting>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GeneralSettingsDraft {
+    default_output_directory: Option<String>,
+    proxy: Option<String>,
+    cookie_files: Vec<CookieFileSetting>,
 }
 
 pub(crate) fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -88,34 +97,50 @@ fn persist_app_settings(app: &AppHandle, settings: &AppSettings) -> Result<(), S
 #[tauri::command]
 pub(crate) fn save_app_settings(
     app: AppHandle,
-    mut settings: AppSettings,
+    settings: GeneralSettingsDraft,
 ) -> Result<AppSettings, String> {
-    settings.default_output_directory = settings
+    let mut current = load_app_settings(&app);
+    current.default_output_directory = settings
         .default_output_directory
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
-    settings.proxy = settings
+    current.proxy = settings
         .proxy
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
-    for cookie_file in &mut settings.cookie_files {
+    current.cookie_files = settings.cookie_files;
+    for cookie_file in &mut current.cookie_files {
         cookie_file.alias = cookie_file.alias.trim().to_string();
         cookie_file.path = cookie_file.path.trim().to_string();
     }
-    if let Some(directory) = &settings.default_output_directory {
+    if let Some(directory) = &current.default_output_directory {
         if !Path::new(directory).is_dir() {
             return Err(t!("backend.settings.invalid_output_directory").to_string());
         }
     }
+    persist_app_settings(&app, &current)?;
+    Ok(current)
+}
+
+#[tauri::command]
+pub(crate) fn set_dependency_preference(
+    app: AppHandle,
+    preference: DependencyPreference,
+) -> Result<AppSettings, String> {
+    let mut settings = load_app_settings(&app);
+    settings.dependency_preference = preference;
     persist_app_settings(&app, &settings)?;
     Ok(settings)
 }
 
 #[tauri::command]
-pub(crate) fn set_language(app: AppHandle, language: LanguageChoice) -> Result<(), String> {
+pub(crate) fn set_language(
+    app: AppHandle,
+    language: LanguageChoice,
+) -> Result<AppSettings, String> {
     let mut settings = load_app_settings(&app);
     settings.language = language;
     persist_app_settings(&app, &settings)?;
     apply_language(language);
-    Ok(())
+    Ok(settings)
 }

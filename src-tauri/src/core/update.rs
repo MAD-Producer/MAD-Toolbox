@@ -17,10 +17,9 @@ use std::time::Instant;
 #[cfg(target_os = "windows")]
 use tauri::Manager;
 
-use super::deps::bundled_binary;
 use super::settings::load_app_settings;
 
-const MANIFEST_URL: &str = "https://openlist.frameneo.com/sd/mt/latest-%EDITION%.json";
+const MANIFEST_URL: &str = "https://openlist.frameneo.com/sd/mt/latest.json";
 const RELEASE_URL_PREFIX: &str = "https://github.com/MAD-Producer/MAD-Toolbox/releases/tag/v";
 /// `https://openlist.frameneo.com/@s/mt` 是分享页面，文件直链使用 `/sd/mt/`。
 const DOWNLOAD_BASE_URL: &str = "https://openlist.frameneo.com/";
@@ -49,19 +48,8 @@ struct UpdateDownloadProgress {
     total: Option<u64>,
 }
 
-/// 安装版本检测：Full 捆绑 ffmpeg 等 sidecar，Lite 不捆绑 ffmpeg。
-/// 只查应用安装目录/资源目录，系统 PATH 上的 ffmpeg 不影响判定。
-fn installed_edition(app: &AppHandle) -> &'static str {
-    if bundled_binary(app, "ffmpeg").is_some() {
-        "full"
-    } else {
-        "lite"
-    }
-}
-
-fn manifest_endpoint(app: &AppHandle) -> Result<Url, String> {
+fn manifest_endpoint() -> Result<Url, String> {
     MANIFEST_URL
-        .replace("%EDITION%", installed_edition(app))
         .parse()
         .map_err(|_| rust_i18n::t!("backend.update.manifestInvalidUrl").to_string())
 }
@@ -224,7 +212,7 @@ pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, Stri
     let comparator_result = Arc::clone(&update_available);
     let mut builder = app
         .updater_builder()
-        .endpoints(vec![manifest_endpoint(&app)?])
+        .endpoints(vec![manifest_endpoint()?])
         .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .version_comparator(move |current, release| {
             comparator_result.store(release.version > current, Ordering::Relaxed);
@@ -257,7 +245,7 @@ pub(crate) async fn check_for_update(app: AppHandle) -> Result<UpdateCheck, Stri
 pub(crate) async fn install_update(app: AppHandle) -> Result<String, String> {
     let mut builder = app
         .updater_builder()
-        .endpoints(vec![manifest_endpoint(&app)?])
+        .endpoints(vec![manifest_endpoint()?])
         .map_err(|error| rust_i18n::t!("backend.update.manifestFailed", error = error).to_string())?
         .timeout(UPDATER_TIMEOUT);
     if let Some(proxy) = load_app_settings(&app).proxy {

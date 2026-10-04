@@ -1,4 +1,4 @@
-import { Button, Divider, Group, Stack, Text, Textarea } from "@mantine/core";
+import { Button, Group, Stack, Text, Textarea } from "@mantine/core";
 import { IconPencil, IconRotate } from "@tabler/icons-react";
 import type { PreviewResult } from "./api";
 import { CommandPreview } from "../../components/common/CommandPreview";
@@ -13,7 +13,6 @@ interface MediaCommandPanelProps {
   onEnterExpert: () => void;
   onExitExpert: () => void;
   onExpertTextChange: (value: string) => void;
-  withDivider?: boolean;
 }
 
 export function MediaCommandPanel({
@@ -24,8 +23,7 @@ export function MediaCommandPanel({
   previewError,
   onEnterExpert,
   onExitExpert,
-  onExpertTextChange,
-  withDivider
+  onExpertTextChange
 }: MediaCommandPanelProps) {
   return (
     <Stack gap="xs">
@@ -79,7 +77,6 @@ export function MediaCommandPanel({
       ) : (
         <CommandPreview display={preview?.display ?? null} error={previewError} />
       )}
-      {withDivider && <Divider my={4} />}
     </Stack>
   );
 }

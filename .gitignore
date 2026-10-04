@@ -2,13 +2,7 @@ node_modules/
 dist/
 src-tauri/target/
 src-tauri/gen/
-src-tauri/binaries/*.zip
-src-tauri/binaries/*.tar.gz
-src-tauri/binaries/BBDown.data
-src-tauri/binaries/[0-9]*/
-src-tauri/resources/MediaInfo-LIBCURL.DLL
 *.tsbuildinfo
-!src-tauri/binaries/README.md
 *.log
 .DS_Store
 .idea/

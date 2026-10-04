@@ -31,11 +31,11 @@ import {
   IconX,
   type Icon as TablerIcon
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { TaskEnvelope, TaskStatus } from "../../contracts/types";
 import { isWindows } from "../../lib/platform";
 import { t, type TranslationKey } from "../../locale";
-import type { TaskLogLine } from "../../stores/tasks.reducer";
+import { useTasksStore } from "../../stores/tasks";
 import { exportTaskDiagnostics } from "./api";
 
 const STATUS_META: Record<
@@ -60,7 +60,6 @@ const FAILED_TAIL_LINES = 10;
 
 interface TaskCardProps {
   task: TaskEnvelope;
-  logs?: TaskLogLine[];
   onCancel: (id: string) => void;
   onPromote: (id: string) => void;
   onDelete: (id: string) => void;
@@ -95,9 +94,8 @@ function progressView(task: TaskEnvelope): ProgressView | null {
   }
 }
 
-export function TaskCard({
+export const TaskCard = memo(function TaskCard({
   task,
-  logs,
   onCancel,
   onPromote,
   onDelete,
@@ -105,6 +103,7 @@ export function TaskCard({
   onReuse
 }: TaskCardProps) {
   const [opened, setOpened] = useState(false);
+  const logs = useTasksStore((s) => s.logs[task.id]);
   const status = STATUS_META[task.status];
   const StatusIcon = status.icon;
   const cancellable = task.status === "queued" || task.status === "running";
@@ -302,4 +301,4 @@ export function TaskCard({
       </Collapse>
     </Card>
   );
-}
+});

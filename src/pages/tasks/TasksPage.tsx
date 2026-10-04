@@ -9,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { PoolIndicator } from "./PoolIndicator";
 import { TaskCard } from "./TaskCard";
@@ -62,7 +62,6 @@ function StatTile({
 
 export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   const tasks = useTasksStore((s) => s.tasks);
-  const logs = useTasksStore((s) => s.logs);
   const cancel = useTasksStore((s) => s.cancel);
   const promote = useTasksStore((s) => s.promote);
   const remove = useTasksStore((s) => s.remove);
@@ -77,8 +76,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
       .catch(() => {});
   }, []);
 
-  const state = useMemo(() => ({ tasks, logs }), [tasks, logs]);
-  const sorted = useMemo(() => sortedTasks(state), [state]);
+  const sorted = useMemo(() => sortedTasks(tasks), [tasks]);
   const { today, history } = useMemo(() => splitByDay(sorted), [sorted]);
   const hero = useMemo(
     () => ({
@@ -93,36 +91,46 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
     [today]
   );
 
-  const deleteTasks = (ids: string[]) => {
-    setExiting((prev) => new Set([...prev, ...ids]));
-    window.setTimeout(() => {
-      remove(ids)
-        .then((deleted) => {
-          if (deleted.length > 0) {
-            notifications.show({
-              message: t("tasks.deletedCount", { count: deleted.length }),
-              color: "green"
+  const deleteTasks = useCallback(
+    (ids: string[]) => {
+      setExiting((prev) => new Set([...prev, ...ids]));
+      window.setTimeout(() => {
+        remove(ids)
+          .then((deleted) => {
+            setExiting((prev) => {
+              const next = new Set(prev);
+              ids.forEach((id) => next.delete(id));
+              return next;
             });
-          } else {
-            notifications.show({
-              message: t("tasks.deleteNoneAvailable"),
-              color: "yellow"
+            if (deleted.length > 0) {
+              notifications.show({
+                message: t("tasks.deletedCount", { count: deleted.length }),
+                color: "green"
+              });
+            } else {
+              notifications.show({
+                message: t("tasks.deleteNoneAvailable"),
+                color: "yellow"
+              });
+            }
+          })
+          .catch((error) => {
+            setExiting((prev) => {
+              const next = new Set(prev);
+              ids.forEach((id) => next.delete(id));
+              return next;
             });
-          }
-        })
-        .catch((error) => {
-          setExiting((prev) => {
-            const next = new Set(prev);
-            ids.forEach((id) => next.delete(id));
-            return next;
+            notifications.show({
+              message: t("tasks.deleteFailed", { error: String(error) }),
+              color: "red"
+            });
           });
-          notifications.show({
-            message: t("tasks.deleteFailed", { error: String(error) }),
-            color: "red"
-          });
-        });
-    }, DELETE_ANIMATION_MS);
-  };
+      }, DELETE_ANIMATION_MS);
+    },
+    [remove]
+  );
+
+  const deleteTask = useCallback((id: string) => deleteTasks([id]), [deleteTasks]);
 
   const renderCard = (task: TaskEnvelope) => (
     <div
@@ -131,10 +139,9 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
     >
       <TaskCard
         task={task}
-        logs={logs[task.id]}
         onCancel={cancel}
         onPromote={promote}
-        onDelete={(id) => deleteTasks([id])}
+        onDelete={deleteTask}
         onRerun={task.feature === "music" ? undefined : onRerun}
         onReuse={onReuse}
       />
@@ -168,7 +175,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
             </Group>
             <PoolIndicator
               definitions={definitions}
-              occupancy={(pool) => poolOccupancy(state, pool)}
+              occupancy={(pool) => poolOccupancy(tasks, pool)}
             />
           </Stack>
         </SettingsSection>

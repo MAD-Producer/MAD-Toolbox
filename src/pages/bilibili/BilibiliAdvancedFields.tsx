@@ -21,10 +21,15 @@ const MODE_OPTIONS: ReadonlyArray<{ value: BilibiliFormState["mode"]; labelKey: 
     { value: "info", labelKey: "bilibili.mode.info" }
   ];
 
-const API_OPTIONS: ReadonlyArray<{ value: BilibiliFormState["api"]; label: string }> = [
+const API_OPTIONS: ReadonlyArray<{
+  value: BilibiliFormState["api"];
+  labelKey?: TranslationKey;
+  label?: string;
+}> = [
   { value: "web", label: "Web" },
   { value: "tv", label: "TV" },
-  { value: "app", label: "APP" }
+  { value: "app", label: "APP" },
+  { value: "intl", labelKey: "bilibili.api.intl" }
 ];
 
 const QUALITY_OPTIONS: ReadonlyArray<{ value: string; labelKey: TranslationKey }> = [
@@ -161,7 +166,10 @@ export function BilibiliAdvancedFields({ form, disabled, onUpdate }: BilibiliAdv
         </FieldRow>
         <FieldRow label={t("bilibili.fields.api")}>
           <SegmentedControl
-            data={[...API_OPTIONS, { value: "intl", label: t("bilibili.api.intl") }]}
+            data={API_OPTIONS.map(({ value, labelKey, label }) => ({
+              value,
+              label: labelKey ? t(labelKey) : (label as string)
+            }))}
             value={form.api}
             onChange={(value) => onUpdate({ api: value as BilibiliFormState["api"] })}
             disabled={disabled}

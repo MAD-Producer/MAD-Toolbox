@@ -19,7 +19,7 @@ export function SettingsShell({
   children
 }: SettingsShellProps) {
   return (
-    <Stack gap="lg" p="lg">
+    <Stack gap="lg" p="lg" h={page === "general" ? "100%" : undefined} style={{ minHeight: 0 }}>
       <L2TabNav
         items={SETTINGS_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
           page: id,

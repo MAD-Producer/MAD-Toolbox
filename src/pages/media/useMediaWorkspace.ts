@@ -1,26 +1,26 @@
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaPageId } from "../../app/route";
-import type { TaskIntent, TaskSeed } from "../../contracts/types";
+import type { PreviewResult, TaskIntent, TaskSeed } from "../../contracts/types";
+import { parseExpertArgv, useDraftPreviewWorkspace } from "../../hooks/useDraftPreviewWorkspace";
 import {
   ffmpegEncoders,
   inspectMedia,
   mediaPreview,
   mediaPrSubmit,
   mediaScanInputs,
-  mediaSubmit,
-  type PreviewResult
+  mediaSubmit
 } from "./api";
 import { defaultMediaForm, type MediaFormState } from "./form";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
-import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import {
   AUDIO_CODECS,
   CONTAINER_BY_OPERATION,
   MEDIA_PAGE_CONFIG,
   VIDEO_CODECS,
+  containerForOperation,
   type MediaPageOperation
 } from "./workflow";
 
@@ -35,12 +35,6 @@ export interface MediaWorkspacePageProps {
 
 interface UseMediaWorkspaceOptions extends MediaWorkspacePageProps {
   page: MediaPageId;
-}
-
-interface RevisionedPreview {
-  revision: number;
-  result: PreviewResult | null;
-  error: string | null;
 }
 
 const MEDIA_FORM_STORAGE_KEY = "media.form";
@@ -87,55 +81,61 @@ export function useMediaWorkspace({
 }: UseMediaWorkspaceOptions): MediaWorkspaceModel {
   const pageConfig = MEDIA_PAGE_CONFIG[page];
   const [inputs, setInputsState] = useState<string[]>([]);
-  const [form, setForm] = useState<MediaFormState>(() =>
-    loadStoredForm(MEDIA_FORM_STORAGE_KEY, defaultMediaForm)
-  );
+  const [form, setForm] = useState<MediaFormState>(() => {
+    const stored = loadStoredForm(MEDIA_FORM_STORAGE_KEY, defaultMediaForm);
+    const initialOperation = pageConfig.operations.includes(stored.operation)
+      ? stored.operation
+      : pageConfig.operations[0];
+    return { ...stored, container: containerForOperation(initialOperation, stored.container) };
+  });
   const [operation, setOperationState] = useState<MediaPageOperation>(() =>
     pageConfig.operations.includes(form.operation) ? form.operation : pageConfig.operations[0]
   );
   const [encoders, setEncoders] = useState<string[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [expertText, setExpertTextState] = useState<string | null>(null);
-  const [draftRevision, setDraftRevision] = useState(0);
-  const [previewState, setPreviewState] = useState<RevisionedPreview | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [inspection, setInspection] = useState<string | null>(null);
-  const draftRevisionRef = useRef(0);
-  const previewStateRef = useRef<RevisionedPreview | null>(null);
   const inspectionRequestRef = useRef(0);
-  previewStateRef.current = previewState;
 
   const [draftPage, setDraftPage] = useState(page);
   if (draftPage !== page) {
+    const nextOperation = pageConfig.operations[0];
     setDraftPage(page);
     setInputsState([]);
-    setOperationState(pageConfig.operations[0]);
-    setForm({ ...defaultMediaForm, outputDirectory: form.outputDirectory });
+    setOperationState(nextOperation);
+    setForm((current) => ({
+      ...defaultMediaForm,
+      outputDirectory: current.outputDirectory,
+      container: containerForOperation(nextOperation, defaultMediaForm.container)
+    }));
     setAdvancedOpen(false);
-    setExpertTextState(null);
-    setPreviewState(null);
     setInspection(null);
   }
 
-  const reviseDraft = () => {
-    const nextRevision = draftRevisionRef.current + 1;
-    draftRevisionRef.current = nextRevision;
-    setDraftRevision(nextRevision);
-    onRetain?.();
-  };
+  const firstInput = inputs[0] ?? "";
+  const isPr = operation === "pr-compatible";
 
-  useEffect(() => {
-    let canceled = false;
-    void resolveDefaultOutputDirectory().then((directory) => {
-      if (canceled || !directory) return;
+  const buildPreviewIntent = useCallback(
+    (): TaskIntent => ({ type: "form", data: { ...form, operation, input: firstInput } }),
+    [form, operation, firstInput]
+  );
+  const draft = useDraftPreviewWorkspace({
+    active,
+    onRetain,
+    previewDisabled: isPr || !firstInput,
+    clearPreviewWhenDisabled: !isPr && !firstInput,
+    buildPreviewIntent,
+    runPreview: mediaPreview,
+    onDefaultOutputDirectory: (directory) =>
       setForm((current) =>
         current.outputDirectory ? current : { ...current, outputDirectory: directory }
-      );
-    });
-    return () => {
-      canceled = true;
-    };
-  }, []);
+      )
+  });
+
+  if (draftPage !== page) {
+    draft.restoreExpertText(null);
+    draft.resetPreview();
+  }
 
   useEffect(() => {
     const { input, ...persisted } = form;
@@ -143,18 +143,17 @@ export function useMediaWorkspace({
   }, [form, operation]);
 
   const update = (patch: Partial<MediaFormState>) => {
-    reviseDraft();
+    draft.reviseDraft();
     setForm((current) => ({ ...current, ...patch }));
   };
 
   const setOperation = (nextOperation: MediaPageOperation) => {
-    reviseDraft();
+    draft.reviseDraft();
     setOperationState(nextOperation);
-  };
-
-  const setExpertText = (value: string | null) => {
-    reviseDraft();
-    setExpertTextState(value);
+    setForm((current) => ({
+      ...current,
+      container: containerForOperation(nextOperation, current.container)
+    }));
   };
 
   useEffect(() => {
@@ -172,7 +171,7 @@ export function useMediaWorkspace({
 
   useEffect(() => {
     if (!seed) return;
-    setPreviewState(null);
+    draft.resetPreview();
     const keepInputs = seed.purpose === "rerun";
     if (seed.task.intent.type === "form") {
       const data = seed.task.intent.data as Record<string, unknown>;
@@ -186,53 +185,24 @@ export function useMediaWorkspace({
       } else {
         const restored = { ...defaultMediaForm, ...(data as Partial<MediaFormState>) };
         setOperationState(restored.operation);
-        setForm(restored);
+        setForm({
+          ...restored,
+          container: containerForOperation(restored.operation, restored.container)
+        });
         setInputsState(keepInputs && restored.input ? [restored.input] : []);
       }
-      setExpertTextState(null);
+      draft.restoreExpertText(null);
     } else {
-      setExpertTextState(seed.task.intent.data.argv.join("\n"));
+      draft.restoreExpertText(seed.task.intent.data.argv.join("\n"));
     }
     onSeedConsumed?.();
   }, [seed, onSeedConsumed]);
-
-  const firstInput = inputs[0] ?? "";
-  const isPr = operation === "pr-compatible";
-
-  useEffect(() => {
-    if (!active || expertText !== null || isPr) return;
-    if (!firstInput) {
-      setPreviewState({ revision: draftRevision, result: null, error: null });
-      return;
-    }
-    let canceled = false;
-    const revision = draftRevision;
-    const handle = window.setTimeout(() => {
-      const intent: TaskIntent = {
-        type: "form",
-        data: { ...form, operation, input: firstInput }
-      };
-      mediaPreview(intent)
-        .then((result) => {
-          if (canceled) return;
-          setPreviewState({ revision, result, error: null });
-        })
-        .catch((error) => {
-          if (canceled) return;
-          setPreviewState({ revision, result: null, error: String(error) });
-        });
-    }, 150);
-    return () => {
-      canceled = true;
-      window.clearTimeout(handle);
-    };
-  }, [active, draftRevision, form, operation, firstInput, expertText, isPr]);
 
   const addFiles = async () => {
     const selected = await openDialog({ multiple: true });
     const picked = Array.isArray(selected) ? selected : selected ? [selected] : [];
     if (picked.length) {
-      reviseDraft();
+      draft.reviseDraft();
       setInputsState((current) => [...new Set([...current, ...picked])]);
     }
   };
@@ -246,17 +216,20 @@ export function useMediaWorkspace({
         notifications.show({ message: t("media.noMediaFilesFound"), color: "yellow" });
         return;
       }
-      reviseDraft();
+      draft.reviseDraft();
       setInputsState((current) => [...new Set([...current, ...files])]);
     } catch (error) {
       notifications.show({ message: String(error), color: "red" });
     }
   };
 
-  const removeInput = (path: string) => {
-    reviseDraft();
-    setInputsState((current) => current.filter((input) => input !== path));
-  };
+  const removeInput = useCallback(
+    (path: string) => {
+      draft.reviseDraft();
+      setInputsState((current) => current.filter((input) => input !== path));
+    },
+    [draft.reviseDraft]
+  );
 
   const pickOutputDirectory = async () => {
     const directory = await openDialog({ directory: true });
@@ -265,45 +238,37 @@ export function useMediaWorkspace({
 
   const inspectFirst = async () => {
     if (!firstInput) return;
-    const requestedRevision = draftRevisionRef.current;
+    const requestedRevision = draft.draftRevisionRef.current;
     const requestId = inspectionRequestRef.current + 1;
     inspectionRequestRef.current = requestId;
     try {
       const result = await inspectMedia(firstInput);
       if (
         inspectionRequestRef.current === requestId &&
-        draftRevisionRef.current === requestedRevision
+        draft.draftRevisionRef.current === requestedRevision
       ) {
         setInspection(result.summary);
       }
     } catch (error) {
       if (
         inspectionRequestRef.current === requestId &&
-        draftRevisionRef.current === requestedRevision
+        draft.draftRevisionRef.current === requestedRevision
       ) {
         notifications.show({ color: "red", message: String(error) });
       }
     }
   };
 
-  const enterExpert = () => {
-    const currentPreview = previewStateRef.current;
-    if (currentPreview?.revision === draftRevisionRef.current && currentPreview.result !== null) {
-      setExpertText(currentPreview.result.argv.join("\n"));
-    }
-  };
-
   const submit = async () => {
-    const submittedRevision = draftRevisionRef.current;
+    const submittedRevision = draft.draftRevisionRef.current;
     onRetain?.();
     setSubmitting(true);
     try {
-      if (expertText !== null) {
-        const argv = expertText
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter(Boolean);
-        await mediaSubmit([], { type: "manual", data: { argv } });
+      if (draft.expertText !== null) {
+        await mediaSubmit([], {
+          type: "manual",
+          data: { argv: parseExpertArgv(draft.expertText) }
+        });
       } else if (isPr) {
         await mediaPrSubmit(inputs, form.outputDirectory.trim() || null);
       } else {
@@ -313,7 +278,7 @@ export function useMediaWorkspace({
         });
       }
       notifications.show({ color: "green", message: t("media.taskQueued") });
-      if (draftRevisionRef.current === submittedRevision) onSubmitted?.();
+      if (draft.draftRevisionRef.current === submittedRevision) onSubmitted?.();
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });
     } finally {
@@ -321,7 +286,7 @@ export function useMediaWorkspace({
     }
   };
 
-  const expertMode = expertText !== null;
+  const expertMode = draft.expertText !== null;
   const containers = CONTAINER_BY_OPERATION[operation];
   const availableVideoCodecs = VIDEO_CODECS.filter(
     (codec) => codec === "copy" || encoders.length === 0 || encoders.includes(codec)
@@ -329,8 +294,6 @@ export function useMediaWorkspace({
   const availableAudioCodecs = AUDIO_CODECS.filter(
     (codec) => codec === "copy" || encoders.length === 0 || encoders.includes(codec)
   );
-  const preview = previewState?.result ?? null;
-  const previewError = previewState?.error ?? null;
 
   return {
     active,
@@ -339,9 +302,9 @@ export function useMediaWorkspace({
     operation,
     form,
     advancedOpen,
-    expertText,
-    preview,
-    previewError,
+    expertText: draft.expertText,
+    preview: draft.preview,
+    previewError: draft.previewError,
     submitting,
     inspection,
     firstInput,
@@ -352,7 +315,7 @@ export function useMediaWorkspace({
     availableAudioCodecs,
     update,
     setOperation,
-    setExpertText,
+    setExpertText: draft.setExpertText,
     setInspection,
     toggleAdvanced: () => setAdvancedOpen((value) => !value),
     addFiles,
@@ -360,7 +323,7 @@ export function useMediaWorkspace({
     removeInput,
     pickOutputDirectory,
     inspectFirst,
-    enterExpert,
+    enterExpert: draft.enterExpert,
     submit
   };
 }

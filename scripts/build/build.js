@@ -1,14 +1,4 @@
-// Cross-platform packaging entry.
-//
-// Usage (host platform is detected automatically):
-//   npm run tauri:build:lite
-//   npm run tauri:build:full
-//
-// Usage (explicit target, must match the host; cross-building is unsupported):
-//   npm run tauri:build:lite -- win
-//   npm run tauri:build:full -- mac --ci
-//
-// Any further arguments are passed through to `tauri build`.
+// Cross-platform packaging: npm run tauri:build -- [win|mac] [tauri arguments].
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -24,7 +14,7 @@ const targetAliases = {
 };
 
 function parseArguments(argv) {
-  const options = { edition: undefined, target: undefined, passthrough: [] };
+  const options = { target: undefined, passthrough: [] };
 
   const setTarget = (value) => {
     const alias = value?.toLowerCase();
@@ -39,12 +29,7 @@ function parseArguments(argv) {
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === "--edition") {
-      index += 1;
-      options.edition = argv[index];
-    } else if (argument.startsWith("--edition=")) {
-      options.edition = argument.slice("--edition=".length);
-    } else if (argument === "--target") {
+    if (argument === "--target") {
       index += 1;
       setTarget(argv[index]);
     } else if (argument.startsWith("--target=")) {
@@ -63,11 +48,7 @@ function parseArguments(argv) {
     }
   }
 
-  const edition = options.edition?.toLowerCase();
-  if (edition !== "full" && edition !== "lite") {
-    throw new Error("Build edition must be 'full' or 'lite'.");
-  }
-  return { edition, target: options.target, passthrough: options.passthrough };
+  return { target: options.target, passthrough: options.passthrough };
 }
 
 function run(command, args, options = {}) {
@@ -91,7 +72,7 @@ function runNpm(args) {
   });
 }
 
-const { edition, target: requestedTarget, passthrough } = parseArguments(process.argv.slice(2));
+const { target: requestedTarget, passthrough } = parseArguments(process.argv.slice(2));
 
 const buildableHosts = [];
 if (process.platform === "win32" && process.arch === "x64") buildableHosts.push("windows");
@@ -111,7 +92,7 @@ if (!buildableHosts.includes(target)) {
   );
 }
 
-console.log(`Packaging the ${edition} edition for ${target}...`);
+console.log(`Packaging MAD Toolbox for ${target}...`);
 
 runNpm(["run", "check"]);
 
@@ -125,11 +106,9 @@ if (target === "windows") {
     "Bypass",
     "-File",
     path.join(buildDirectory, "windows.ps1"),
-    "-Edition",
-    edition === "full" ? "Full" : "Lite",
     "-TauriArgsJson",
     JSON.stringify(passthrough)
   ]);
 } else {
-  run("/bin/sh", [path.join(buildDirectory, "macos.sh"), edition, ...passthrough]);
+  run("/bin/sh", [path.join(buildDirectory, "macos.sh"), ...passthrough]);
 }

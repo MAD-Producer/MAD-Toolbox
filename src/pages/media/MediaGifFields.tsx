@@ -1,7 +1,7 @@
 import { NumberInput } from "@mantine/core";
 import { FieldRow } from "../../components/common/FieldRow";
 import { t } from "../../locale";
-import type { MediaFormState } from "./form";
+import { defaultMediaForm, type MediaFormState } from "./form";
 import type { MediaPageOperation } from "./workflow";
 
 interface MediaGifFieldsProps {
@@ -20,7 +20,9 @@ export function MediaGifFields({ operation, form, disabled, onUpdate }: MediaGif
         <NumberInput
           min={1}
           value={form.gifFps}
-          onChange={(value) => onUpdate({ gifFps: typeof value === "number" ? value : 12 })}
+          onChange={(value) =>
+            onUpdate({ gifFps: typeof value === "number" ? value : defaultMediaForm.gifFps })
+          }
           disabled={disabled}
         />
       </FieldRow>
@@ -28,7 +30,9 @@ export function MediaGifFields({ operation, form, disabled, onUpdate }: MediaGif
         <NumberInput
           min={16}
           value={form.gifWidth}
-          onChange={(value) => onUpdate({ gifWidth: typeof value === "number" ? value : 720 })}
+          onChange={(value) =>
+            onUpdate({ gifWidth: typeof value === "number" ? value : defaultMediaForm.gifWidth })
+          }
           disabled={disabled}
         />
       </FieldRow>

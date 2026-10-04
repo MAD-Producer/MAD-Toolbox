@@ -7,6 +7,8 @@ interface BilibiliLoginDialogProps {
   onClose: () => void;
 }
 
+const QR_SIZE = 280;
+
 export function BilibiliLoginDialog({ active, qrDataUrl, onClose }: BilibiliLoginDialogProps) {
   return (
     <Modal
@@ -17,7 +19,7 @@ export function BilibiliLoginDialog({ active, qrDataUrl, onClose }: BilibiliLogi
     >
       <Stack align="center" gap="sm">
         {qrDataUrl && (
-          <img src={qrDataUrl} alt={t("bilibili.login.qrAlt")} width={280} height={280} />
+          <img src={qrDataUrl} alt={t("bilibili.login.qrAlt")} width={QR_SIZE} height={QR_SIZE} />
         )}
         <Text size="sm" c="dimmed">
           {t("bilibili.login.hint")}

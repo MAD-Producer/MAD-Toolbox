@@ -17,6 +17,57 @@ interface BilibiliPageHeaderProps {
   onOpenDependencies?: () => void;
 }
 
+function LogoutButton({ onLogout }: { onLogout: () => Promise<void> }) {
+  const [hovered, setHovered] = useState(false);
+  const [opened, setOpened] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  const confirmLogout = async () => {
+    setPending(true);
+    try {
+      await onLogout();
+      setOpened(false);
+    } catch {
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        size="compact-md"
+        variant="light"
+        color={hovered ? "red" : "green"}
+        leftSection={hovered ? <IconLogout size={16} /> : <IconCircleCheck size={16} />}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => setOpened(true)}
+      >
+        {hovered ? t("bilibili.login.logout") : t("bilibili.login.signedIn")}
+      </Button>
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title={t("bilibili.login.logoutConfirmTitle")}
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm">{t("bilibili.login.logoutConfirmBody")}</Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setOpened(false)}>
+              {t("bilibili.login.logoutCancel")}
+            </Button>
+            <Button color="red" loading={pending} onClick={() => void confirmLogout()}>
+              {t("bilibili.login.logoutConfirm")}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </>
+  );
+}
+
 export function BilibiliPageHeader({
   loginPhase,
   loggedIn,
@@ -28,40 +79,16 @@ export function BilibiliPageHeader({
   dependencyLabels,
   onOpenDependencies
 }: BilibiliPageHeaderProps) {
-  const [logoutHovered, setLogoutHovered] = useState(false);
-  const [logoutOpened, setLogoutOpened] = useState(false);
-  const [logoutPending, setLogoutPending] = useState(false);
   const submitLabel = t("bilibili.actions.addToQueue");
   const loginLabel =
     loginPhase === "running" ? t("bilibili.login.waitingScan") : t("bilibili.login.qrLogin");
-
-  const confirmLogout = async () => {
-    setLogoutPending(true);
-    try {
-      await onLogout();
-      setLogoutOpened(false);
-    } catch {
-    } finally {
-      setLogoutPending(false);
-    }
-  };
 
   return (
     <HeaderActions section="bilibili">
       <Group gap="xs" wrap="nowrap">
         <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
         {loggedIn ? (
-          <Button
-            size="compact-md"
-            variant="light"
-            color={logoutHovered ? "red" : "green"}
-            leftSection={logoutHovered ? <IconLogout size={16} /> : <IconCircleCheck size={16} />}
-            onMouseEnter={() => setLogoutHovered(true)}
-            onMouseLeave={() => setLogoutHovered(false)}
-            onClick={() => setLogoutOpened(true)}
-          >
-            {logoutHovered ? t("bilibili.login.logout") : t("bilibili.login.signedIn")}
-          </Button>
+          <LogoutButton onLogout={onLogout} />
         ) : (
           <Button
             size="compact-md"
@@ -84,24 +111,6 @@ export function BilibiliPageHeader({
           {submitLabel}
         </Button>
       </Group>
-      <Modal
-        opened={logoutOpened}
-        onClose={() => setLogoutOpened(false)}
-        title={t("bilibili.login.logoutConfirmTitle")}
-        centered
-      >
-        <Stack gap="md">
-          <Text size="sm">{t("bilibili.login.logoutConfirmBody")}</Text>
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setLogoutOpened(false)}>
-              {t("bilibili.login.logoutCancel")}
-            </Button>
-            <Button color="red" loading={logoutPending} onClick={() => void confirmLogout()}>
-              {t("bilibili.login.logoutConfirm")}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
     </HeaderActions>
   );
 }

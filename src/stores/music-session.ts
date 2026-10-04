@@ -19,8 +19,11 @@ interface PendingSearchEvents {
 export type MusicSessionPhase =
   "idle" | "ready" | "starting" | "searching" | "canceling" | "releasing";
 
+export function isSearchBusy(phase: MusicSessionPhase): boolean {
+  return phase === "starting" || phase === "searching" || phase === "canceling";
+}
+
 interface MusicSessionStore {
-  initialized: boolean;
   phase: MusicSessionPhase;
   jobId: string | null;
   response: MusicdlSearchResponse | null;
@@ -101,7 +104,6 @@ export const useMusicSessionStore = create<MusicSessionStore>((set, get) => {
   };
 
   return {
-    initialized: false,
     phase: "idle",
     jobId: null,
     response: null,
@@ -117,7 +119,6 @@ export const useMusicSessionStore = create<MusicSessionStore>((set, get) => {
         );
         try {
           await listen<JobState>("job-state", ({ payload }) => handleJobState(payload));
-          set({ initialized: true });
         } catch (error) {
           unlistenResult();
           throw error;

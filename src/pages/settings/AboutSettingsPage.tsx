@@ -76,6 +76,19 @@ interface AboutListRowProps {
   href?: string;
 }
 
+function updateTooltipLabel(
+  update: { latestVersion: string },
+  downloading: boolean,
+  progress: number | null
+): string {
+  if (downloading) {
+    return progress !== null
+      ? t("settings.about.downloadingProgress", { percent: progress })
+      : t("settings.about.downloading");
+  }
+  return t("settings.about.updateToVersion", { version: update.latestVersion });
+}
+
 function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) {
   return (
     <FieldWithActions
@@ -189,13 +202,7 @@ export function AboutSettingsPage() {
               </Button>
               {update ? (
                 <Tooltip
-                  label={
-                    downloading
-                      ? progress !== null
-                        ? t("settings.about.downloadingProgress", { percent: progress })
-                        : t("settings.about.downloading")
-                      : t("settings.about.updateToVersion", { version: update.latestVersion })
-                  }
+                  label={updateTooltipLabel(update, downloading, progress)}
                   opened={downloading || undefined}
                   position="bottom"
                 >

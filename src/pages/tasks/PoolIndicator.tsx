@@ -1,4 +1,4 @@
-import { Box, Group, Stack, Text } from "@mantine/core";
+import { Box, Group, Progress, Stack, Text } from "@mantine/core";
 import type { Pool } from "../../contracts/types";
 import { t, type TranslationKey } from "../../locale";
 import type { PoolDefinition } from "./api";
@@ -31,24 +31,7 @@ export function PoolIndicator({ definitions, occupancy }: PoolIndicatorProps) {
                 {used}/{capacity}
               </Text>
             </Group>
-            <Box
-              h={6}
-              style={{
-                borderRadius: "var(--mantine-radius-sm)",
-                background: "var(--mantine-color-default-hover)",
-                overflow: "hidden"
-              }}
-            >
-              <Box
-                h="100%"
-                w={`${filled * 100}%`}
-                style={{
-                  background: full
-                    ? "var(--mantine-color-red-filled)"
-                    : "var(--mantine-color-green-filled)"
-                }}
-              />
-            </Box>
+            <Progress size={6} value={filled * 100} color={full ? "red" : "green"} />
           </Box>
         );
       })}

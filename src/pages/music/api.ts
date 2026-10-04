@@ -1,10 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { RunResult } from "../../contracts/job";
+import type { SubmitResult } from "../../contracts/types";
 import type { MusicdlCliOptions, MusicFormState } from "./configuration";
 
-export interface SubmitResult {
-  taskId: string;
-}
+export type { SubmitResult };
 
 export interface MusicdlSearchRequest {
   keyword: string;

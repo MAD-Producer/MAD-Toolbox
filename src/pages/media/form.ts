@@ -1,12 +1,6 @@
-export type MediaOperation =
-  | "remux"
-  | "transcode"
-  | "video-extract"
-  | "audio"
-  | "subtitle-extract"
-  | "thumbnail"
-  | "gif"
-  | "frames";
+import type { MediaOperation } from "../../contracts/types";
+
+export type { MediaOperation };
 
 export interface MediaFormState {
   input: string;
