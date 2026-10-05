@@ -2,6 +2,10 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 2.1.1
+
+- ci: 标记tag后GitHub会预先发布为 prerelease，等微软商店审核上架后再转为release
+
 ## 2.1.0
 
 - refactor: 工具依赖与工具箱解耦，Windows 和 macOS 均改为单一安装包，不再区分 FULL/LITE，也不再内置工具依赖
