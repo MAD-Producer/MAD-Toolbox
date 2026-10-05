@@ -190,7 +190,7 @@ jobs:
           retention-days: 30
 
   publish:
-    name: Publish GitHub Release
+    name: Publish GitHub prerelease
     needs: [prepare, build]
     runs-on: ubuntu-latest
     permissions:
@@ -297,6 +297,7 @@ jobs:
             gh release create "$TAG" \
               --verify-tag \
               --draft \
+              --prerelease \
               --title "MAD Toolbox $TAG" \
               --notes-file release-notes.md \
               --repo "$GITHUB_REPOSITORY"
@@ -308,6 +309,8 @@ jobs:
           if [ "$release_is_draft" = "true" ]; then
             gh release edit "$TAG" \
               --draft=false \
+              --prerelease \
+              --latest=false \
               --title "MAD Toolbox $TAG" \
               --notes-file release-notes.md \
               --repo "$GITHUB_REPOSITORY"

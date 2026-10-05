@@ -156,13 +156,22 @@ settings ever need to diverge from the GitHub-distributed installers.
 
 ### Automated Store updates
 
-`.github/workflows/publish-microsoft-store.yml` checks the latest stable GitHub
-Release every six hours, at 00:07, 06:07, 12:07 and 18:07 UTC
+The release build first publishes a public GitHub prerelease, after all Windows
+and macOS assets have been uploaded. The existing formal release stays latest
+while the new version is being reviewed by Microsoft Store. Rebuilding an
+already formal release does not demote it to a prerelease.
+
+`.github/workflows/publish-microsoft-store.yml` checks the highest published
+`vX.Y.Z` version, including prereleases, every six hours at 00:07, 06:07, 12:07
+and 18:07 UTC
 (02:07, 08:07, 14:07 and 20:07 in Beijing). GitHub may delay or drop scheduled
 runs under load; these are planned times, not guaranteed execution times.
 It runs independently of the release build, so OpenList's 30-minute cache does
 not hold up GitHub publishing.
 The workflow must be on the default branch for scheduled runs to execute.
+Drafts, nightly releases and suffixed beta/RC tags are ignored. The script lists
+releases rather than using GitHub's latest-release endpoint, which excludes
+prereleases.
 
 Configure these repository Actions secrets:
 
@@ -182,6 +191,9 @@ and share it under the ID `mt_store` without a password or expiry. Installer
 URLs have the form
 `https://openlist.frameneo.com/sd/mt_store/v2.1.0/MAD.Toolbox_2.1.0_x64-setup.exe`.
 Keep the referenced GitHub releases and installer assets available and unchanged.
+The all-versions mount must expose the public prerelease to Microsoft Store;
+the latest-only `/mt` mount continues to expose only the formal release, without
+changing application update URLs or parsing logic.
 
 Only the unified `MAD.Toolbox_<version>_x64-setup.exe` is submitted. Releases
 without that asset (including the existing FULL/LITE releases) are skipped.
@@ -195,8 +207,19 @@ It saves a small `microsoft-store-submission.json` asset on the corresponding
 GitHub Release with the package URL and submission ID. This persists prepared
 packages and submitted updates across runs without committing state to the repository.
 When the submission API confirms `PUBLISHED`, the script also saves that terminal
-status and skips further Store status queries for the same release.
+status and promotes the corresponding GitHub prerelease to a formal release,
+explicitly setting it as latest. Later runs skip further Store status queries
+for the same release. If GitHub promotion fails, the next run retries promotion
+from the saved status without submitting to Microsoft Store again.
 Do not delete this asset while the workflow is managing the submission.
+
+Windows and macOS become formally available together after this confirmation.
+Until then the public prerelease remains directly downloadable on GitHub, but
+is not advertised through `/mt/latest.json`. OpenList cache refresh and Store
+client propagation can still create a short delay; this is not an atomic
+cross-platform publication. A rejected submission or unavailable status leaves
+the version as a prerelease. If Microsoft keeps returning HTTP 5xx, automatic
+promotion cannot proceed until its API confirms publication.
 
 Before submission, the workflow fills each existing listing language's `whatsNew`
 field from the GitHub Release's Markdown bullet items, which the release workflow

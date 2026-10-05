@@ -1,7 +1,13 @@
 export async function syncMicrosoftStore({ github, context, core, env = process.env }) {
   const repository = context.repo;
-  const { data: release } = await github.rest.repos.getLatestRelease(repository);
-  const tag = release.tag_name;
+  const releases = await github.paginate(github.rest.repos.listReleases, {
+    ...repository,
+    per_page: 100
+  });
+  const release = releases
+    .filter((item) => !item.draft && /^v\d+\.\d+\.\d+$/.test(item.tag_name))
+    .sort((left, right) => right.tag_name.localeCompare(left.tag_name, "en", { numeric: true }))[0];
+  const tag = release?.tag_name;
   const dryRun = env.DRY_RUN === "true";
   const retryFailed = env.RETRY_FAILED === "true";
   const recordName = "microsoft-store-submission.json";
@@ -13,8 +19,8 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
     return { outcome, tag, packageUrl };
   }
 
-  if (release.draft || release.prerelease || !/^v\d+\.\d+\.\d+$/.test(tag)) {
-    return report("ineligible-release", "Only stable vX.Y.Z releases are submitted.");
+  if (!release) {
+    return report("ineligible-release", "No published vX.Y.Z release is available for submission.");
   }
 
   const installer = release.assets.find(
@@ -130,8 +136,26 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
     record = nextRecord;
   }
 
+  async function finishPublication() {
+    if (release.prerelease) {
+      if (dryRun) {
+        return report(
+          "dry-run",
+          `${tag} is published in the Microsoft Store. Would promote its GitHub prerelease to the latest release; no release was changed.`
+        );
+      }
+      await github.rest.repos.updateRelease({
+        ...repository,
+        release_id: release.id,
+        prerelease: false,
+        make_latest: "true"
+      });
+    }
+    return report("published", `${tag} is published in the Microsoft Store and on GitHub.`);
+  }
+
   if (record?.publishingStatus === "PUBLISHED") {
-    return report("published", `${tag} is published in the Microsoft Store.`);
+    return finishPublication();
   }
 
   let moduleStatus = await storeRequest("/status");
@@ -172,7 +196,7 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
       );
     } else if (status.publishingStatus === "PUBLISHED" && record?.submissionId) {
       if (!dryRun) await saveRecord(submissionId, "PUBLISHED");
-      return report("published", `${tag} is published in the Microsoft Store.`);
+      return finishPublication();
     } else if (status.publishingStatus !== "PUBLISHED") {
       throw new Error(`Unexpected Store submission status: ${JSON.stringify(status)}`);
     }
