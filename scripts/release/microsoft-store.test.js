@@ -39,6 +39,7 @@ function setup(testContext, options = {}) {
     { language: "en-us", description: "Manually saved description", whatsNew: "Old notes" }
   ];
   const metadataUpdates = [];
+  const warnings = [];
   let failRecordUpload = options.failRecordUpload;
   const secrets = {
     STORE_APP_ID: "application-id",
@@ -71,11 +72,37 @@ function setup(testContext, options = {}) {
     assert.equal(request.headers["X-Seller-Account-Id"], "seller-id");
     let data;
     if (address.pathname.endsWith("/submission/submission-id/status")) {
+      if (options.submissionStatusError) {
+        if (options.submissionStatusHtml) {
+          return new Response("<html>Service unavailable</html>", {
+            status: options.submissionStatusError
+          });
+        }
+        return Response.json(
+          {
+            isSuccess: false,
+            errors: [
+              {
+                code: "submissionerror",
+                message: "Unable to Get Submission Status",
+                target: "submission"
+              }
+            ]
+          },
+          { status: options.submissionStatusError }
+        );
+      }
       data = {
         publishingStatus: options.publishingStatus ?? "INPROGRESS",
         hasFailed: options.publishingStatus === "FAILED"
       };
     } else if (address.pathname.endsWith("/status")) {
+      if (options.moduleStatusError) {
+        return Response.json(
+          { isSuccess: false, errors: [] },
+          { status: options.moduleStatusError }
+        );
+      }
       data = {
         isReady: moduleReady,
         ongoingSubmissionId: submissions.length ? "submission-id" : ""
@@ -107,6 +134,9 @@ function setup(testContext, options = {}) {
       data = { packages };
     } else if (address.pathname.endsWith("/submit")) {
       assert.equal(request.method, "POST");
+      if (options.submitError) {
+        return Response.json({ isSuccess: false, errors: [] }, { status: options.submitError });
+      }
       submissions.push(structuredClone(packages));
       data = { submissionId: "submission-id" };
     } else {
@@ -142,6 +172,9 @@ function setup(testContext, options = {}) {
   };
   const core = {
     info() {},
+    warning(message) {
+      warnings.push(message);
+    },
     setSecret() {},
     summary: {
       addRaw() {
@@ -163,6 +196,7 @@ function setup(testContext, options = {}) {
     updates,
     listings,
     metadataUpdates,
+    warnings,
     release,
     getRecord: () => record,
     finishUpload: () => {
@@ -245,10 +279,64 @@ test("skips releases without the unified Windows installer", async (testContext)
 });
 
 test("does not submit a version already published in the Store", async (testContext) => {
-  const fixture = setup(testContext, { publishingStatus: "PUBLISHED" });
+  const options = { publishingStatus: "PUBLISHED" };
+  const fixture = setup(testContext, options);
   await fixture.run();
   assert.equal((await fixture.run()).outcome, "published");
+  assert.equal(fixture.getRecord().publishingStatus, "PUBLISHED");
+  options.moduleStatusError = 500;
+  options.submissionStatusError = 500;
+  assert.equal((await fixture.run()).outcome, "published");
   assert.equal(fixture.submissions.length, 1);
+});
+
+test("defers an unavailable submission status without changing or resubmitting the draft", async (testContext) => {
+  const fixture = setup(testContext, { submissionStatusError: 500 });
+  await fixture.run();
+  const record = structuredClone(fixture.getRecord());
+  assert.equal((await fixture.run({ RETRY_FAILED: "true" })).outcome, "status-unavailable");
+  assert.deepEqual(fixture.getRecord(), record);
+  assert.equal(fixture.submissions.length, 1);
+  assert.equal(fixture.updates.length, 1);
+  assert.equal(fixture.metadataUpdates.length, 2);
+  assert.match(fixture.warnings[0], /500/);
+});
+
+test("defers an HTML server error when reading submission status", async (testContext) => {
+  const fixture = setup(testContext, { submissionStatusError: 503, submissionStatusHtml: true });
+  await fixture.run();
+  assert.equal((await fixture.run()).outcome, "status-unavailable");
+  assert.equal(fixture.getRecord().publishingStatus, undefined);
+  assert.equal(fixture.submissions.length, 1);
+});
+
+test("does not suppress permission errors when reading submission status", async (testContext) => {
+  const fixture = setup(testContext, { submissionStatusError: 403 });
+  await fixture.run();
+  await assert.rejects(fixture.run(), /failed \(403\)/);
+  assert.deepEqual(fixture.warnings, []);
+  assert.equal(fixture.submissions.length, 1);
+});
+
+test("dry run does not persist a published status", async (testContext) => {
+  const fixture = setup(testContext, { publishingStatus: "PUBLISHED" });
+  await fixture.run();
+  const record = structuredClone(fixture.getRecord());
+  assert.equal((await fixture.run({ DRY_RUN: "true" })).outcome, "published");
+  assert.deepEqual(fixture.getRecord(), record);
+});
+
+test("does not suppress a module status server error", async (testContext) => {
+  const fixture = setup(testContext, { moduleStatusError: 500 });
+  await assert.rejects(fixture.run(), /GET \/status failed \(500\)/);
+  assert.deepEqual(fixture.submissions, []);
+});
+
+test("does not retry or suppress a submission POST server error", async (testContext) => {
+  const fixture = setup(testContext, { submitError: 500 });
+  await assert.rejects(fixture.run(), /POST \/submit failed \(500\)/);
+  assert.deepEqual(fixture.submissions, []);
+  assert.equal(fixture.getRecord().submissionId, null);
 });
 
 test("allows an explicitly requested retry of a rejected submission", async (testContext) => {

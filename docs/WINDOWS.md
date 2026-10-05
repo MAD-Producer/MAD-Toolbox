@@ -157,8 +157,11 @@ settings ever need to diverge from the GitHub-distributed installers.
 ### Automated Store updates
 
 `.github/workflows/publish-microsoft-store.yml` checks the latest stable GitHub
-Release at minutes 7 and 37 of every hour. It runs independently of the release
-build, so OpenList's 30-minute cache does not hold up GitHub publishing.
+Release every six hours, at 00:07, 06:07, 12:07 and 18:07 UTC
+(02:07, 08:07, 14:07 and 20:07 in Beijing). GitHub may delay or drop scheduled
+runs under load; these are planned times, not guaranteed execution times.
+It runs independently of the release build, so OpenList's 30-minute cache does
+not hold up GitHub publishing.
 The workflow must be on the default branch for scheduled runs to execute.
 
 Configure these repository Actions secrets:
@@ -191,6 +194,8 @@ update the existing package, commit it, check processing readiness, and submit.
 It saves a small `microsoft-store-submission.json` asset on the corresponding
 GitHub Release with the package URL and submission ID. This persists prepared
 packages and submitted updates across runs without committing state to the repository.
+When the submission API confirms `PUBLISHED`, the script also saves that terminal
+status and skips further Store status queries for the same release.
 Do not delete this asset while the workflow is managing the submission.
 
 Before submission, the workflow fills each existing listing language's `whatsNew`
@@ -219,6 +224,14 @@ and resumed on the next run if necessary; no runner waits through certification.
 If the package URL already matches but its submission record is missing, the
 workflow reports `untracked-package` without submitting again. Inspect Partner
 Center before using the same manual retry option to resume an untracked draft.
+
+An HTTP 5xx response from the submission-status endpoint reports
+`status-unavailable` with a warning instead of failing the run. It does not mean
+the submission was rejected or published: the workflow leaves the draft and
+submission record unchanged and checks again on the next run, even when
+`retry_failed=true`. Inspect Partner Center if this persists. Authentication,
+permission errors, other API failures and confirmed rejection still fail the run.
+Dry runs never persist a published status or otherwise change release assets.
 
 Run the focused script tests with:
 
