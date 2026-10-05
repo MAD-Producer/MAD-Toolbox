@@ -3,19 +3,22 @@ import test from "node:test";
 import { syncMicrosoftStore } from "./microsoft-store.js";
 
 function setup(testContext, options = {}) {
-  const mirrorUrl =
-    "https://openlist.frameneo.com/sd/mt_store/v2.1.0/MAD.Toolbox_2.1.0_x64-setup.exe";
+  const tag = options.tag ?? "v2.1.0";
+  const mirrorUrl = `https://openlist.frameneo.com/sd/mt_store/${tag}/MAD.Toolbox_${tag.slice(1)}_x64-setup.exe`;
   const release = {
     id: 21,
-    tag_name: "v2.1.0",
+    tag_name: tag,
     draft: false,
     prerelease: false,
     body: "## Downloads\n\n| Windows x64 | [Setup.exe](https://example.com/setup.exe) |\n\n- feat: 依赖镜像安装\n- fix: 下载进度显示",
     assets: [
-      { name: "MAD.Toolbox_2.1.0_x64-setup.exe", size: 5000 },
-      { name: "MAD.Toolbox_2.1.0_x64-setup.exe.sig", size: 424 }
+      { name: `MAD.Toolbox_${tag.slice(1)}_x64-setup.exe`, size: 5000 },
+      { name: `MAD.Toolbox_${tag.slice(1)}_x64-setup.exe.sig`, size: 424 }
     ]
   };
+  const releases = options.releases ?? [release];
+  const releaseUpdates = [];
+  let failPromotion = options.failPromotion;
   const packages = [
     {
       packageId: "windows-package",
@@ -39,6 +42,7 @@ function setup(testContext, options = {}) {
     { language: "en-us", description: "Manually saved description", whatsNew: "Old notes" }
   ];
   const metadataUpdates = [];
+  const warnings = [];
   let failRecordUpload = options.failRecordUpload;
   const secrets = {
     STORE_APP_ID: "application-id",
@@ -71,11 +75,37 @@ function setup(testContext, options = {}) {
     assert.equal(request.headers["X-Seller-Account-Id"], "seller-id");
     let data;
     if (address.pathname.endsWith("/submission/submission-id/status")) {
+      if (options.submissionStatusError) {
+        if (options.submissionStatusHtml) {
+          return new Response("<html>Service unavailable</html>", {
+            status: options.submissionStatusError
+          });
+        }
+        return Response.json(
+          {
+            isSuccess: false,
+            errors: [
+              {
+                code: "submissionerror",
+                message: "Unable to Get Submission Status",
+                target: "submission"
+              }
+            ]
+          },
+          { status: options.submissionStatusError }
+        );
+      }
       data = {
         publishingStatus: options.publishingStatus ?? "INPROGRESS",
         hasFailed: options.publishingStatus === "FAILED"
       };
     } else if (address.pathname.endsWith("/status")) {
+      if (options.moduleStatusError) {
+        return Response.json(
+          { isSuccess: false, errors: [] },
+          { status: options.moduleStatusError }
+        );
+      }
       data = {
         isReady: moduleReady,
         ongoingSubmissionId: submissions.length ? "submission-id" : ""
@@ -107,6 +137,9 @@ function setup(testContext, options = {}) {
       data = { packages };
     } else if (address.pathname.endsWith("/submit")) {
       assert.equal(request.method, "POST");
+      if (options.submitError) {
+        return Response.json({ isSuccess: false, errors: [] }, { status: options.submitError });
+      }
       submissions.push(structuredClone(packages));
       data = { submissionId: "submission-id" };
     } else {
@@ -115,9 +148,22 @@ function setup(testContext, options = {}) {
     return Response.json({ isSuccess: true, errors: [], responseData: data });
   });
   const github = {
+    paginate: async (method, parameters) => (await method(parameters)).data,
     rest: {
       repos: {
-        getLatestRelease: async () => ({ data: release }),
+        listReleases: async () => ({ data: releases }),
+        updateRelease: async (parameters) => {
+          if (failPromotion) {
+            failPromotion = false;
+            throw new Error("GitHub promotion failed");
+          }
+          assert.equal(parameters.owner, "MAD-Producer");
+          assert.equal(parameters.repo, "MAD-Toolbox");
+          assert.equal(parameters.release_id, 21);
+          releaseUpdates.push(parameters);
+          release.prerelease = parameters.prerelease;
+          return { data: release };
+        },
         listReleaseAssets: async () => ({
           data: record ? [{ id: 99, name: "microsoft-store-submission.json" }] : []
         }),
@@ -142,6 +188,9 @@ function setup(testContext, options = {}) {
   };
   const core = {
     info() {},
+    warning(message) {
+      warnings.push(message);
+    },
     setSecret() {},
     summary: {
       addRaw() {
@@ -163,13 +212,123 @@ function setup(testContext, options = {}) {
     updates,
     listings,
     metadataUpdates,
+    warnings,
     release,
+    releases,
+    releaseUpdates,
     getRecord: () => record,
     finishUpload: () => {
       moduleReady = true;
     }
   };
 }
+
+test("submits a prerelease without promoting it before Store publication", async (testContext) => {
+  const fixture = setup(testContext);
+  fixture.release.prerelease = true;
+  assert.equal((await fixture.run()).outcome, "submitted");
+  assert.equal((await fixture.run()).outcome, "in-progress");
+  assert.equal(fixture.release.prerelease, true);
+  assert.deepEqual(fixture.releaseUpdates, []);
+  assert.equal(fixture.submissions.length, 1);
+});
+
+test("selects the highest stable version tag while ignoring nightly and draft releases", async (testContext) => {
+  const fixture = setup(testContext);
+  fixture.release.prerelease = true;
+  fixture.releases.unshift(
+    { ...fixture.release, tag_name: "nightly" },
+    { ...fixture.release, tag_name: "v3.0.0", draft: true },
+    { ...fixture.release, tag_name: "v2.2.0-beta.1" },
+    { ...fixture.release, tag_name: "v2.0.99", prerelease: false }
+  );
+  const result = await fixture.run();
+  assert.equal(result.outcome, "submitted");
+  assert.equal(result.tag, "v2.1.0");
+});
+
+test("compares version components numerically rather than by release order", async (testContext) => {
+  const fixture = setup(testContext, { tag: "v2.10.0" });
+  fixture.release.prerelease = true;
+  fixture.releases.unshift({ ...fixture.release, tag_name: "v2.9.0", prerelease: false });
+  const result = await fixture.run();
+  assert.equal(result.outcome, "submitted");
+  assert.equal(result.tag, "v2.10.0");
+  assert.equal(
+    fixture.submissions[0][0].packageUrl,
+    "https://openlist.frameneo.com/sd/mt_store/v2.10.0/MAD.Toolbox_2.10.0_x64-setup.exe"
+  );
+});
+
+test("skips when there are no published versioned releases", async (testContext) => {
+  const fixture = setup(testContext, { releases: [] });
+  assert.equal((await fixture.run()).outcome, "ineligible-release");
+  assert.deepEqual(fixture.submissions, []);
+});
+
+test("promotes a prerelease to latest only after confirmed Store publication", async (testContext) => {
+  const fixture = setup(testContext, { publishingStatus: "PUBLISHED" });
+  fixture.release.prerelease = true;
+  await fixture.run();
+  assert.equal((await fixture.run()).outcome, "published");
+  assert.equal(fixture.getRecord().publishingStatus, "PUBLISHED");
+  assert.equal(fixture.release.prerelease, false);
+  assert.deepEqual(fixture.releaseUpdates, [
+    {
+      owner: "MAD-Producer",
+      repo: "MAD-Toolbox",
+      release_id: 21,
+      prerelease: false,
+      make_latest: "true"
+    }
+  ]);
+  await fixture.run();
+  assert.equal(fixture.releaseUpdates.length, 1);
+  assert.equal(fixture.submissions.length, 1);
+});
+
+test("dry run does not promote a Store-published prerelease", async (testContext) => {
+  const fixture = setup(testContext, { publishingStatus: "PUBLISHED" });
+  fixture.release.prerelease = true;
+  await fixture.run();
+  const record = structuredClone(fixture.getRecord());
+  assert.equal((await fixture.run({ DRY_RUN: "true" })).outcome, "dry-run");
+  assert.equal(fixture.release.prerelease, true);
+  assert.deepEqual(fixture.releaseUpdates, []);
+  assert.deepEqual(fixture.getRecord(), record);
+});
+
+test("retries GitHub promotion from a saved published status without resubmitting", async (testContext) => {
+  const options = { publishingStatus: "PUBLISHED", failPromotion: true };
+  const fixture = setup(testContext, options);
+  fixture.release.prerelease = true;
+  await fixture.run();
+  await assert.rejects(fixture.run(), /GitHub promotion failed/);
+  assert.equal(fixture.getRecord().publishingStatus, "PUBLISHED");
+  options.moduleStatusError = 500;
+  options.submissionStatusError = 500;
+  assert.equal((await fixture.run()).outcome, "published");
+  assert.equal(fixture.release.prerelease, false);
+  assert.equal(fixture.submissions.length, 1);
+});
+
+test("unavailable Store status does not promote a prerelease", async (testContext) => {
+  const fixture = setup(testContext, { submissionStatusError: 500 });
+  fixture.release.prerelease = true;
+  await fixture.run();
+  assert.equal((await fixture.run()).outcome, "status-unavailable");
+  assert.equal(fixture.release.prerelease, true);
+  assert.deepEqual(fixture.releaseUpdates, []);
+});
+
+test("rejected Store submissions leave the GitHub release as a prerelease", async (testContext) => {
+  const fixture = setup(testContext, { publishingStatus: "FAILED" });
+  fixture.release.prerelease = true;
+  await fixture.run();
+  await assert.rejects(fixture.run(), /failed/i);
+  assert.equal(fixture.release.prerelease, true);
+  assert.deepEqual(fixture.releaseUpdates, []);
+});
 
 test("waits for an unsynchronized mirror without changing the Store", async (testContext) => {
   const fixture = setup(testContext, { mirrorMissing: true });
@@ -245,10 +404,64 @@ test("skips releases without the unified Windows installer", async (testContext)
 });
 
 test("does not submit a version already published in the Store", async (testContext) => {
-  const fixture = setup(testContext, { publishingStatus: "PUBLISHED" });
+  const options = { publishingStatus: "PUBLISHED" };
+  const fixture = setup(testContext, options);
   await fixture.run();
   assert.equal((await fixture.run()).outcome, "published");
+  assert.equal(fixture.getRecord().publishingStatus, "PUBLISHED");
+  options.moduleStatusError = 500;
+  options.submissionStatusError = 500;
+  assert.equal((await fixture.run()).outcome, "published");
   assert.equal(fixture.submissions.length, 1);
+});
+
+test("defers an unavailable submission status without changing or resubmitting the draft", async (testContext) => {
+  const fixture = setup(testContext, { submissionStatusError: 500 });
+  await fixture.run();
+  const record = structuredClone(fixture.getRecord());
+  assert.equal((await fixture.run({ RETRY_FAILED: "true" })).outcome, "status-unavailable");
+  assert.deepEqual(fixture.getRecord(), record);
+  assert.equal(fixture.submissions.length, 1);
+  assert.equal(fixture.updates.length, 1);
+  assert.equal(fixture.metadataUpdates.length, 2);
+  assert.match(fixture.warnings[0], /500/);
+});
+
+test("defers an HTML server error when reading submission status", async (testContext) => {
+  const fixture = setup(testContext, { submissionStatusError: 503, submissionStatusHtml: true });
+  await fixture.run();
+  assert.equal((await fixture.run()).outcome, "status-unavailable");
+  assert.equal(fixture.getRecord().publishingStatus, undefined);
+  assert.equal(fixture.submissions.length, 1);
+});
+
+test("does not suppress permission errors when reading submission status", async (testContext) => {
+  const fixture = setup(testContext, { submissionStatusError: 403 });
+  await fixture.run();
+  await assert.rejects(fixture.run(), /failed \(403\)/);
+  assert.deepEqual(fixture.warnings, []);
+  assert.equal(fixture.submissions.length, 1);
+});
+
+test("dry run does not persist a published status", async (testContext) => {
+  const fixture = setup(testContext, { publishingStatus: "PUBLISHED" });
+  await fixture.run();
+  const record = structuredClone(fixture.getRecord());
+  assert.equal((await fixture.run({ DRY_RUN: "true" })).outcome, "published");
+  assert.deepEqual(fixture.getRecord(), record);
+});
+
+test("does not suppress a module status server error", async (testContext) => {
+  const fixture = setup(testContext, { moduleStatusError: 500 });
+  await assert.rejects(fixture.run(), /GET \/status failed \(500\)/);
+  assert.deepEqual(fixture.submissions, []);
+});
+
+test("does not retry or suppress a submission POST server error", async (testContext) => {
+  const fixture = setup(testContext, { submitError: 500 });
+  await assert.rejects(fixture.run(), /POST \/submit failed \(500\)/);
+  assert.deepEqual(fixture.submissions, []);
+  assert.equal(fixture.getRecord().submissionId, null);
 });
 
 test("allows an explicitly requested retry of a rejected submission", async (testContext) => {

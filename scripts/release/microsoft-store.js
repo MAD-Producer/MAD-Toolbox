@@ -1,7 +1,13 @@
 export async function syncMicrosoftStore({ github, context, core, env = process.env }) {
   const repository = context.repo;
-  const { data: release } = await github.rest.repos.getLatestRelease(repository);
-  const tag = release.tag_name;
+  const releases = await github.paginate(github.rest.repos.listReleases, {
+    ...repository,
+    per_page: 100
+  });
+  const release = releases
+    .filter((item) => !item.draft && /^v\d+\.\d+\.\d+$/.test(item.tag_name))
+    .sort((left, right) => right.tag_name.localeCompare(left.tag_name, "en", { numeric: true }))[0];
+  const tag = release?.tag_name;
   const dryRun = env.DRY_RUN === "true";
   const retryFailed = env.RETRY_FAILED === "true";
   const recordName = "microsoft-store-submission.json";
@@ -13,8 +19,8 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
     return { outcome, tag, packageUrl };
   }
 
-  if (release.draft || release.prerelease || !/^v\d+\.\d+\.\d+$/.test(tag)) {
-    return report("ineligible-release", "Only stable vX.Y.Z releases are submitted.");
+  if (!release) {
+    return report("ineligible-release", "No published vX.Y.Z release is available for submission.");
   }
 
   const installer = release.assets.find(
@@ -70,15 +76,18 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
         signal: AbortSignal.timeout(30000)
       }
     );
-    const payload = await response.json();
-    const errors = payload.errors ?? [];
+    const payload = await response.json().catch(() => null);
+    const errors = payload?.errors ?? [];
     if (
       !response.ok ||
-      !payload.isSuccess ||
+      !payload?.isSuccess ||
       errors.some((error) => error.code === "packageuploaderror")
     ) {
-      throw new Error(
-        `Microsoft Store ${method} ${path} failed (${response.status}): ${JSON.stringify(errors)}`
+      throw Object.assign(
+        new Error(
+          `Microsoft Store ${method} ${path} failed (${response.status}): ${JSON.stringify(errors)}`
+        ),
+        { status: response.status }
       );
     }
     return payload.responseData;
@@ -104,11 +113,12 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
     }
   }
 
-  async function saveRecord(submissionId) {
+  async function saveRecord(submissionId, publishingStatus) {
     const nextRecord = {
       tag,
       packageUrl,
       submissionId,
+      publishingStatus,
       updatedAt: new Date().toISOString()
     };
     const data = Buffer.from(`${JSON.stringify(nextRecord, null, 2)}\n`);
@@ -126,10 +136,42 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
     record = nextRecord;
   }
 
+  async function finishPublication() {
+    if (release.prerelease) {
+      if (dryRun) {
+        return report(
+          "dry-run",
+          `${tag} is published in the Microsoft Store. Would promote its GitHub prerelease to the latest release; no release was changed.`
+        );
+      }
+      await github.rest.repos.updateRelease({
+        ...repository,
+        release_id: release.id,
+        prerelease: false,
+        make_latest: "true"
+      });
+    }
+    return report("published", `${tag} is published in the Microsoft Store and on GitHub.`);
+  }
+
+  if (record?.publishingStatus === "PUBLISHED") {
+    return finishPublication();
+  }
+
   let moduleStatus = await storeRequest("/status");
   const submissionId = record?.submissionId || moduleStatus.ongoingSubmissionId;
   if (submissionId) {
-    const status = await storeRequest(`/submission/${encodeURIComponent(submissionId)}/status`);
+    let status;
+    try {
+      status = await storeRequest(`/submission/${encodeURIComponent(submissionId)}/status`);
+    } catch (error) {
+      if (!(error.status >= 500 && error.status < 600)) throw error;
+      core.warning(error.message);
+      return report(
+        "status-unavailable",
+        `Cannot determine the status of Store submission ${submissionId}. No draft was changed or resubmitted. The next scheduled run will check again; inspect Partner Center if the error persists.`
+      );
+    }
     if (!record?.submissionId) {
       const { packages: activePackages } = await storeRequest("/packages");
       if (activePackages.some((item) => item.packageUrl === packageUrl)) {
@@ -153,7 +195,8 @@ export async function syncMicrosoftStore({ github, context, core, env = process.
         `Store submission ${submissionId} is ${status.publishingStatus}; waiting for certification.`
       );
     } else if (status.publishingStatus === "PUBLISHED" && record?.submissionId) {
-      return report("published", `${tag} is published in the Microsoft Store.`);
+      if (!dryRun) await saveRecord(submissionId, "PUBLISHED");
+      return finishPublication();
     } else if (status.publishingStatus !== "PUBLISHED") {
       throw new Error(`Unexpected Store submission status: ${JSON.stringify(status)}`);
     }

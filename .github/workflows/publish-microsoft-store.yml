@@ -2,7 +2,7 @@ name: Publish Microsoft Store
 
 on:
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "7 */6 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
