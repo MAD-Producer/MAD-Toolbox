@@ -90,7 +90,7 @@ winget install --id DenoLand.Deno -e
 brew install ffmpeg yt-dlp media-info deno
 ```
 
-BBDown can also be installed with an existing .NET SDK: `dotnet tool install --global BBDown`.
+On macOS, install BBDown from the CDN mirror on the dependencies page.
 
 ## Development & Contribution
 

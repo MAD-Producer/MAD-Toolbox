@@ -107,6 +107,9 @@ impl ToolName {
     }
 
     fn install_command(&self) -> Option<&'static str> {
+        if cfg!(target_os = "macos") && matches!(self, Self::Bbdown) {
+            return None;
+        }
         if cfg!(target_os = "windows") {
             match self {
                 Self::Bbdown => Some(
@@ -1270,7 +1273,7 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
             install_hint: if health_check_failed && install_command.is_none() {
                 Some(rust_i18n::t!("backend.deps.manualRepair").to_string())
             } else if matches!(tool, ToolName::Bbdown) && cfg!(target_os = "macos") && !available {
-                Some(rust_i18n::t!("backend.deps.bbdownDotnetHint").to_string())
+                Some(rust_i18n::t!("backend.deps.bbdownCdnHint").to_string())
             } else {
                 None
             },

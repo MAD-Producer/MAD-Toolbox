@@ -1,5 +1,5 @@
 {
-  "backend.deps.bbdownDotnetHint": "This system installation command requires the .NET SDK. Install the SDK first.",
+  "backend.deps.bbdownCdnHint": "On macOS, install BBDown from the CDN mirror.",
   "backend.deps.invalidPackageFile": "The mirror package must be a ZIP filename, not a path or URL.",
   "backend.deps.invalidPackageHash": "The mirror package has no valid SHA-256 checksum.",
   "backend.deps.invalidPackageExecutables": "The mirror package is missing a required executable or has an invalid executable path.",

@@ -4,6 +4,7 @@ All notable changes to MAD Toolbox are documented here.
 
 ## 2.1.1
 
+- fix: macOS 的 BBDown 安装仅提供 CDN 镜像，禁用命令行安装并更新安装提示
 - ci: 标记tag后GitHub会预先发布为 prerelease，等微软商店审核上架后再转为release
 
 ## 2.1.0

@@ -87,12 +87,11 @@ installer no longer contains an offline runtime payload.
 
 ```sh
 brew install ffmpeg yt-dlp media-info deno
-dotnet tool install --global BBDown
 ```
 
-BBDown's command requires an existing .NET SDK. Toolbox searches Homebrew locations,
-PATH, `~/.local/bin` and `~/.dotnet/tools`. System BBDown is supported on macOS;
-it is no longer restricted to an application-bundled executable.
+On macOS, BBDown installation is available only through the CDN mirror on the
+dependencies page; command installation is disabled. Toolbox still detects existing
+system binaries in Homebrew locations, PATH, `~/.local/bin` and `~/.dotnet/tools`.
 
 ## Python and musicdl
 

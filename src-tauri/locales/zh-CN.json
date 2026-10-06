@@ -1,5 +1,5 @@
 {
-  "backend.deps.bbdownDotnetHint": "此系统安装命令需要 .NET SDK；请先安装 SDK。",
+  "backend.deps.bbdownCdnHint": "macOS 上请通过 CDN 镜像安装 BBDown。",
   "backend.deps.invalidPackageFile": "镜像包必须使用 ZIP 文件名，不能是路径或 URL。",
   "backend.deps.invalidPackageHash": "镜像包缺少有效的 SHA-256 校验值。",
   "backend.deps.invalidPackageExecutables": "镜像包缺少必要程序，或程序路径无效。",
