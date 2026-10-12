@@ -1,8 +1,9 @@
 name: Publish Microsoft Store
 
 on:
-  schedule:
-    - cron: "7 */6 * * *"
+  # 2026-10-12 暂停微软商店自动上架，恢复时取消下面的注释
+  # schedule:
+  #   - cron: "7 */6 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
