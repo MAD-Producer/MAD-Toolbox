@@ -28,6 +28,8 @@
 
 ENGLISH · [简体中文](README.zh.md)
 
+MAD Toolbox is a toolkit designed specifically for MAD creators, facilitating the acquisition and processing of source materials. It provides features for downloading audiovisual content, transcoding assets, and managing these resources. Furthermore, by standardizing the invocation interfaces for its various tools, MAD Toolbox enables unified scheduling and reuse across all tasks.
+
 ## Features
 
 - **Cross-platform support**: Compatible with Windows 10/11 and macOS
