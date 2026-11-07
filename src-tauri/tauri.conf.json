@@ -44,7 +44,7 @@
     "shortDescription": "GUI toolbox for media processing and downloading",
     "longDescription": "MAD Toolbox turns common media command-line tools into a clear graphical workflow.",
     "macOS": {
-      "minimumSystemVersion": "12.0",
+      "minimumSystemVersion": "15.0",
       "signingIdentity": "-"
     }
   },
