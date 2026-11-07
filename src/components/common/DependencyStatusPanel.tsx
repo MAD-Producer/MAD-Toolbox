@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Card, Group, Progress, Stack, Text } from "@mantine/core";
+import { Badge, Button, Card, Checkbox, Group, Progress, Stack, Text } from "@mantine/core";
 import {
   IconCircleCheck,
   IconCloud,
@@ -35,7 +35,8 @@ interface DependencyStatusPanelProps {
   onInstall: (dependency: DependencyStatus) => void;
   mirrorDependencies: MirrorDependencyStatus[];
   installation: DependencyDownloadProgress | null;
-  onMirrorInstall: (tool: ToolName) => void;
+  queue: ToolName[];
+  onMirrorInstall: (tools: ToolName[]) => void;
 }
 
 export function DependencyStatusPanel({
@@ -45,6 +46,7 @@ export function DependencyStatusPanel({
   onInstall,
   mirrorDependencies,
   installation,
+  queue,
   onMirrorInstall
 }: DependencyStatusPanelProps) {
   const visibleDependencies = dependencies.filter((item) => item.tool !== "ffprobe");
@@ -54,6 +56,29 @@ export function DependencyStatusPanel({
   const sortedDependencies = [...missing, ...visibleDependencies.filter((item) => item.available)];
   const mirrors = new Map(mirrorDependencies.map((dependency) => [dependency.tool, dependency]));
   const updateCount = mirrorDependencies.filter((dependency) => dependency.updateAvailable).length;
+  const suggestedTools = sortedDependencies
+    .filter((dependency) => {
+      const mirror = mirrors.get(dependency.tool);
+      return mirror && (!dependency.available || mirror.updateAvailable);
+    })
+    .map((dependency) => dependency.tool);
+  const suggestedKey = suggestedTools.join(",");
+  const [selected, setSelected] = useState<ReadonlySet<ToolName>>(() => new Set(suggestedTools));
+  const selectedTools = sortedDependencies
+    .map((dependency) => dependency.tool)
+    .filter((tool) => mirrors.has(tool) && selected.has(tool));
+  const currentIndex = installation ? queue.indexOf(installation.tool) : -1;
+
+  useEffect(() => {
+    setSelected(new Set(suggestedTools));
+  }, [suggestedKey]);
+
+  const toggleSelected = (tool: ToolName) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (!next.delete(tool)) next.add(tool);
+      return next;
+    });
 
   useEffect(() => {
     if (missingTools || updateCount > 0 || installation) setOpened(true);
@@ -83,19 +108,33 @@ export function DependencyStatusPanel({
         )
       }
       action={
-        <Button
-          size="compact-sm"
-          variant="subtle"
-          className="dep-refresh"
-          leftSection={<IconRefresh size={14} />}
-          loading={loading}
-          onClick={() => {
-            if (missing.length > 0) setOpened(true);
-            onRefresh();
-          }}
-        >
-          {t("deps.recheck")}
-        </Button>
+        <Group gap="xs">
+          {mirrors.size > 0 && (
+            <Button
+              size="compact-sm"
+              variant="light"
+              leftSection={<IconCloudDownload size={14} />}
+              loading={installation !== null}
+              disabled={selectedTools.length === 0}
+              onClick={() => onMirrorInstall(selectedTools)}
+            >
+              {t("deps.mirrorInstallSelected", { count: selectedTools.length })}
+            </Button>
+          )}
+          <Button
+            size="compact-sm"
+            variant="subtle"
+            className="dep-refresh"
+            leftSection={<IconRefresh size={14} />}
+            loading={loading}
+            onClick={() => {
+              if (missing.length > 0) setOpened(true);
+              onRefresh();
+            }}
+          >
+            {t("deps.recheck")}
+          </Button>
+        </Group>
       }
     >
       <Stack gap="xs">
@@ -105,6 +144,7 @@ export function DependencyStatusPanel({
             Boolean(dependency.installCommand);
           const mirror = mirrors.get(dependency.tool);
           const installing = installation?.tool === dependency.tool;
+          const queued = queue.indexOf(dependency.tool) > currentIndex;
           const total = installation?.total;
           const received = installation?.received ?? 0;
           const progress = total ? Math.min(100, (received / total) * 100) : 0;
@@ -112,9 +152,21 @@ export function DependencyStatusPanel({
             <Card key={dependency.tool} withBorder radius="md" padding="sm">
               <Stack gap="xs">
                 <Group justify="space-between">
-                  <Text size="sm" fw={600}>
-                    {dependency.label}
-                  </Text>
+                  {mirror ? (
+                    <Checkbox
+                      size="xs"
+                      label={dependency.label}
+                      aria-label={t("deps.mirrorSelectAria", { name: dependency.label })}
+                      checked={selected.has(dependency.tool)}
+                      disabled={installation !== null}
+                      onChange={() => toggleSelected(dependency.tool)}
+                      styles={{ label: { fontWeight: 600 } }}
+                    />
+                  ) : (
+                    <Text size="sm" fw={600}>
+                      {dependency.label}
+                    </Text>
+                  )}
                   <Group gap="xs" justify="flex-end" style={{ marginInlineStart: "auto" }}>
                     {mirror && (
                       <Button
@@ -123,7 +175,7 @@ export function DependencyStatusPanel({
                         loading={installing}
                         disabled={installation !== null}
                         leftSection={<IconCloudDownload size={14} />}
-                        onClick={() => onMirrorInstall(dependency.tool)}
+                        onClick={() => onMirrorInstall([dependency.tool])}
                       >
                         {mirror.updateAvailable
                           ? t("deps.mirrorUpdate")
@@ -211,6 +263,11 @@ export function DependencyStatusPanel({
                     )}
                   </Group>
                 )}
+                {queued && (
+                  <Text size="xs" c="dimmed">
+                    {t("deps.mirrorQueued")}
+                  </Text>
+                )}
                 {installing && installation && (
                   <Stack gap="xs" aria-live="polite">
                     <Progress
@@ -219,6 +276,7 @@ export function DependencyStatusPanel({
                       aria-label={t("deps.mirrorDownloading")}
                     />
                     <Text size="xs" c="dimmed">
+                      {queue.length > 1 && `${currentIndex + 1}/${queue.length} · `}
                       {received === 0
                         ? t("deps.mirrorPreparing")
                         : progress === 100

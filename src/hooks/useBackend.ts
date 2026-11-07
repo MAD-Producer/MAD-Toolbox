@@ -13,7 +13,7 @@ import {
   fetchAppSettings,
   fetchDependencyStatus,
   fetchMirrorDependencyStatus,
-  installMirrorDependency,
+  installMirrorDependencies,
   saveAppSettings,
   setDependencyPreference,
   type AppSettings,
@@ -30,8 +30,9 @@ export function useBackend() {
   const [mirrorInstallation, setMirrorInstallation] = useState<DependencyDownloadProgress | null>(
     null
   );
+  const [mirrorQueue, setMirrorQueue] = useState<ToolName[]>([]);
   const mirrorRequest = useRef<Promise<void> | null>(null);
-  const mirrorInstalling = useRef(false);
+  const mirrorBatch = useRef<ToolName[]>([]);
   const progressListener = useRef<ReturnType<typeof listen> | null>(null);
   const settingsUpdates = useRef<Promise<void>>(Promise.resolve());
 
@@ -99,14 +100,37 @@ export function useBackend() {
   );
 
   const installMirror = useCallback(
-    async (tool: ToolName) => {
-      if (mirrorInstalling.current) return;
-      mirrorInstalling.current = true;
-      setMirrorInstallation({ tool, received: 0, total: null });
+    async (tools: ToolName[]) => {
+      if (mirrorBatch.current.length > 0 || tools.length === 0) return;
+      mirrorBatch.current = tools;
+      setMirrorQueue(tools);
+      setMirrorInstallation({ tool: tools[0], received: 0, total: null });
       try {
         await progressListener.current;
-        await installMirrorDependency(tool);
-        notifications.show({ color: "teal", message: t("deps.mirrorInstalled", { name: tool }) });
+        const results = await installMirrorDependencies(tools);
+        const installed = results.filter((result) => result.status === "installed");
+        const problems = results.flatMap((result) =>
+          result.status === "installed" ? [] : [`${result.tool}: ${result.reason}`]
+        );
+        if (problems.length === 0) {
+          notifications.show({
+            color: "teal",
+            message: t("deps.mirrorInstalled", {
+              name: installed.map((result) => result.tool).join(", ")
+            })
+          });
+        } else {
+          notifications.show({
+            color: installed.length > 0 ? "yellow" : "red",
+            title: t("deps.mirrorBatchSummary", {
+              installed: installed.length,
+              skipped: results.filter((result) => result.status === "skipped").length,
+              failed: results.filter((result) => result.status === "failed").length
+            }),
+            message: problems.join("\n"),
+            style: { whiteSpace: "pre-wrap" }
+          });
+        }
         await Promise.all([refreshDependencies(), refreshMirrorDependencies()]);
       } catch (error) {
         notifications.show({
@@ -114,7 +138,8 @@ export function useBackend() {
           message: t("deps.mirrorInstallFailed", { error: String(error) })
         });
       } finally {
-        mirrorInstalling.current = false;
+        mirrorBatch.current = [];
+        setMirrorQueue([]);
         setMirrorInstallation(null);
       }
     },
@@ -132,8 +157,7 @@ export function useBackend() {
     const promise = listen<DependencyDownloadProgress>(
       "dependency-download-progress",
       ({ payload }) => {
-        if (!disposed)
-          setMirrorInstallation((current) => (current?.tool === payload.tool ? payload : current));
+        if (!disposed && mirrorBatch.current.includes(payload.tool)) setMirrorInstallation(payload);
       }
     );
     progressListener.current = promise;
@@ -145,7 +169,7 @@ export function useBackend() {
 
   useEffect(() => {
     const promise = listen("dependency-install-finished", () => {
-      if (mirrorInstalling.current) return;
+      if (mirrorBatch.current.length > 0) return;
       void refreshDependencies();
       void refreshMirrorDependencies();
     });
@@ -173,6 +197,7 @@ export function useBackend() {
     loadingMirror,
     mirrorError,
     mirrorInstallation,
+    mirrorQueue,
     refreshMirrorDependencies,
     installMirror
   };

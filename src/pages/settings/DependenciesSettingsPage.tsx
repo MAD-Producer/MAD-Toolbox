@@ -23,7 +23,8 @@ interface DependenciesSettingsPageProps {
   loadingMirror: boolean;
   mirrorError: string | null;
   mirrorInstallation: DependencyDownloadProgress | null;
-  onMirrorInstall: (tool: ToolName) => Promise<void>;
+  mirrorQueue: ToolName[];
+  onMirrorInstall: (tools: ToolName[]) => Promise<void>;
 }
 
 export function DependenciesSettingsPage({
@@ -36,6 +37,7 @@ export function DependenciesSettingsPage({
   loadingMirror,
   mirrorError,
   mirrorInstallation,
+  mirrorQueue,
   onMirrorInstall
 }: DependenciesSettingsPageProps) {
   const [preference, setPreference] = useState(settings.dependencyPreference);
@@ -114,7 +116,8 @@ export function DependenciesSettingsPage({
         onInstall={(dependency) => void onInstall(dependency)}
         mirrorDependencies={mirrorDependencies}
         installation={mirrorInstallation}
-        onMirrorInstall={(tool) => void onMirrorInstall(tool)}
+        queue={mirrorQueue}
+        onMirrorInstall={(tools) => void onMirrorInstall(tools)}
       />
     </Stack>
   );

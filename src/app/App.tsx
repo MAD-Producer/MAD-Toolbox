@@ -268,6 +268,7 @@ export default function App() {
             loadingMirror={backend.loadingMirror}
             mirrorError={backend.mirrorError}
             mirrorInstallation={backend.mirrorInstallation}
+            mirrorQueue={backend.mirrorQueue}
             onMirrorInstall={backend.installMirror}
           />
         ) : (

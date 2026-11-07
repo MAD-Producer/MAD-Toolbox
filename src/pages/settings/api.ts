@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   DependencyStatus,
   MirrorDependencyStatus,
+  MirrorInstallResult,
   ToolName
 } from "../../contracts/dependency";
 import type { CookieFileOption } from "../../contracts/types";
@@ -60,6 +61,6 @@ export function fetchMirrorDependencyStatus(): Promise<MirrorDependencyStatus[]>
   return invoke<MirrorDependencyStatus[]>("dependency_mirror_status");
 }
 
-export function installMirrorDependency(tool: ToolName): Promise<void> {
-  return invoke<void>("dependency_install_mirror", { tool });
+export function installMirrorDependencies(tools: ToolName[]): Promise<MirrorInstallResult[]> {
+  return invoke<MirrorInstallResult[]>("dependency_install_mirror", { tools });
 }

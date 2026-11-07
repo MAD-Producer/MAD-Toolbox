@@ -502,9 +502,9 @@ fn replace_mirror_installation(
     Ok(())
 }
 
-async fn ensure_mirror_not_in_use(hub: &TaskHub, tool: &ToolName) -> Result<(), String> {
+async fn mirror_in_use(hub: &TaskHub, tool: &ToolName) -> bool {
     let group = tool.package_name();
-    let busy = hub.snapshot().await.iter().any(|task| {
+    hub.snapshot().await.iter().any(|task| {
         !task.status.is_terminal()
             && match group {
                 Some("ffmpeg") => true,
@@ -512,8 +512,11 @@ async fn ensure_mirror_not_in_use(hub: &TaskHub, tool: &ToolName) -> Result<(), 
                 Some("yt-dlp" | "deno") => task.feature == Feature::Network,
                 _ => false,
             }
-    });
-    if busy {
+    })
+}
+
+async fn ensure_mirror_not_in_use(hub: &TaskHub, tool: &ToolName) -> Result<(), String> {
+    if mirror_in_use(hub, tool).await {
         return Err(rust_i18n::t!("backend.deps.mirrorInUse").to_string());
     }
     Ok(())
@@ -571,31 +574,32 @@ async fn download_mirror_package(
     Ok(())
 }
 
-#[tauri::command]
-pub(crate) async fn dependency_install_mirror(
-    app: AppHandle,
-    hub: State<'_, TaskHub>,
+#[derive(Serialize)]
+#[serde(tag = "status", content = "reason", rename_all = "kebab-case")]
+pub(crate) enum MirrorInstallOutcome {
+    Installed,
+    Skipped(String),
+    Failed(String),
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct MirrorInstallResult {
     tool: ToolName,
+    #[serde(flatten)]
+    outcome: MirrorInstallOutcome,
+}
+
+async fn install_mirror_package(
+    app: &AppHandle,
+    hub: &TaskHub,
+    client: &reqwest::Client,
+    tool: &ToolName,
+    remote: &MirrorPackage,
 ) -> Result<(), String> {
-    let group = tool
-        .package_name()
-        .ok_or_else(|| rust_i18n::t!("backend.deps.mirrorUnsupported").to_string())?;
-    let _guard = MIRROR_INSTALL_LOCK
-        .try_lock()
-        .map_err(|_| rust_i18n::t!("backend.deps.mirrorInstalling").to_string())?;
-    let packages = fetch_mirror_packages(&app).await?;
-    let remote = packages
-        .values()
-        .find(|package| package.installation.executables.contains_key(&tool))
-        .ok_or_else(|| {
-            rust_i18n::t!("backend.deps.manifestPackageMissing", tool = group).to_string()
-        })?;
     let mut package = remote.installation.clone();
-    let current = managed_directory(&app, &tool)
+    let current = managed_directory(app, tool)
         .ok_or_else(|| rust_i18n::t!("backend.deps.mirrorUnsupported").to_string())?;
-    if current.exists() {
-        ensure_mirror_not_in_use(&hub, &tool).await?;
-    }
     let parent = current.parent().unwrap();
     std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     let temporary = tempfile::Builder::new()
@@ -603,9 +607,8 @@ pub(crate) async fn dependency_install_mirror(
         .tempdir_in(parent)
         .map_err(|error| error.to_string())?;
     let archive = temporary.path().join("download.zip");
-    let client = mirror_client(&app, Duration::from_secs(3600))?;
     download_mirror_package(
-        &client,
+        client,
         mirror_download_url(&package.file_name)?,
         &archive,
         &package.sha256,
@@ -632,7 +635,7 @@ pub(crate) async fn dependency_install_mirror(
     .await
     .map_err(|error| error.to_string())??;
     if current.exists() {
-        ensure_mirror_not_in_use(&hub, &tool).await?;
+        ensure_mirror_not_in_use(hub, tool).await?;
     }
     let previous = temporary.path().join("previous");
     let result = replace_mirror_installation(&prepared, &current, &previous);
@@ -642,6 +645,46 @@ pub(crate) async fn dependency_install_mirror(
     result?;
     let _ = app.emit("dependency-install-finished", tool);
     Ok(())
+}
+
+/// 串行安装所选镜像依赖：整批持有安装锁、只拉一次清单；单项失败或被任务占用不中断其余项。
+#[tauri::command]
+pub(crate) async fn dependency_install_mirror(
+    app: AppHandle,
+    hub: State<'_, TaskHub>,
+    tools: Vec<ToolName>,
+) -> Result<Vec<MirrorInstallResult>, String> {
+    let _guard = MIRROR_INSTALL_LOCK
+        .try_lock()
+        .map_err(|_| rust_i18n::t!("backend.deps.mirrorInstalling").to_string())?;
+    let packages = fetch_mirror_packages(&app).await?;
+    let client = mirror_client(&app, Duration::from_secs(3600))?;
+    let mut results = Vec::with_capacity(tools.len());
+    for tool in tools {
+        let outcome = match packages
+            .values()
+            .find(|package| package.installation.executables.contains_key(&tool))
+        {
+            None => MirrorInstallOutcome::Failed(
+                rust_i18n::t!("backend.deps.manifestPackageMissing", tool = tool.label())
+                    .to_string(),
+            ),
+            Some(_)
+                if managed_directory(&app, &tool).is_some_and(|current| current.exists())
+                    && mirror_in_use(&hub, &tool).await =>
+            {
+                MirrorInstallOutcome::Skipped(rust_i18n::t!("backend.deps.mirrorInUse").to_string())
+            }
+            Some(remote) => {
+                match install_mirror_package(&app, &hub, &client, &tool, remote).await {
+                    Ok(()) => MirrorInstallOutcome::Installed,
+                    Err(error) => MirrorInstallOutcome::Failed(error),
+                }
+            }
+        };
+        results.push(MirrorInstallResult { tool, outcome });
+    }
+    Ok(results)
 }
 
 #[cfg(target_os = "windows")]
