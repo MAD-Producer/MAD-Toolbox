@@ -66,7 +66,7 @@ MAD Toolbox currently supports the following platforms:
 | Platform | OS Version | Architecture | Distribution Types      |
 | -------- | ---------- | ------------ | ----------------------- |
 | Windows  | 10+        | `x86_64`     | Single installer `.exe` |
-| macOS    | 14+        | `aarch64`    | Single installer `.dmg` |
+| macOS    | 15+        | `aarch64`    | Single installer `.dmg` |
 
 Application installers no longer bundle command-line dependencies. Settings offers CDN installation and independent updates for app-managed tools, alongside the system installation commands below. Python and musicdl remain system-only.
 
