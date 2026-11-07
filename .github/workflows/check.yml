@@ -89,7 +89,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-14, windows-2022]
+        platform: [macos-15, windows-2022]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v5
@@ -101,7 +101,7 @@ jobs:
 
       # Platform-specific Rust target setup (kept explicit for readability)
       - name: Set up Rust (macOS)
-        if: matrix.platform == 'macos-14'
+        if: matrix.platform == 'macos-15'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache: false
@@ -123,7 +123,7 @@ jobs:
 
       # Platform-specific cargo check invocation (kept explicit for readability)
       - name: Check Rust (macOS)
-        if: matrix.platform == 'macos-14'
+        if: matrix.platform == 'macos-15'
         run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
       - name: Check Rust (Windows)
         if: matrix.platform == 'windows-2022'

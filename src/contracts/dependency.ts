@@ -31,6 +31,10 @@ export interface DependencyDownloadProgress {
   total: number | null;
 }
 
+export type MirrorInstallResult = { tool: ToolName } & (
+  { status: "installed" } | { status: "skipped" | "failed"; reason: string }
+);
+
 export interface MirrorDependencyStatus extends ManagedDependency {
   tool: ToolName;
   size: number;
