@@ -70,8 +70,8 @@ export function DependencyStatusPanel({
   const currentIndex = installation ? queue.indexOf(installation.tool) : -1;
 
   useEffect(() => {
-    setSelected(new Set(suggestedTools));
-  }, [suggestedKey]);
+    if (queue.length === 0) setSelected(new Set(suggestedTools));
+  }, [suggestedKey, queue.length]);
 
   const toggleSelected = (tool: ToolName) =>
     setSelected((current) => {
