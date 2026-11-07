@@ -117,10 +117,10 @@ share is separate from the application update share:
 - Application updates: `/sd/mt/latest.json`.
 - Dependency manifest: `/sd/mt_dependencies/version.json`.
 
-Application builds are first published as GitHub prereleases. After Microsoft
-Store confirms publication, the Store workflow promotes the release to latest;
+Application builds are published directly as formal GitHub Releases after all
+Windows and macOS assets have been uploaded. The release is marked as latest;
 the latest-only `/mt` mount then exposes its `latest.json` after cache refresh.
-Dependency releases remain independent of this application approval flow.
+Dependency releases remain independent of application releases.
 
 Schema 1 uses `platforms.windows-x64` and `platforms.macos-arm64`, each containing the
 five binary packages. Each entry supplies `version`, `fileName`, `sha256`, `size` and
