@@ -2,6 +2,11 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 2.1.2
+
+- feat: 依赖的安装支持一键勾选后批量下载
+- ci: 将macos的最低版本提高为 15
+
 ## 2.1.1
 
 - fix: macOS 的 BBDown 安装仅提供 CDN 镜像，禁用命令行安装并更新安装提示
