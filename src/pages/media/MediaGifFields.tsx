@@ -24,9 +24,7 @@ export function MediaGifFields({ operation, form, disabled, onUpdate }: MediaGif
           id={fpsId}
           min={1}
           value={form.gifFps}
-          onChange={(value) =>
-            onUpdate({ gifFps: value ?? defaultMediaForm.gifFps })
-          }
+          onChange={(value) => onUpdate({ gifFps: value ?? defaultMediaForm.gifFps })}
           disabled={disabled}
         />
       </FieldRow>
@@ -35,9 +33,7 @@ export function MediaGifFields({ operation, form, disabled, onUpdate }: MediaGif
           id={widthId}
           min={16}
           value={form.gifWidth}
-          onChange={(value) =>
-            onUpdate({ gifWidth: value ?? defaultMediaForm.gifWidth })
-          }
+          onChange={(value) => onUpdate({ gifWidth: value ?? defaultMediaForm.gifWidth })}
           disabled={disabled}
         />
       </FieldRow>

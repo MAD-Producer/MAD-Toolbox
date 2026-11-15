@@ -1,6 +1,12 @@
 import { useId } from "react";
 import { FieldRow } from "../../components/common/FieldRow";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../../components/ui/select";
 import { t } from "../../locale";
 import { MEDIA_OPERATION_OPTIONS, type MediaPageOperation } from "./workflow";
 

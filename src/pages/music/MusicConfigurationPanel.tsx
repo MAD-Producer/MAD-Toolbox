@@ -95,9 +95,7 @@ export function MusicConfigurationPanel({
           min={1}
           max={100}
           value={form.searchSize}
-          onChange={(value) =>
-            onChange({ searchSize: value ?? DEFAULT_SEARCH_SIZE })
-          }
+          onChange={(value) => onChange({ searchSize: value ?? DEFAULT_SEARCH_SIZE })}
         />
       </FieldRow>
       <FieldRow label={t("music.proxy.label")} htmlFor={proxyId}>

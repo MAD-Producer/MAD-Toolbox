@@ -196,35 +196,38 @@ export default function App() {
     }
   };
 
-  const seedTaskIntoWorkspace = useCallback((task: TaskEnvelope, purpose: TaskSeed["purpose"]) => {
-    const target = routeForTask(task);
-    const targetWorkspace = workspaceIdForRoute(target);
-    if (targetWorkspace === null) return;
-    const session = useWorkspacesStore.getState().sessions[targetWorkspace];
-    if (session.status === "retained" && !window.confirm(t("app.confirmDiscardDraft"))) {
-      return;
-    }
-    // 种子交付进会话：generation+1 触发目标页重挂，由挂载初始化器恰好消费一次
-    // （原先靠目标页 mount 后的 Effect 回调 onSeedConsumed 清除 App 级 state）
-    useWorkspacesStore.getState().deliver(targetWorkspace, { task, purpose });
-    // 打码参数警告在用户点击「重跑」时就地发出（原先在目标页 mount 后的 Effect 里补发）
-    if (
-      (target.section === "bilibili" || target.section === "network") &&
-      task.intent.type === "manual" &&
-      task.intent.data.argv.some((argument) => argument === "***")
-    ) {
-      notifications.show({
-        color: "yellow",
-        message: t(
-          target.section === "bilibili"
-            ? "bilibili.notice.redactedArgs"
-            : "network.expertRedactedWarning"
-        )
-      });
-    }
-    if (target.section === "media") setLastMediaPage(target.page);
-    navigate(target);
-  }, [navigate]);
+  const seedTaskIntoWorkspace = useCallback(
+    (task: TaskEnvelope, purpose: TaskSeed["purpose"]) => {
+      const target = routeForTask(task);
+      const targetWorkspace = workspaceIdForRoute(target);
+      if (targetWorkspace === null) return;
+      const session = useWorkspacesStore.getState().sessions[targetWorkspace];
+      if (session.status === "retained" && !window.confirm(t("app.confirmDiscardDraft"))) {
+        return;
+      }
+      // 种子交付进会话：generation+1 触发目标页重挂，由挂载初始化器恰好消费一次
+      // （原先靠目标页 mount 后的 Effect 回调 onSeedConsumed 清除 App 级 state）
+      useWorkspacesStore.getState().deliver(targetWorkspace, { task, purpose });
+      // 打码参数警告在用户点击「重跑」时就地发出（原先在目标页 mount 后的 Effect 里补发）
+      if (
+        (target.section === "bilibili" || target.section === "network") &&
+        task.intent.type === "manual" &&
+        task.intent.data.argv.some((argument) => argument === "***")
+      ) {
+        notifications.show({
+          color: "yellow",
+          message: t(
+            target.section === "bilibili"
+              ? "bilibili.notice.redactedArgs"
+              : "network.expertRedactedWarning"
+          )
+        });
+      }
+      if (target.section === "media") setLastMediaPage(target.page);
+      navigate(target);
+    },
+    [navigate]
+  );
 
   const rerunTask = useCallback(
     (task: TaskEnvelope) => seedTaskIntoWorkspace(task, "rerun"),

@@ -8,7 +8,12 @@ export type TextareaProps = ComponentPropsWithRef<"textarea"> & {
   autosize?: boolean;
 };
 
-export function Textarea({ className, invalid = false, autosize = false, ...props }: TextareaProps) {
+export function Textarea({
+  className,
+  invalid = false,
+  autosize = false,
+  ...props
+}: TextareaProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const value = props.value;
 

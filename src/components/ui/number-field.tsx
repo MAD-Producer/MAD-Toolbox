@@ -1,7 +1,10 @@
 import { useState, type ComponentPropsWithRef } from "react";
 import { cn } from "../../lib/cn";
 
-export type NumberFieldProps = Omit<ComponentPropsWithRef<"input">, "type" | "onChange" | "value"> & {
+export type NumberFieldProps = Omit<
+  ComponentPropsWithRef<"input">,
+  "type" | "onChange" | "value"
+> & {
   /** 当前数值 */
   value?: number | null;
   /** 数值变化回调（失焦时若为空/非法则回调 null，由调用方决定回退值） */

@@ -117,7 +117,9 @@ export function useMediaWorkspace({
       const restored = { ...defaultMediaForm, ...(seedData as Partial<MediaFormState>) };
       if (pageConfig.operations.includes(restored.operation)) return restored.operation;
     }
-    return pageConfig.operations.includes(form.operation) ? form.operation : pageConfig.operations[0];
+    return pageConfig.operations.includes(form.operation)
+      ? form.operation
+      : pageConfig.operations[0];
   });
   const [encoders, setEncoders] = useState<string[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);

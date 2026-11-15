@@ -18,9 +18,7 @@ export function SettingsShell({
   children
 }: SettingsShellProps) {
   return (
-    <div
-      className={`flex flex-col gap-5 p-5 ${page === "general" ? "h-full min-h-0" : ""}`}
-    >
+    <div className={`flex flex-col gap-5 p-5 ${page === "general" ? "h-full min-h-0" : ""}`}>
       <L2TabNav
         items={SETTINGS_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
           page: id,

@@ -3,7 +3,13 @@ import { FieldRow, OptionGroup, SwitchTileGrid } from "../../components/common/F
 import { Input } from "../../components/ui/input";
 import { PasswordInput } from "../../components/ui/password-input";
 import { Segmented } from "../../components/ui/segmented";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../../components/ui/select";
 import { t, type TranslationKey } from "../../locale";
 import type { BilibiliFormState } from "./form";
 

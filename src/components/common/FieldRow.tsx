@@ -57,12 +57,7 @@ function SwitchRow({ label, checked, disabled, onChange }: SwitchRowProps) {
       onClick={(event) => event.stopPropagation()}
     >
       <span className="text-sm font-medium">{label}</span>
-      <Switch
-        aria-label={label}
-        checked={checked}
-        disabled={disabled}
-        onCheckedChange={onChange}
-      />
+      <Switch aria-label={label} checked={checked} disabled={disabled} onCheckedChange={onChange} />
     </label>
   );
 }
@@ -99,10 +94,7 @@ export function SwitchTileGrid({
         {items.map((item) => (
           <div
             key={item.key}
-            className={cn(
-              "rounded-md border p-2.5",
-              !disabled && "cursor-pointer"
-            )}
+            className={cn("rounded-md border p-2.5", !disabled && "cursor-pointer")}
             onClick={() => !disabled && item.onToggle(!item.checked)}
           >
             <SwitchRow
@@ -122,7 +114,11 @@ export function SwitchTileGrid({
 export function OptionGroup({ title, children }: { title: string; children: ReactNode }) {
   const titleId = useId();
   return (
-    <div role="group" aria-labelledby={titleId} className="flex flex-col gap-4 rounded-md border p-4">
+    <div
+      role="group"
+      aria-labelledby={titleId}
+      className="flex flex-col gap-4 rounded-md border p-4"
+    >
       <p id={titleId} className="text-sm font-semibold text-primary">
         {title}
       </p>

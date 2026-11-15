@@ -44,9 +44,7 @@ export function MusicAdvancedSettings({ form, onChange }: MusicAdvancedSettingsP
           min={1}
           max={50}
           value={form.threadCount}
-          onChange={(value) =>
-            onChange({ threadCount: value ?? DEFAULT_THREAD_COUNT })
-          }
+          onChange={(value) => onChange({ threadCount: value ?? DEFAULT_THREAD_COUNT })}
         />
       </FieldRow>
       <p id={rawHintId} className="text-xs text-muted-foreground">

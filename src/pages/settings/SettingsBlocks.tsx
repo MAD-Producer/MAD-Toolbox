@@ -24,9 +24,7 @@ export function SettingsRow({ title, description, children }: SettingsRowProps) 
         <p className="text-sm font-medium">{title}</p>
         {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
       </div>
-      {children != null && (
-        <div className="flex shrink-0 items-center gap-2">{children}</div>
-      )}
+      {children != null && <div className="flex shrink-0 items-center gap-2">{children}</div>}
     </div>
   );
 }

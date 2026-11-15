@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "../../components/ui/dialog";
 import { t } from "../../locale";
 
 interface BilibiliLoginDialogProps {
@@ -20,12 +26,7 @@ export function BilibiliLoginDialog({ active, qrDataUrl, onClose }: BilibiliLogi
         </DialogHeader>
         <div className="flex flex-col items-center gap-3">
           {qrDataUrl && (
-            <img
-              src={qrDataUrl}
-              alt={t("bilibili.login.qrAlt")}
-              width={QR_SIZE}
-              height={QR_SIZE}
-            />
+            <img src={qrDataUrl} alt={t("bilibili.login.qrAlt")} width={QR_SIZE} height={QR_SIZE} />
           )}
         </div>
       </DialogContent>

@@ -40,23 +40,23 @@ export function Tooltip({
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           {!disabled && (
-          <TooltipPrimitive.Content
-            side={side}
-            sideOffset={sideOffset}
-            className={cn(
-              "z-50 select-none rounded-md bg-foreground px-[7px] py-[3px] text-[11px] leading-tight text-background",
-              "data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0",
-              "data-[state=instant-open]:animate-in data-[state=instant-open]:fade-in-0",
-              "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-              "data-[side=top]:data-[state=delayed-open]:slide-in-from-bottom-2",
-              "data-[side=bottom]:data-[state=delayed-open]:slide-in-from-top-2",
-              "data-[side=left]:data-[state=delayed-open]:slide-in-from-right-2",
-              "data-[side=right]:data-[state=delayed-open]:slide-in-from-left-2",
-              className
-            )}
-          >
-            {label}
-          </TooltipPrimitive.Content>
+            <TooltipPrimitive.Content
+              side={side}
+              sideOffset={sideOffset}
+              className={cn(
+                "z-50 select-none rounded-md bg-foreground px-[7px] py-[3px] text-[11px] leading-tight text-background",
+                "data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0",
+                "data-[state=instant-open]:animate-in data-[state=instant-open]:fade-in-0",
+                "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+                "data-[side=top]:data-[state=delayed-open]:slide-in-from-bottom-2",
+                "data-[side=bottom]:data-[state=delayed-open]:slide-in-from-top-2",
+                "data-[side=left]:data-[state=delayed-open]:slide-in-from-right-2",
+                "data-[side=right]:data-[state=delayed-open]:slide-in-from-left-2",
+                className
+              )}
+            >
+              {label}
+            </TooltipPrimitive.Content>
           )}
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>

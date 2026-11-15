@@ -1,5 +1,11 @@
 import { CopyIconButton } from "../../components/common/CopyIconButton";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "../../components/ui/dialog";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { t } from "../../locale";
 import type { NetworkProbeResult } from "./useNetworkVideoWorkspace";

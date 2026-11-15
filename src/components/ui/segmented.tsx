@@ -9,8 +9,10 @@ export interface SegmentedOption<T extends string> {
   disabled?: boolean;
 }
 
-export interface SegmentedProps<T extends string>
-  extends Omit<ComponentPropsWithoutRef<"div">, "onChange" | "defaultValue"> {
+export interface SegmentedProps<T extends string> extends Omit<
+  ComponentPropsWithoutRef<"div">,
+  "onChange" | "defaultValue"
+> {
   /** 选项列表（互斥选择；键盘 ←→↓↑ 在选项间移动焦点） */
   options: ReadonlyArray<SegmentedOption<T>>;
   /** 当前值 */
@@ -36,7 +38,8 @@ export function Segmented<T extends string>({
   ...props
 }: SegmentedProps<T>) {
   const enabled = options.filter((option) => !option.disabled);
-  const activeValue = value !== null && enabled.some((option) => option.value === value) ? value : null;
+  const activeValue =
+    value !== null && enabled.some((option) => option.value === value) ? value : null;
   const tabStopValue = activeValue ?? enabled[0]?.value ?? null;
 
   return (
@@ -45,14 +48,19 @@ export function Segmented<T extends string>({
       aria-disabled={disabled || undefined}
       onKeyDown={(event) => {
         if (disabled) return;
-        const currentIdx = enabled.findIndex((option) => option.value === (activeValue ?? tabStopValue));
+        const currentIdx = enabled.findIndex(
+          (option) => option.value === (activeValue ?? tabStopValue)
+        );
         let nextIdx: number | null = null;
         if (event.key === "ArrowRight" || event.key === "ArrowDown") {
           event.preventDefault();
           nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % enabled.length;
         } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
           event.preventDefault();
-          nextIdx = currentIdx < 0 ? enabled.length - 1 : (currentIdx - 1 + enabled.length) % enabled.length;
+          nextIdx =
+            currentIdx < 0
+              ? enabled.length - 1
+              : (currentIdx - 1 + enabled.length) % enabled.length;
         }
         if (nextIdx !== null) {
           const next = enabled[nextIdx];

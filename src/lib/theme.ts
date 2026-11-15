@@ -47,7 +47,10 @@ let currentScheme: ColorScheme = readStoredScheme();
 let systemDark = systemPrefersDark();
 const listeners = new Set<() => void>();
 
-export function resolveColorScheme(scheme: ColorScheme, systemIsDark: boolean): ResolvedColorScheme {
+export function resolveColorScheme(
+  scheme: ColorScheme,
+  systemIsDark: boolean
+): ResolvedColorScheme {
   if (scheme === "auto") return systemIsDark ? "dark" : "light";
   return scheme;
 }

@@ -2,7 +2,13 @@ import { useId } from "react";
 import { FieldRow, OptionGroup, SwitchTileGrid } from "../../components/common/FieldRow";
 import { Input } from "../../components/ui/input";
 import { NumberField } from "../../components/ui/number-field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../../components/ui/select";
 import { t, type TranslationKey } from "../../locale";
 import { defaultMediaForm, type MediaFormState } from "./form";
 import { mediaSwitchTileItems, type MediaSwitchSpec } from "./switchTiles";
@@ -21,7 +27,11 @@ const AUDIO_SWITCHES: ReadonlyArray<MediaSwitchSpec> = [
   { key: "loudnessNormalization", labelKey: "media.fields.loudnessNormalization" }
 ];
 
-const ROTATION_OPTIONS: ReadonlyArray<{ value: MediaFormState["rotation"]; labelKey: TranslationKey | null; label?: string }> = [
+const ROTATION_OPTIONS: ReadonlyArray<{
+  value: MediaFormState["rotation"];
+  labelKey: TranslationKey | null;
+  label?: string;
+}> = [
   { value: "none", labelKey: "media.rotation.none" },
   { value: "90cw", labelKey: "media.rotation.90cw" },
   { value: "90ccw", labelKey: "media.rotation.90ccw" },
@@ -82,9 +92,7 @@ export function MediaAdvancedFields({ form, onUpdate }: MediaAdvancedFieldsProps
             step={0.25}
             min={0.25}
             value={form.speed}
-            onChange={(value) =>
-              onUpdate({ speed: value ?? defaultMediaForm.speed })
-            }
+            onChange={(value) => onUpdate({ speed: value ?? defaultMediaForm.speed })}
           />
         </FieldRow>
         <FieldRow label={t("media.fields.rotation")} htmlFor={rotationId}>
