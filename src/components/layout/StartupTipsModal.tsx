@@ -1,23 +1,9 @@
-import { useEffect, useState } from "react";
-import type { EmblaCarouselType } from "embla-carousel";
-import { Carousel } from "@mantine/carousel";
-import {
-  ActionIcon,
-  Button,
-  Group,
-  Modal,
-  ScrollArea,
-  Stack,
-  Text,
-  ThemeIcon
-} from "@mantine/core";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconFileMusic,
-  IconNetwork,
-  IconQrcode
-} from "@tabler/icons-react";
+import useEmblaCarousel from "embla-carousel-react";
+import { CaretLeft, CaretRight, FileAudio, GlobeSimple, QrCode } from "@phosphor-icons/react";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
+import { IconButton } from "../ui/icon-button";
 import { t } from "../../locale";
 
 const DISMISSED_KEY = "mad-toolbox:startup-tips-dismissed";
@@ -36,13 +22,26 @@ interface StartupTipsModalProps {
   onClose: () => void;
 }
 
+/** 首启提示弹窗：embla 轮播三页（无拖拽，仅按钮翻页），末页出现"不再提示" */
 export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
-  const [embla, setEmbla] = useState<EmblaCarouselType | null>(null);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, watchDrag: false });
   const [slide, setSlide] = useState(0);
 
+  const onSelect = useCallback(() => {
+    if (emblaApi) setSlide(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
   useEffect(() => {
-    if (opened) embla?.reInit();
-  }, [opened, embla]);
+    if (!emblaApi) return;
+    emblaApi.on("select", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
+  }, [emblaApi, onSelect]);
+
+  useEffect(() => {
+    if (opened) emblaApi?.reInit();
+  }, [opened, emblaApi]);
 
   const dismissForever = () => {
     try {
@@ -52,106 +51,76 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title={t("startup.title")} size={560} centered>
-      <Carousel
-        slideSize="100%"
-        height={240}
-        withControls={false}
-        emblaOptions={{ loop: false, watchDrag: false }}
-        getEmblaApi={setEmbla}
-        onSlideChange={setSlide}
-      >
-        <Carousel.Slide>
-          <ScrollArea h="100%" type="never">
-            <Stack gap="sm" pt="sm" px="xl">
-              <Group gap="xs">
-                <ThemeIcon variant="transparent" color="blue" size="lg">
-                  <IconQrcode size={18} />
-                </ThemeIcon>
-                <Text fw={600}>{t("startup.bilibiliQuality.title")}</Text>
-              </Group>
-              <Text size="sm" c="dimmed">
-                {t("startup.bilibiliQuality.p1")}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t("startup.bilibiliQuality.p2")}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t("startup.bilibiliQuality.p3")}
-              </Text>
-            </Stack>
-          </ScrollArea>
-        </Carousel.Slide>
-        <Carousel.Slide>
-          <ScrollArea h="100%" type="never">
-            <Stack gap="sm" pt="sm" px="xl">
-              <Group gap="xs">
-                <ThemeIcon variant="transparent" color="blue" size="lg">
-                  <IconNetwork size={18} />
-                </ThemeIcon>
-                <Text fw={600}>{t("startup.proxy.title")}</Text>
-              </Group>
-              <Text size="sm" c="dimmed">
-                {t("startup.proxy.p1")}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t("startup.proxy.p2")}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t("startup.proxy.p3")}
-              </Text>
-            </Stack>
-          </ScrollArea>
-        </Carousel.Slide>
-        <Carousel.Slide>
-          <ScrollArea h="100%" type="never">
-            <Stack gap="sm" pt="sm" px="xl">
-              <Group gap="xs">
-                <ThemeIcon variant="transparent" color="blue" size="lg">
-                  <IconFileMusic size={18} />
-                </ThemeIcon>
-                <Text fw={600}>{t("startup.flac.title")}</Text>
-              </Group>
-              <Text size="sm" c="dimmed">
-                {t("startup.flac.p1")}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {t("startup.flac.p2")}
-              </Text>
-            </Stack>
-          </ScrollArea>
-        </Carousel.Slide>
-      </Carousel>
-
-      <Group justify="space-between" align="center" mt="xs">
-        <ActionIcon
-          variant="default"
-          radius="sm"
-          w={44}
-          h={32}
-          disabled={slide === 0}
-          onClick={() => embla?.scrollPrev()}
-          aria-label={t("startup.prev")}
-        >
-          <IconChevronLeft size={18} />
-        </ActionIcon>
-        <span style={{ visibility: slide === TIPS_LAST_SLIDE ? "visible" : "hidden" }}>
-          <Button variant="light" onClick={dismissForever}>
-            {t("startup.dismiss")}
-          </Button>
-        </span>
-        <ActionIcon
-          variant="default"
-          radius="sm"
-          w={44}
-          h={32}
-          disabled={slide === TIPS_LAST_SLIDE}
-          onClick={() => embla?.scrollNext()}
-          aria-label={t("startup.next")}
-        >
-          <IconChevronRight size={18} />
-        </ActionIcon>
-      </Group>
-    </Modal>
+    <Dialog open={opened} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>{t("startup.title")}</DialogTitle>
+          <DialogDescription>{t("startup.description")}</DialogDescription>
+        </DialogHeader>
+        <div ref={emblaRef} className="h-60 overflow-hidden">
+          <div className="flex h-full">
+            <div className="min-w-0 flex-[0_0_100%] overflow-y-auto">
+              <div className="flex flex-col gap-3 px-6 pt-2">
+                <div className="flex items-center gap-1.5">
+                  <QrCode size={18} className="text-primary" />
+                  <p className="font-semibold">{t("startup.bilibiliQuality.title")}</p>
+                </div>
+                <p className="text-sm text-muted-foreground">{t("startup.bilibiliQuality.p1")}</p>
+                <p className="text-sm text-muted-foreground">{t("startup.bilibiliQuality.p2")}</p>
+                <p className="text-sm text-muted-foreground">{t("startup.bilibiliQuality.p3")}</p>
+              </div>
+            </div>
+            <div className="min-w-0 flex-[0_0_100%] overflow-y-auto">
+              <div className="flex flex-col gap-3 px-6 pt-2">
+                <div className="flex items-center gap-1.5">
+                  <GlobeSimple size={18} className="text-primary" />
+                  <p className="font-semibold">{t("startup.proxy.title")}</p>
+                </div>
+                <p className="text-sm text-muted-foreground">{t("startup.proxy.p1")}</p>
+                <p className="text-sm text-muted-foreground">{t("startup.proxy.p2")}</p>
+                <p className="text-sm text-muted-foreground">{t("startup.proxy.p3")}</p>
+              </div>
+            </div>
+            <div className="min-w-0 flex-[0_0_100%] overflow-y-auto">
+              <div className="flex flex-col gap-3 px-6 pt-2">
+                <div className="flex items-center gap-1.5">
+                  <FileAudio size={18} className="text-primary" />
+                  <p className="font-semibold">{t("startup.flac.title")}</p>
+                </div>
+                <p className="text-sm text-muted-foreground">{t("startup.flac.p1")}</p>
+                <p className="text-sm text-muted-foreground">{t("startup.flac.p2")}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-2.5 flex items-center justify-between">
+          <IconButton
+            label={t("startup.prev")}
+            variant="outline"
+            size="sm"
+            disabled={slide === 0}
+            onClick={() => emblaApi?.scrollPrev()}
+          >
+            <CaretLeft size={18} />
+          </IconButton>
+          {slide === TIPS_LAST_SLIDE ? (
+            <Button variant="secondary" className="h-8" onClick={dismissForever}>
+              {t("startup.dismiss")}
+            </Button>
+          ) : (
+            <span />
+          )}
+          <IconButton
+            label={t("startup.next")}
+            variant="outline"
+            size="sm"
+            disabled={slide === TIPS_LAST_SLIDE}
+            onClick={() => emblaApi?.scrollNext()}
+          >
+            <CaretRight size={18} />
+          </IconButton>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

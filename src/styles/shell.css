@@ -1,91 +1,14 @@
 .app-chrome {
-  background: var(--app-surface-chrome);
+  background: var(--background);
 }
 
 .workspace-surface {
-  background: var(--app-surface-workspace);
+  background: var(--card);
 }
 
 .app-title {
   font-size: 20px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--app-title-color);
-}
-
-.top-nav {
-  background: var(--app-nav-track-bg);
-}
-
-.top-nav-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-  padding: 0 12px;
-  border: none;
-  background: transparent;
-  color: var(--mantine-color-gray-light-color);
-  cursor: pointer;
-  border-radius: var(--mantine-radius-md);
-  transition:
-    background-color 150ms ease,
-    box-shadow 150ms ease;
-}
-
-.top-nav-item:hover:not(.top-nav-item-active) {
-  background: var(--app-nav-hover-bg);
-}
-
-.top-nav .tabler-icon {
-  display: block;
-  width: 20px;
-  height: 20px;
-}
-
-.top-nav-item-active {
-  background: var(--app-nav-active-bg);
-  box-shadow: var(--app-nav-active-shadow);
-  color: var(--app-nav-active-icon);
-}
-
-.top-nav-task-running {
-  color: var(--mantine-color-green-light-color);
-}
-
-.app-header-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  justify-self: end;
-  min-width: 0;
-  overflow: hidden;
-}
-
-/* 面板显隐跟随槽位上的当前分区：隐藏工作区卸载按钮的提交是延迟的，不能依赖它 */
-.app-header-actions > .app-header-actions-panel {
-  display: none;
-}
-
-.app-header-actions[data-active-section="tasks"] > [data-header-actions="tasks"],
-.app-header-actions[data-active-section="bilibili"] > [data-header-actions="bilibili"],
-.app-header-actions[data-active-section="network"] > [data-header-actions="network"],
-.app-header-actions[data-active-section="media"] > [data-header-actions="media"],
-.app-header-actions[data-active-section="music"] > [data-header-actions="music"] {
-  display: flex;
-  align-items: center;
-}
-
-/* 头部动作键高度 40（用户定标，略小于 nav 轨道外容器的 44）。
-   次要动作是常驻纯图标键（HeaderIconButton，图标走 children 槽），label 恒定显示，无需按宽度收缩 */
-.app-header-actions .mantine-Button-root {
-  height: 40px;
-}
-
-.app-header-icon-btn {
-  padding-inline: 10px;
-}
-
-.app-header-icon-btn[disabled] {
-  pointer-events: none;
+  color: var(--title-foreground);
 }

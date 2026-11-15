@@ -1,10 +1,8 @@
-import { Center } from "@mantine/core";
-
 export function SplashScreen() {
   return (
-    <Center w="100%" mih="100vh" style={{ background: "var(--mantine-color-body)" }}>
+    <div className="flex min-h-screen w-full items-center justify-center bg-background">
       <DotsLoader />
-    </Center>
+    </div>
   );
 }
 

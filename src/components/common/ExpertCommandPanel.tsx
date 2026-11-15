@@ -1,7 +1,10 @@
-import { Button, Group, Stack, Text, Textarea } from "@mantine/core";
-import { IconPencil, IconRotate } from "@tabler/icons-react";
+import { Pencil, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { useEffect, useRef } from "react";
 import type { PreviewResult } from "../../contracts/types";
 import { t, type TranslationKey } from "../../locale";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+import { Tooltip } from "../ui/tooltip";
 import { CommandPreview } from "./CommandPreview";
 
 interface ExpertCommandPanelLabels {
@@ -22,6 +25,7 @@ interface ExpertCommandPanelProps {
   onExpertTextChange: (value: string) => void;
 }
 
+/** 专家命令面板：预览态 ↔ 编辑态切换；编辑态为等宽自适应高度文本域 */
 export function ExpertCommandPanel({
   labels,
   expertText,
@@ -32,50 +36,71 @@ export function ExpertCommandPanel({
   onExpertTextChange
 }: ExpertCommandPanelProps) {
   const expertMode = expertText !== null;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const prevExpertRef = useRef(expertMode);
+
+  // 进入专家模式时把焦点交给文本域；退出时焦点接回"编辑命令"，避免坠到 body
+  useEffect(() => {
+    if (expertMode) textareaRef.current?.focus();
+    else if (prevExpertRef.current) editButtonRef.current?.focus();
+    prevExpertRef.current = expertMode;
+  }, [expertMode]);
+
+  // 预览未就绪时按钮禁用：包一层 span 桥接 Tooltip（IconButton/Button 禁用态 pointer-events-none 会阻断 hover）
+  const editButton = (
+    <Button
+      ref={editButtonRef}
+      size="sm"
+      variant="secondary"
+      className="h-8 gap-1.5 px-2.5 text-xs"
+      leftSection={<Pencil size={14} />}
+      onClick={onEnterExpert}
+      disabled={!preview}
+    >
+      {t(labels.editCommand)}
+    </Button>
+  );
 
   return (
-    <Stack gap="xs">
-      <Group justify="space-between">
-        <Text size="sm" fw={500}>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">
           {expertMode ? t(labels.expertTitle) : t(labels.previewTitle)}
-        </Text>
+        </span>
         {expertMode ? (
           <Button
-            size="compact-sm"
-            variant="light"
-            leftSection={<IconRotate size={14} />}
+            size="sm"
+            variant="secondary"
+            className="h-8 gap-1.5 px-2.5 text-xs"
+            leftSection={<ArrowCounterClockwise size={14} />}
             onClick={onExitExpert}
           >
             {t(labels.restoreForm)}
           </Button>
+        ) : preview ? (
+          editButton
         ) : (
-          <Button
-            size="compact-sm"
-            variant="light"
-            leftSection={<IconPencil size={14} />}
-            onClick={onEnterExpert}
-            disabled={!preview}
-          >
-            {t(labels.editCommand)}
-          </Button>
+          <Tooltip label={previewError ?? t("common.submitWaitingPreview")}>
+            <span className="inline-flex">{editButton}</span>
+          </Tooltip>
         )}
-      </Group>
+      </div>
       {expertMode ? (
         <>
-          <Text size="xs" c="yellow">
-            {t(labels.expertWarning)}
-          </Text>
+          <p className="text-xs font-medium text-warning">{t(labels.expertWarning)}</p>
           <Textarea
+            ref={textareaRef}
             autosize
-            minRows={4}
+            rows={4}
             value={expertText}
             onChange={(event) => onExpertTextChange(event.currentTarget.value)}
-            styles={{ input: { fontFamily: "monospace", fontSize: "var(--mantine-font-size-xs)" } }}
+            className="min-h-0 font-mono text-xs"
           />
         </>
       ) : (
         <CommandPreview display={preview?.display ?? null} error={previewError} />
       )}
-    </Stack>
+    </div>
   );
 }

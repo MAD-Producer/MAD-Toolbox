@@ -1,7 +1,9 @@
-import { Button, Group } from "@mantine/core";
-import { IconInfoCircle, IconListDetails, IconPlayerPlay } from "@tabler/icons-react";
+import { Info, ListBullets, Play } from "@phosphor-icons/react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
-import { HeaderActions, HeaderIconButton } from "../../components/layout/HeaderActions";
+import { PageToolbar } from "../../components/common/PageToolbar";
+import { Button } from "../../components/ui/button";
+import { IconButton } from "../../components/ui/icon-button";
+import { Tooltip } from "../../components/ui/tooltip";
 import { t } from "../../locale";
 import type { ProbeKind } from "./api";
 
@@ -29,38 +31,58 @@ export function NetworkVideoPageHeader({
   const submitLabel = t("network.submit");
   const formatsLabel = t("network.probe.formatsButton");
   const metadataLabel = t("network.probe.metadataButton");
+
+  const submitButton = (
+    <Button
+      size="sm"
+      className="h-8 gap-1.5"
+      leftSection={<Play size={16} />}
+      loading={submitting}
+      disabled={submitDisabled}
+      onClick={onSubmit}
+    >
+      {submitLabel}
+    </Button>
+  );
+
   return (
-    <HeaderActions section="network">
-      <Group gap="xs" wrap="nowrap">
-        <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-        <HeaderIconButton
-          label={formatsLabel}
-          variant="default"
-          loading={probing === "formats"}
-          disabled={probeDisabled}
-          onClick={() => void onProbe("formats")}
-        >
-          <IconListDetails size={20} />
-        </HeaderIconButton>
-        <HeaderIconButton
-          label={metadataLabel}
-          variant="default"
-          loading={probing === "metadata"}
-          disabled={probeDisabled}
-          onClick={() => void onProbe("metadata")}
-        >
-          <IconInfoCircle size={20} />
-        </HeaderIconButton>
-        <Button
-          size="compact-md"
-          leftSection={<IconPlayerPlay size={16} />}
-          loading={submitting}
-          disabled={submitDisabled}
-          onClick={onSubmit}
-        >
-          {submitLabel}
-        </Button>
-      </Group>
-    </HeaderActions>
+    <PageToolbar>
+      <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
+      <Tooltip label={probeDisabled ? t("network.probe.urlRequired") : formatsLabel}>
+        <span className="inline-flex">
+          <IconButton
+            label={formatsLabel}
+            variant="outline"
+            size="sm"
+            loading={probing === "formats"}
+            disabled={probeDisabled}
+            onClick={() => void onProbe("formats")}
+          >
+            <ListBullets size={16} />
+          </IconButton>
+        </span>
+      </Tooltip>
+      <Tooltip label={probeDisabled ? t("network.probe.urlRequired") : metadataLabel}>
+        <span className="inline-flex">
+          <IconButton
+            label={metadataLabel}
+            variant="outline"
+            size="sm"
+            loading={probing === "metadata"}
+            disabled={probeDisabled}
+            onClick={() => void onProbe("metadata")}
+          >
+            <Info size={16} />
+          </IconButton>
+        </span>
+      </Tooltip>
+      {submitDisabled && !submitting ? (
+        <Tooltip label={t("common.submitWaitingPreview")}>
+          <span className="inline-flex">{submitButton}</span>
+        </Tooltip>
+      ) : (
+        submitButton
+      )}
+    </PageToolbar>
   );
 }

@@ -1,7 +1,9 @@
-import { NumberInput, Stack, TextInput } from "@mantine/core";
+import { useId } from "react";
 import { CookieFileField } from "../../components/common/CookieFileField";
 import { FieldRow } from "../../components/common/FieldRow";
 import { OutputDirectoryField } from "../../components/common/OutputDirectoryField";
+import { Input } from "../../components/ui/input";
+import { NumberField } from "../../components/ui/number-field";
 import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { t } from "../../locale";
 import type { CookieFileOption } from "../../contracts/types";
@@ -29,14 +31,25 @@ export function MusicConfigurationPanel({
   onAddCookieFile
 }: MusicConfigurationPanelProps) {
   const isSearch = form.mode === "search";
+  const keywordId = useId();
+  const urlHintId = useId();
+  const outputId = useId();
+  const outputHintId = useId();
+  const searchSizeId = useId();
+  const searchSizeHintId = useId();
+  const proxyId = useId();
 
   return (
-    <Stack gap="md">
+    <div className="flex flex-col gap-4">
       <FieldRow
         label={isSearch ? t("music.keyword.label") : t("music.playlistUrl.label")}
         hint={isSearch ? undefined : t("music.playlistUrl.description")}
+        htmlFor={keywordId}
+        hintId={isSearch ? undefined : urlHintId}
       >
-        <TextInput
+        <Input
+          id={keywordId}
+          aria-describedby={isSearch ? undefined : urlHintId}
           placeholder={
             isSearch ? t("music.keyword.placeholder") : "https://music.163.com/#/playlist?id=..."
           }
@@ -50,8 +63,15 @@ export function MusicConfigurationPanel({
           }
         />
       </FieldRow>
-      <FieldRow label={t("music.outputDirectory")} hint={t("common.outputDirectoryHint")}>
+      <FieldRow
+        label={t("music.outputDirectory")}
+        hint={t("common.outputDirectoryHint")}
+        htmlFor={outputId}
+        hintId={outputHintId}
+      >
         <OutputDirectoryField
+          inputId={outputId}
+          describedById={outputHintId}
           value={form.outputDirectory}
           placeholder={t("music.outputDirectory.placeholder")}
           onChange={(outputDirectory) => onChange({ outputDirectory })}
@@ -63,18 +83,24 @@ export function MusicConfigurationPanel({
           }
         />
       </FieldRow>
-      <FieldRow label={t("music.searchSize.label")} hint={t("music.searchSize.description")}>
-        <NumberInput
+      <FieldRow
+        label={t("music.searchSize.label")}
+        hint={t("music.searchSize.description")}
+        htmlFor={searchSizeId}
+        hintId={searchSizeHintId}
+      >
+        <NumberField
+          id={searchSizeId}
+          aria-describedby={searchSizeHintId}
           min={1}
           max={100}
           value={form.searchSize}
-          onChange={(value) =>
-            onChange({ searchSize: typeof value === "number" ? value : DEFAULT_SEARCH_SIZE })
-          }
+          onChange={(value) => onChange({ searchSize: value ?? DEFAULT_SEARCH_SIZE })}
         />
       </FieldRow>
-      <FieldRow label={t("music.proxy.label")}>
-        <TextInput
+      <FieldRow label={t("music.proxy.label")} htmlFor={proxyId}>
+        <Input
+          id={proxyId}
           placeholder={globalProxy ?? "http://127.0.0.1:7890"}
           value={form.proxy}
           onChange={(event) => onChange({ proxy: event.currentTarget.value })}
@@ -89,6 +115,6 @@ export function MusicConfigurationPanel({
           onAddCookieFile={onAddCookieFile}
         />
       </FieldRow>
-    </Stack>
+    </div>
   );
 }

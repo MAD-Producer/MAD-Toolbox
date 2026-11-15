@@ -1,4 +1,3 @@
-import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
@@ -16,7 +15,6 @@ const NETWORK_FORM_STORAGE_KEY = "network.form";
 export interface NetworkVideoPageProps {
   active: boolean;
   seed?: TaskSeed | null;
-  onSeedConsumed?: () => void;
   onRetain?: () => void;
   onSubmitted?: () => void;
   dependencyLabels?: string[];
@@ -34,14 +32,23 @@ export interface NetworkProbeResult {
 export function useNetworkVideoWorkspace({
   active,
   seed,
-  onSeedConsumed,
   onRetain,
   onSubmitted
 }: NetworkVideoPageProps) {
-  const [form, setForm] = useState<NetworkFormState>(() =>
-    loadStoredForm(NETWORK_FORM_STORAGE_KEY, defaultNetworkForm)
-  );
-  const [advancedOpen, advanced] = useDisclosure(false);
+  // 任务种子只在挂载时消费一次（deliver → generation+1 → 重挂）；无种子时读持久化草稿
+  const [form, setForm] = useState<NetworkFormState>(() => {
+    if (seed?.task.intent.type === "form") {
+      const restored = {
+        ...defaultNetworkForm,
+        ...(seed.task.intent.data as Partial<NetworkFormState>)
+      };
+      if (seed.purpose === "reuse") restored.url = "";
+      return restored;
+    }
+    return loadStoredForm(NETWORK_FORM_STORAGE_KEY, defaultNetworkForm);
+  });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const toggleAdvanced = useCallback(() => setAdvancedOpen((open) => !open), []);
   const [submitting, setSubmitting] = useState(false);
   const [probeResult, setProbeResult] = useState<NetworkProbeResult | null>(null);
   const [probing, setProbing] = useState<ProbeKind | null>(null);
@@ -55,12 +62,10 @@ export function useNetworkVideoWorkspace({
   const draft = useDraftPreviewWorkspace({
     active,
     onRetain,
+    initialExpertText:
+      seed?.task.intent.type === "manual" ? seed.task.intent.data.argv.join("\n") : null,
     buildPreviewIntent,
-    runPreview: networkPreview,
-    onDefaultOutputDirectory: (directory) =>
-      setForm((current) =>
-        current.outputDirectory ? current : { ...current, outputDirectory: directory }
-      )
+    runPreview: networkPreview
   });
 
   const update = (patch: Partial<NetworkFormState>) => {
@@ -71,34 +76,11 @@ export function useNetworkVideoWorkspace({
     setForm((current) => ({ ...current, ...patch }));
   };
 
+  // 【Effect 白名单⑤】表单草稿持久化到 localStorage（同 bilibili 工作区）
   useEffect(() => {
     const { url, ...persisted } = form;
     saveStoredForm(NETWORK_FORM_STORAGE_KEY, persisted);
   }, [form]);
-
-  useEffect(() => {
-    if (!seed) return;
-    draft.resetPreview();
-    setCookieVerification("idle");
-    if (seed.task.intent.type === "form") {
-      draft.restoreExpertText(null);
-      const restored = {
-        ...defaultNetworkForm,
-        ...(seed.task.intent.data as Partial<NetworkFormState>)
-      };
-      if (seed.purpose === "reuse") restored.url = "";
-      setForm(restored);
-    } else {
-      draft.restoreExpertText(seed.task.intent.data.argv.join("\n"));
-      if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
-        notifications.show({
-          color: "yellow",
-          message: t("network.expertRedactedWarning")
-        });
-      }
-    }
-    onSeedConsumed?.();
-  }, [seed, onSeedConsumed]);
 
   const submit = async () => {
     const submittedRevision = draft.draftRevisionRef.current;
@@ -192,7 +174,7 @@ export function useNetworkVideoWorkspace({
     form,
     update,
     advancedOpen,
-    toggleAdvanced: advanced.toggle,
+    toggleAdvanced,
     expertMode: draft.expertText !== null,
     expertText: draft.expertText,
     setExpertText: draft.setExpertText,

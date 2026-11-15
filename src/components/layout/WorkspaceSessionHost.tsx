@@ -1,4 +1,4 @@
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { useWorkspacesStore, type WorkspaceId } from "../../stores/workspaces";
 import { WorkspaceSlot } from "./WorkspaceSlot";
 
@@ -13,29 +13,13 @@ interface WorkspaceSessionHostProps {
   fallback?: ReactNode;
 }
 
+// visit 与可释放会话的驱逐由 App.navigate 在导航事件里直接驱动，这里只做纯渲染
 export function WorkspaceSessionHost({
   activeWorkspace,
   workspaces,
   fallback = null
 }: WorkspaceSessionHostProps) {
   const sessions = useWorkspacesStore((state) => state.sessions);
-  const visit = useWorkspacesStore((state) => state.visit);
-  const evictIfReleasable = useWorkspacesStore((state) => state.evictIfReleasable);
-
-  useEffect(() => {
-    if (activeWorkspace !== null) {
-      visit(activeWorkspace);
-    }
-  }, [activeWorkspace, visit]);
-
-  useEffect(() => {
-    for (const id of Object.keys(sessions) as WorkspaceId[]) {
-      const session = sessions[id];
-      if (id !== activeWorkspace && session.status === "releasable") {
-        evictIfReleasable(id);
-      }
-    }
-  }, [activeWorkspace, evictIfReleasable, sessions]);
 
   return workspaces.map((workspace) => {
     const session = sessions[workspace.id];

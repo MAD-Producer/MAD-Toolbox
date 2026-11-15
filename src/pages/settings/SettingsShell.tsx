@@ -1,4 +1,3 @@
-import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import { SETTINGS_L2_NAVIGATION } from "../../app/navigation";
 import type { SettingsPageId } from "../../app/route";
@@ -19,7 +18,7 @@ export function SettingsShell({
   children
 }: SettingsShellProps) {
   return (
-    <Stack gap="lg" p="lg" h={page === "general" ? "100%" : undefined} style={{ minHeight: 0 }}>
+    <div className={`flex flex-col gap-5 p-5 ${page === "general" ? "h-full min-h-0" : ""}`}>
       <L2TabNav
         items={SETTINGS_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
           page: id,
@@ -35,6 +34,6 @@ export function SettingsShell({
         aria-label={t("settings.shell.sectionAria")}
       />
       {children}
-    </Stack>
+    </div>
   );
 }

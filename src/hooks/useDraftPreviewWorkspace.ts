@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PreviewResult, TaskIntent } from "../contracts/types";
-import { resolveDefaultOutputDirectory } from "../lib/platform";
 
 const PREVIEW_DEBOUNCE_MS = 150;
 
@@ -20,27 +19,31 @@ export function parseExpertArgv(expertText: string): string[] {
 interface UseDraftPreviewWorkspaceOptions {
   active: boolean;
   onRetain?: () => void;
+  /** 挂载时的专家模式初值（任务种子为手动命令时由 workspace hook 传入） */
+  initialExpertText?: string | null;
   previewDisabled?: boolean;
   clearPreviewWhenDisabled?: boolean;
   buildPreviewIntent: () => TaskIntent;
   runPreview: (intent: TaskIntent) => Promise<PreviewResult>;
-  onDefaultOutputDirectory: (directory: string) => void;
 }
 
 export function useDraftPreviewWorkspace({
   active,
   onRetain,
+  initialExpertText = null,
   previewDisabled = false,
   clearPreviewWhenDisabled = false,
   buildPreviewIntent,
-  runPreview,
-  onDefaultOutputDirectory
+  runPreview
 }: UseDraftPreviewWorkspaceOptions) {
-  const [expertText, setExpertTextState] = useState<string | null>(null);
+  const [expertText, setExpertTextState] = useState<string | null>(initialExpertText);
   const [draftRevision, setDraftRevision] = useState(0);
   const [previewState, setPreviewState] = useState<RevisionedPreview | null>(null);
   const draftRevisionRef = useRef(0);
 
+  // latest-ref 模式：让 reviseDraft 保持稳定引用（否则每次 onRetain 变化都会
+  // 使 setExpertText 等回调失稳，进而在所有依赖它们的组件里放大重渲）。
+  // onRetain 是父级回调而非业务状态，这里只是转发引用，不是用它隐藏状态。
   const onRetainRef = useRef(onRetain);
   useEffect(() => {
     onRetainRef.current = onRetain;
@@ -61,16 +64,10 @@ export function useDraftPreviewWorkspace({
     [reviseDraft]
   );
 
-  useEffect(() => {
-    let canceled = false;
-    void resolveDefaultOutputDirectory().then((directory) => {
-      if (!canceled && directory) onDefaultOutputDirectory(directory);
-    });
-    return () => {
-      canceled = true;
-    };
-  }, []);
-
+  // 【Effect 白名单⑤】草稿命令预览：表单连续编辑期间对后端做防抖预览取数。
+  // 这是"派生数据 → 外部系统"的持续同步：编辑没有离散事件边界（每次按键都是变更），
+  // 事件化需要在每个 mutation 点手工管理防抖计时器，等价复杂度只是换了位置。
+  // 以 draftRevision 快照做版本守卫，过期响应直接丢弃。
   useEffect(() => {
     if (!active || expertText !== null) return;
     if (previewDisabled) {

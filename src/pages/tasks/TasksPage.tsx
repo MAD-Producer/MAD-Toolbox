@@ -1,16 +1,19 @@
-import { Badge, Box, Button, Group, Stack, Text } from "@mantine/core";
 import {
-  IconActivity,
-  IconAlertTriangle,
-  IconCalendarEvent,
-  IconCircleCheck,
-  IconHistory,
-  IconTrash
-} from "@tabler/icons-react";
+  Pulse,
+  Warning,
+  Calendar,
+  CheckCircle,
+  ClockCounterClockwise,
+  Trash
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { cn } from "../../lib/cn";
 import { notifications } from "../../lib/notifications";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SettingsSection } from "../../components/common/SettingsSection";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
 import { PoolIndicator } from "./PoolIndicator";
 import { TaskCard } from "./TaskCard";
 import { fetchPoolDefinitions, type PoolDefinition } from "./api";
@@ -25,39 +28,55 @@ interface TasksPageProps {
 }
 
 const DELETE_ANIMATION_MS = 280;
+const CLEAR_CONFIRM_MS = 3000;
+
+/** 统计块数值语义色（对齐通知语义：蓝=进行、黄=需处理；结束为中性灰，失败数以红字脚注披露） */
+const STAT_VALUE_CLASS = {
+  primary: "text-primary",
+  warning: "text-warning",
+  muted: "text-muted-foreground"
+} as const;
 
 function StatTile({
   icon,
   label,
   value,
-  color
+  color,
+  footnote
 }: {
   icon: ReactNode;
   label: string;
   value: number;
-  color: string;
+  color: keyof typeof STAT_VALUE_CLASS;
+  footnote?: ReactNode;
 }) {
   return (
-    <Box
-      p="md"
-      style={{
-        border: "1px solid var(--mantine-color-default-border)",
-        borderRadius: "var(--mantine-radius-md)"
-      }}
-    >
-      <Group gap="xs" wrap="nowrap" align="center">
-        <Box c="var(--mantine-color-dimmed)" style={{ display: "flex" }} lh={0}>
-          {icon}
-        </Box>
-        <Text size="sm" c="dimmed">
-          {label}
-        </Text>
-      </Group>
-      <Text fw={800} c={value === 0 ? "dimmed" : color} lh={1} mt="sm" style={{ fontSize: 28 }}>
+    <Card padding="md">
+      <div className="flex items-center gap-2.5">
+        <span className="flex shrink-0 text-muted-foreground">{icon}</span>
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+      <p
+        className={cn(
+          "mt-3 text-[28px] font-extrabold leading-none",
+          value === 0 ? "text-muted-foreground" : STAT_VALUE_CLASS[color]
+        )}
+      >
         {value}
-      </Text>
-    </Box>
+      </p>
+      {footnote}
+    </Card>
   );
+}
+
+/** 删除完成后把焦点挪到原位置邻近的存活卡标题（批量删除的键盘/读屏路径） */
+function focusNeighbourTask(removedIds: string[], before: TaskEnvelope[]) {
+  const removed = new Set(removedIds);
+  const alive = useTasksStore.getState().tasks;
+  const firstIdx = before.findIndex((task) => removed.has(task.id));
+  const candidates = [...before.slice(firstIdx + 1), ...before.slice(0, firstIdx).reverse()];
+  const next = candidates.find((task) => !removed.has(task.id) && alive[task.id]);
+  if (next) document.getElementById(`task-title-${next.id}`)?.focus();
 }
 
 export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
@@ -69,12 +88,26 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   const [todayOpen, setTodayOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [exiting, setExiting] = useState<ReadonlySet<string>>(() => new Set());
+  const [clearArmed, setClearArmed] = useState(false);
+  const clearTimer = useRef<number | null>(null);
 
+  // 【Effect 白名单⑤】挂载时一次性拉取任务池定义（容量展示用静态数据）
   useEffect(() => {
     void fetchPoolDefinitions()
       .then(setDefinitions)
       .catch(() => {});
   }, []);
+
+  const disarmClear = useCallback(() => {
+    setClearArmed(false);
+    if (clearTimer.current !== null) {
+      window.clearTimeout(clearTimer.current);
+      clearTimer.current = null;
+    }
+  }, []);
+
+  // 卸载时清掉确认倒计时
+  useEffect(() => disarmClear, [disarmClear]);
 
   const sorted = useMemo(() => sortedTasks(tasks), [tasks]);
   const { today, history } = useMemo(() => splitByDay(sorted), [sorted]);
@@ -86,23 +119,29 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
       ).length,
       interrupted: today.filter((task) => task.status === "interrupted").length,
       finished: today.filter((task) => ["success", "failed", "canceled"].includes(task.status))
-        .length
+        .length,
+      failed: today.filter((task) => task.status === "failed").length
     }),
     [today]
   );
 
   const deleteTasks = useCallback(
     (ids: string[]) => {
-      setExiting((prev) => new Set([...prev, ...ids]));
+      // 退场动画期间的重复触发（连点/双击）直接忽略
+      const pending = ids.filter((id) => !exiting.has(id));
+      if (pending.length === 0) return;
+      const before = sortedTasks(useTasksStore.getState().tasks);
+      setExiting((prev) => new Set([...prev, ...pending]));
       window.setTimeout(() => {
-        remove(ids)
+        remove(pending)
           .then((deleted) => {
             setExiting((prev) => {
               const next = new Set(prev);
-              ids.forEach((id) => next.delete(id));
+              pending.forEach((id) => next.delete(id));
               return next;
             });
             if (deleted.length > 0) {
+              focusNeighbourTask(pending, before);
               notifications.show({
                 message: t("tasks.deletedCount", { count: deleted.length }),
                 color: "green"
@@ -117,7 +156,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
           .catch((error) => {
             setExiting((prev) => {
               const next = new Set(prev);
-              ids.forEach((id) => next.delete(id));
+              pending.forEach((id) => next.delete(id));
               return next;
             });
             notifications.show({
@@ -127,110 +166,139 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
           });
       }, DELETE_ANIMATION_MS);
     },
-    [remove]
+    [remove, exiting]
   );
 
   const deleteTask = useCallback((id: string) => deleteTasks([id]), [deleteTasks]);
 
-  const renderCard = (task: TaskEnvelope) => (
-    <div
-      key={task.id}
-      className={exiting.has(task.id) ? "task-card-slot task-card-slot-exiting" : "task-card-slot"}
-    >
-      <TaskCard
-        task={task}
-        onCancel={cancel}
-        onPromote={promote}
-        onDelete={deleteTask}
-        onRerun={task.feature === "music" ? undefined : onRerun}
-        onReuse={onReuse}
-      />
-    </div>
-  );
+  // 清空历史两步确认：首击进入待确认态（3 秒无操作自动还原），再击执行
+  const handleClearHistory = () => {
+    if (!clearArmed) {
+      setClearArmed(true);
+      clearTimer.current = window.setTimeout(() => setClearArmed(false), CLEAR_CONFIRM_MS);
+      return;
+    }
+    disarmClear();
+    deleteTasks(history.map((task) => task.id));
+  };
+
+  const renderCard = (task: TaskEnvelope) => {
+    const isExiting = exiting.has(task.id);
+    return (
+      <div
+        key={task.id}
+        className={isExiting ? "task-card-slot task-card-slot-exiting" : "task-card-slot"}
+        inert={isExiting || undefined}
+        aria-hidden={isExiting || undefined}
+      >
+        <TaskCard
+          task={task}
+          onCancel={cancel}
+          onPromote={promote}
+          onDelete={deleteTask}
+          onRerun={task.feature === "music" ? undefined : onRerun}
+          onReuse={onReuse}
+        />
+      </div>
+    );
+  };
 
   return (
-    <Box mih="100%">
-      <Stack gap="md" p="lg">
+    <div className="min-h-full">
+      <div className="flex flex-col gap-4 p-5">
         <SettingsSection>
-          <Stack gap="md">
-            <Group grow align="stretch">
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-3 items-stretch gap-4">
               <StatTile
-                icon={<IconActivity size={16} />}
-                label={t("tasks.status.running")}
+                icon={<Pulse size={16} />}
+                label={t("tasks.stat.active")}
                 value={hero.active}
-                color="blue"
+                color="primary"
               />
               <StatTile
-                icon={<IconAlertTriangle size={16} />}
+                icon={<Warning size={16} />}
                 label={t("tasks.status.interrupted")}
                 value={hero.interrupted}
-                color="yellow"
+                color="warning"
               />
               <StatTile
-                icon={<IconCircleCheck size={16} />}
+                icon={<CheckCircle size={16} />}
                 label={t("tasks.stat.finished")}
                 value={hero.finished}
-                color="green"
+                color="muted"
+                footnote={
+                  hero.failed > 0 ? (
+                    <p className="mt-1 text-xs text-destructive">
+                      {t("tasks.stat.failedOf", { count: hero.failed })}
+                    </p>
+                  ) : null
+                }
               />
-            </Group>
+            </div>
             <PoolIndicator
               definitions={definitions}
               occupancy={(pool) => poolOccupancy(tasks, pool)}
             />
-          </Stack>
+          </div>
         </SettingsSection>
 
         {sorted.length === 0 ? (
-          <Text c="dimmed" size="sm">
-            {t("tasks.empty")}
-          </Text>
+          <p className="text-sm text-muted-foreground">{t("tasks.empty")}</p>
         ) : (
           <>
             {today.length > 0 && (
               <SettingsSection
-                icon={<IconCalendarEvent size={20} stroke={1.8} />}
+                icon={<Calendar size={20} />}
                 title={t("tasks.today")}
-                action={
-                  <Badge variant="light" color="gray">
-                    {today.length}
-                  </Badge>
-                }
+                action={<Badge>{today.length}</Badge>}
                 opened={todayOpen}
                 onToggle={() => setTodayOpen((value) => !value)}
               >
-                <Stack gap="xs">{today.map(renderCard)}</Stack>
+                <div className="flex flex-col gap-2.5">{today.map(renderCard)}</div>
               </SettingsSection>
             )}
             {history.length > 0 && (
               <SettingsSection
-                icon={<IconHistory size={20} stroke={1.8} />}
+                icon={<ClockCounterClockwise size={20} />}
                 title={t("tasks.history")}
                 action={
                   <>
-                    <Badge variant="light" color="gray">
-                      {history.length}
-                    </Badge>
-                    <Button
-                      size="compact-xs"
-                      variant="transparent"
-                      color="red"
-                      className="history-clear-all"
-                      leftSection={<IconTrash size={14} />}
-                      onClick={() => deleteTasks(history.map((tk) => tk.id))}
-                    >
-                      {t("tasks.deleteAll")}
-                    </Button>
+                    <Badge>{history.length}</Badge>
+                    {historyOpen &&
+                      (clearArmed ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-8 gap-1.5 px-2 text-xs"
+                          onClick={handleClearHistory}
+                        >
+                          {t("tasks.clearHistoryConfirm", { count: history.length })}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 gap-1.5 px-2 text-xs text-destructive hover:bg-destructive/10"
+                          leftSection={<Trash size={14} />}
+                          onClick={handleClearHistory}
+                        >
+                          {t("tasks.clearHistory")}
+                        </Button>
+                      ))}
                   </>
                 }
                 opened={historyOpen}
-                onToggle={() => setHistoryOpen((value) => !value)}
+                onToggle={() => {
+                  if (!historyOpen) disarmClear();
+                  setHistoryOpen((value) => !value);
+                }}
               >
-                <Stack gap="xs">{history.map(renderCard)}</Stack>
+                <div className="flex flex-col gap-2.5">{history.map(renderCard)}</div>
               </SettingsSection>
             )}
           </>
         )}
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,17 @@
-import { Badge, Button, Checkbox, Chip, Group, Stack, Table, Text } from "@mantine/core";
-import { IconDownload } from "@tabler/icons-react";
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { DownloadSimple } from "@phosphor-icons/react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction
+} from "react";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Checkbox } from "../../components/ui/checkbox";
+import { Chip } from "../../components/ui/chip";
 import { t } from "../../locale";
 import type { MusicdlSearchResponse, MusicdlSearchResult } from "./api";
 import { musicSourceLabel } from "./configuration";
@@ -11,6 +22,7 @@ function resultFormat(result: MusicdlSearchResult): string {
 }
 
 const DOWNSAMPLE_TARGET_RATE = 48000;
+const CLEAR_ARM_RESET_MS = 3000;
 
 function denoiseEstimate(result: MusicdlSearchResult, enabled: boolean): string | null {
   if (!enabled) return null;
@@ -54,6 +66,29 @@ export function MusicSearchResults({
 
   const [formats, setFormats] = useState<string[]>([]);
 
+  // 清空结果两步确认：首击变为确认态，3 秒无操作自动还原（对齐 tasks.clearHistory 模式）
+  const [clearArmed, setClearArmed] = useState(false);
+  const clearTimer = useRef<number | null>(null);
+  const disarmClear = useCallback(() => {
+    setClearArmed(false);
+    if (clearTimer.current !== null) {
+      window.clearTimeout(clearTimer.current);
+      clearTimer.current = null;
+    }
+  }, []);
+  useEffect(() => disarmClear, [disarmClear]);
+
+  const handleClear = () => {
+    if (!clearArmed) {
+      setClearArmed(true);
+      if (clearTimer.current !== null) window.clearTimeout(clearTimer.current);
+      clearTimer.current = window.setTimeout(() => setClearArmed(false), CLEAR_ARM_RESET_MS);
+      return;
+    }
+    disarmClear();
+    onEndSession();
+  };
+
   const formatCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const result of response.results) {
@@ -79,6 +114,12 @@ export function MusicSearchResults({
     );
   };
 
+  const toggleFormat = (format: string) => {
+    setFormats((current) =>
+      current.includes(format) ? current.filter((value) => value !== format) : [...current, format]
+    );
+  };
+
   const toggleSelectVisible = () => {
     const visibleIndices = visibleResults.map((result) => result.index);
     if (allVisibleSelected) {
@@ -91,143 +132,156 @@ export function MusicSearchResults({
     );
   };
 
+  const selectVisibleLossless = () => {
+    // 与全选同口径：只作用于当前格式筛选可见的行，避免静默选中被筛掉的条目
+    onSelectedChange(
+      visibleResults.filter((result) => result.lossless).map((result) => result.index)
+    );
+  };
+
+  const hasStats = selected.length > 0 || queuedIndices.length > 0;
+
   return (
-    <Stack gap="xs">
-      <Group justify="space-between">
-        <Text fw={500}>
-          {t("music.results.title")}
-          <Text span size="xs" c="dimmed" ml={8}>
-            {formats.length
-              ? t("music.results.range", {
-                  visible: visibleResults.length,
-                  total: response.results.length
-                })
-              : t("music.results.count", { count: response.results.length })}{" "}
-            {t("music.results.stats", { selected: selected.length, queued: queuedIndices.length })}
-          </Text>
-        </Text>
-        <Group gap="xs">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          {formats.length
+            ? t("music.results.range", {
+                visible: visibleResults.length,
+                total: response.results.length
+              })
+            : t("music.results.count", { count: response.results.length })}
+          {hasStats
+            ? ` ${t("music.results.stats", { selected: selected.length, queued: queuedIndices.length })}`
+            : ""}
+        </p>
+        <div className="flex items-center gap-2">
+          {clearArmed ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-8 gap-1.5 px-2 text-xs"
+              onClick={handleClear}
+            >
+              {t("music.results.clearConfirm", { count: response.results.length })}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 px-2 text-xs text-destructive hover:bg-destructive/10"
+              disabled={sessionPhase !== "ready" || taskSubmitting}
+              onClick={handleClear}
+            >
+              {t("music.results.clear")}
+            </Button>
+          )}
           <Button
-            size="compact-sm"
-            variant="subtle"
-            color="red"
-            loading={sessionPhase === "releasing"}
-            disabled={sessionPhase !== "ready" || taskSubmitting}
-            onClick={onEndSession}
+            size="sm"
+            variant="secondary"
+            className="h-8 gap-1.5 px-2 text-xs"
+            onClick={toggleSelectVisible}
           >
-            {t("music.results.clear")}
-          </Button>
-          <Button size="compact-sm" variant="default" onClick={toggleSelectVisible}>
             {allVisibleSelected ? t("music.results.deselectAll") : t("music.results.selectAll")}
           </Button>
           <Button
-            size="compact-sm"
-            variant="default"
-            onClick={() =>
-              onSelectedChange(
-                response.results.filter((result) => result.lossless).map((result) => result.index)
-              )
-            }
+            size="sm"
+            variant="secondary"
+            className="h-8 gap-1.5 px-2 text-xs"
+            onClick={selectVisibleLossless}
           >
             {t("music.results.losslessOnly")}
           </Button>
           <Button
-            size="compact-sm"
-            leftSection={<IconDownload size={14} />}
+            size="sm"
+            className="h-8 gap-1.5 px-2 text-xs"
+            leftSection={<DownloadSimple size={14} />}
             disabled={!selected.length || taskSubmitting || sessionPhase !== "ready"}
             loading={taskSubmitting}
             onClick={onDownload}
           >
             {t("music.download.selected")}
           </Button>
-        </Group>
-      </Group>
+        </div>
+      </div>
       {formatCounts.length > 1 ? (
-        <Chip.Group multiple value={formats} onChange={setFormats}>
-          <Group gap={6}>
-            {formatCounts.map(([format, count]) => (
-              <Chip key={format} value={format} size="xs">
-                {format} · {count}
-              </Chip>
-            ))}
-          </Group>
-        </Chip.Group>
+        <div className="flex flex-wrap gap-1.5">
+          {formatCounts.map(([format, count]) => (
+            <Chip
+              key={format}
+              selected={formats.includes(format)}
+              onClick={() => toggleFormat(format)}
+            >
+              {format} · {count}
+            </Chip>
+          ))}
+        </div>
       ) : null}
       {response.results.length === 0 ? (
-        <Text size="sm" c="dimmed">
-          {t("music.results.noneFound")}
-        </Text>
+        <p className="text-sm text-muted-foreground">{t("music.results.noneFound")}</p>
       ) : visibleResults.length === 0 ? (
-        <Text size="sm" c="dimmed">
-          {t("music.results.formatFilteredEmpty")}
-        </Text>
+        <p className="text-sm text-muted-foreground">{t("music.results.formatFilteredEmpty")}</p>
       ) : (
-        <Table highlightOnHover verticalSpacing={6}>
-          <Table.Tbody>
+        <table className="w-full text-sm">
+          <tbody>
             {visibleResults.map((result) => {
               const checked = selectedSet.has(result.index);
               const queued = queuedSet.has(result.index);
               const estimate = denoiseEstimate(result, denoise);
               return (
-                <Table.Tr
+                <tr
                   key={`${result.source}-${result.index}`}
-                  style={{ cursor: "pointer" }}
+                  className="cursor-pointer border-b border-border/60 transition-colors last:border-b-0 hover:bg-secondary/40"
                   onClick={() => toggleResult(result.index)}
                 >
-                  <Table.Td w={36}>
+                  <td className="w-9 py-1.5 pl-1 align-middle">
                     <Checkbox
-                      aria-label={result.songName}
+                      aria-label={`${result.songName} · ${result.singers} · ${musicSourceLabel(result.source)}`}
                       checked={checked}
-                      onChange={() => toggleResult(result.index)}
+                      onCheckedChange={() => toggleResult(result.index)}
                       onClick={(event) => event.stopPropagation()}
                     />
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={500}>
-                        {result.songName}
-                      </Text>
+                  </td>
+                  <td className="py-1.5 align-middle">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{result.songName}</span>
                       {queued ? (
-                        <Badge size="xs" variant="light" color="blue">
+                        <Badge variant="primary" className="px-2 py-0 text-[11px]">
                           {t("music.results.queued")}
                         </Badge>
                       ) : null}
-                    </Group>
-                    <Text size="xs" c="dimmed">
+                    </div>
+                    <p className="text-xs text-muted-foreground">
                       {result.singers}
                       {result.album ? ` · ${result.album}` : ""}
-                    </Text>
-                  </Table.Td>
-
-                  <Table.Td w={230}>
-                    <Group gap="xs" wrap="nowrap">
+                    </p>
+                  </td>
+                  <td className="w-[230px] py-1.5 align-middle">
+                    <div className="flex items-center gap-2 whitespace-nowrap">
                       {estimate ? (
-                        <Text size="xs" c="dimmed">
-                          {estimate}
-                        </Text>
+                        <span className="text-xs text-muted-foreground">{estimate}</span>
                       ) : null}
                       <Badge
-                        variant="light"
-                        color={result.lossless ? "teal" : "gray"}
-                        style={{ textTransform: "none" }}
+                        variant={result.lossless ? "success" : "default"}
+                        className="px-2 py-0 text-[11px]"
                       >
                         {result.extension || result.codec || t("music.format.unknown")}
                         {result.bitrate ? ` · ${Math.round(result.bitrate / 1000)}k` : ""}
                       </Badge>
-                    </Group>
-                  </Table.Td>
-                  <Table.Td w={160}>
-                    <Text size="xs">{musicSourceLabel(result.source)}</Text>
-                    <Text size="xs" c="dimmed">
+                    </div>
+                  </td>
+                  <td className="w-[160px] py-1.5 align-middle">
+                    <p className="text-xs">{musicSourceLabel(result.source)}</p>
+                    <p className="text-xs text-muted-foreground">
                       {[result.fileSize, result.duration].filter(Boolean).join(" · ")}
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
+                    </p>
+                  </td>
+                </tr>
               );
             })}
-          </Table.Tbody>
-        </Table>
+          </tbody>
+        </table>
       )}
-    </Stack>
+    </div>
   );
 }

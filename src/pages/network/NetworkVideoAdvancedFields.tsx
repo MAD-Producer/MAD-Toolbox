@@ -1,5 +1,8 @@
-import { NumberInput, SegmentedControl, Stack, TextInput } from "@mantine/core";
+import { useId } from "react";
 import { FieldRow, OptionGroup, SwitchTileGrid } from "../../components/common/FieldRow";
+import { Input } from "../../components/ui/input";
+import { NumberField } from "../../components/ui/number-field";
+import { Segmented } from "../../components/ui/segmented";
 import { t, type TranslationKey } from "../../locale";
 import { defaultNetworkForm, type NetworkFormState } from "./form";
 
@@ -46,20 +49,29 @@ export function NetworkVideoAdvancedFields({
   disabled,
   onUpdate
 }: NetworkVideoAdvancedFieldsProps) {
+  const audioFormatId = useId();
+  const subtitleLanguagesId = useId();
+  const formatId = useId();
+  const outputTemplateId = useId();
+  const retriesId = useId();
+  const concurrentFragmentsId = useId();
+
   return (
-    <Stack gap="md">
+    <div className="flex flex-col gap-4">
       <OptionGroup title={t("network.group.content")}>
         <FieldRow label={t("network.fields.content")}>
-          <SegmentedControl
-            data={MODE_OPTIONS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
+          <Segmented
+            aria-label={t("network.fields.content")}
+            options={MODE_OPTIONS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
             value={form.mode}
-            onChange={(value) => onUpdate({ mode: value as NetworkFormState["mode"] })}
+            onChange={(value) => onUpdate({ mode: value })}
             disabled={disabled}
           />
         </FieldRow>
         {form.mode === "audio" && (
-          <FieldRow label={t("network.fields.audioFormat")}>
-            <TextInput
+          <FieldRow label={t("network.fields.audioFormat")} htmlFor={audioFormatId}>
+            <Input
+              id={audioFormatId}
               placeholder="best / mp3 / m4a / flac …"
               value={form.audioFormat}
               onChange={(event) => onUpdate({ audioFormat: event.currentTarget.value })}
@@ -68,8 +80,9 @@ export function NetworkVideoAdvancedFields({
           </FieldRow>
         )}
         {form.mode === "subtitles" && (
-          <FieldRow label={t("network.fields.subtitleLanguages")}>
-            <TextInput
+          <FieldRow label={t("network.fields.subtitleLanguages")} htmlFor={subtitleLanguagesId}>
+            <Input
+              id={subtitleLanguagesId}
               placeholder={t("network.fields.subtitleLanguagesPlaceholder")}
               value={form.subtitleLanguages}
               onChange={(event) => onUpdate({ subtitleLanguages: event.currentTarget.value })}
@@ -81,16 +94,18 @@ export function NetworkVideoAdvancedFields({
       </OptionGroup>
 
       <OptionGroup title={t("network.group.format")}>
-        <FieldRow label={t("network.fields.format")}>
-          <TextInput
+        <FieldRow label={t("network.fields.format")} htmlFor={formatId}>
+          <Input
+            id={formatId}
             placeholder={t("network.fields.formatPlaceholder")}
             value={form.format}
             onChange={(event) => onUpdate({ format: event.currentTarget.value })}
             disabled={disabled}
           />
         </FieldRow>
-        <FieldRow label={t("network.fields.outputTemplate")}>
-          <TextInput
+        <FieldRow label={t("network.fields.outputTemplate")} htmlFor={outputTemplateId}>
+          <Input
+            id={outputTemplateId}
             value={form.outputTemplate}
             onChange={(event) => onUpdate({ outputTemplate: event.currentTarget.value })}
             disabled={disabled}
@@ -99,25 +114,22 @@ export function NetworkVideoAdvancedFields({
       </OptionGroup>
 
       <OptionGroup title={t("network.group.network")}>
-        <FieldRow label={t("network.fields.retries")}>
-          <NumberInput
+        <FieldRow label={t("network.fields.retries")} htmlFor={retriesId}>
+          <NumberField
+            id={retriesId}
             min={0}
             value={form.retries}
-            onChange={(value) =>
-              onUpdate({ retries: typeof value === "number" ? value : defaultNetworkForm.retries })
-            }
+            onChange={(value) => onUpdate({ retries: value ?? defaultNetworkForm.retries })}
             disabled={disabled}
           />
         </FieldRow>
-        <FieldRow label={t("network.fields.concurrentFragments")}>
-          <NumberInput
+        <FieldRow label={t("network.fields.concurrentFragments")} htmlFor={concurrentFragmentsId}>
+          <NumberField
+            id={concurrentFragmentsId}
             min={1}
             value={form.concurrentFragments}
             onChange={(value) =>
-              onUpdate({
-                concurrentFragments:
-                  typeof value === "number" ? value : defaultNetworkForm.concurrentFragments
-              })
+              onUpdate({ concurrentFragments: value ?? defaultNetworkForm.concurrentFragments })
             }
             disabled={disabled}
           />
@@ -130,6 +142,6 @@ export function NetworkVideoAdvancedFields({
           disabled={disabled}
         />
       </OptionGroup>
-    </Stack>
+    </div>
   );
 }

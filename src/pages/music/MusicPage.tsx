@@ -1,11 +1,10 @@
-import { Alert, Box, Card, Group, Loader, Stack, Text } from "@mantine/core";
-import { IconAdjustmentsHorizontal, IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
-import { useDisclosure } from "@mantine/hooks";
+import { SlidersHorizontal, Warning, ListBullets, CircleNotch } from "@phosphor-icons/react";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { L2TabNav } from "../../components/common/L2TabNav";
+import { Card } from "../../components/ui/card";
 import { t } from "../../locale";
 import { MusicAdvancedSettings } from "./MusicAdvancedSettings";
 import { MusicCommandPanel } from "./MusicCommandPanel";
@@ -16,7 +15,6 @@ import { MusicSourcePicker } from "./MusicSourcePicker";
 import type { DependencyStatus } from "../../contracts/dependency";
 import type { CookieFileOption, TaskSeed } from "../../contracts/types";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
-import { resolveDefaultOutputDirectory } from "../../lib/platform";
 import { isSearchBusy, useMusicSessionStore } from "../../stores/music-session";
 import { musicdlDownload, musicdlPlaylist, previewMusicCommand } from "./api";
 import {
@@ -70,7 +68,6 @@ interface MusicPreviewResult {
 interface MusicPageProps {
   active: boolean;
   seed?: TaskSeed | null;
-  onSeedConsumed?: () => void;
   dependency: DependencyStatus | null;
   pythonDependency: DependencyStatus | null;
   defaultOutputDirectory: string | null;
@@ -86,7 +83,6 @@ interface MusicPageProps {
 export function MusicPage({
   active,
   seed,
-  onSeedConsumed,
   dependency,
   pythonDependency,
   defaultOutputDirectory,
@@ -98,15 +94,41 @@ export function MusicPage({
   cookieFiles,
   onAddCookieFile
 }: MusicPageProps) {
-  const [form, setForm] = useState(createPersistedMusicForm);
-  const [advancedOpen, advancedToggle] = useDisclosure(false);
-  const [resultsOpen, resultsHandlers] = useDisclosure(false);
+  // 任务种子只在挂载时消费一次（deliver → generation+1 → 重挂）
+  const seedFormSnapshot =
+    seed?.task.intent.type === "form"
+      ? ((seed.task.intent.data.form ?? {}) as Partial<MusicFormState>)
+      : null;
+  const seedMode: MusicFormState["mode"] =
+    seed?.task.intent.type === "form" && seed.task.intent.data.musicdl === "playlist"
+      ? "playlist"
+      : "search";
+  const seedDenoise =
+    seed?.task.intent.type === "form" && typeof seed.task.intent.data.denoise === "boolean"
+      ? seed.task.intent.data.denoise
+      : null;
+  const [form, setForm] = useState<MusicFormState>(() => {
+    if (seed) {
+      return {
+        ...createInitialMusicForm(),
+        ...seedFormSnapshot,
+        mode: seedFormSnapshot?.mode ?? seedMode,
+        keyword: "",
+        playlistUrl: ""
+      };
+    }
+    return createPersistedMusicForm();
+  });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // 结果面板展开状态：收起是用户显式操作，展开由「发起搜索」事件驱动
+  //（原先用 Effect 观察 searchResponse 到达再展开，发起时即展开，搜索中就有反馈）
+  const [resultsCollapsed, setResultsCollapsed] = useState(true);
   const [configurationError, setConfigurationError] = useState<string | null>(null);
   const [taskSubmitting, setTaskSubmitting] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [previewResult, setPreviewResult] = useState<MusicPreviewResult | null>(null);
   const [denoise, setDenoise] = useState(
-    () => localStorage.getItem(MUSIC_DENOISE_STORAGE_KEY) === "1"
+    () => seedDenoise ?? localStorage.getItem(MUSIC_DENOISE_STORAGE_KEY) === "1"
   );
   const sessionPhase = useMusicSessionStore((state) => state.phase);
   const searchResponse = useMusicSessionStore((state) => state.response);
@@ -131,53 +153,25 @@ export function MusicPage({
     [retainWorkspace]
   );
 
-  useEffect(() => {
-    const fillDefault = (directory: string) =>
-      setForm((current) =>
-        current.outputDirectory ? current : { ...current, outputDirectory: directory }
-      );
-    if (defaultOutputDirectory) {
-      fillDefault(defaultOutputDirectory);
-      return;
-    }
-    let canceled = false;
-    void resolveDefaultOutputDirectory().then((directory) => {
-      if (!canceled && directory) fillDefault(directory);
-    });
-    return () => {
-      canceled = true;
-    };
-  }, [defaultOutputDirectory]);
-
+  // 【Effect 白名单⑤】表单草稿持久化到 localStorage（keyword/playlistUrl 等瞬态字段除外）。
+  // 留空的输出目录在提交层回退后端默认位置（createMusic*Request 均为 `|| null`），
+  // 不再把默认值预先烘焙进草稿（原先用 Effect 异步解析默认目录后填进表单）
   useEffect(() => {
     const { keyword, playlistUrl, ...persisted } = form;
     saveStoredForm(MUSIC_FORM_STORAGE_KEY, persisted);
   }, [form]);
 
+  // 【Effect 白名单⑤】降噪偏好持久化到 localStorage
   useEffect(() => {
     localStorage.setItem(MUSIC_DENOISE_STORAGE_KEY, denoise ? "1" : "0");
   }, [denoise]);
-
-  useEffect(() => {
-    if (searchResponse) resultsHandlers.open();
-  }, [searchResponse, resultsHandlers.open]);
-
-  useEffect(() => {
-    if (!seed) return;
-    setPreviewResult(null);
-    const data = seed.task.intent.type === "form" ? seed.task.intent.data : {};
-    const snapshot = (data.form ?? {}) as Partial<MusicFormState>;
-    const mode: MusicFormState["mode"] =
-      snapshot.mode ?? (data.musicdl === "playlist" ? "playlist" : "search");
-    setForm({ ...createInitialMusicForm(), ...snapshot, mode, keyword: "", playlistUrl: "" });
-    if (typeof data.denoise === "boolean") setDenoise(data.denoise);
-    onSeedConsumed?.();
-  }, [seed, onSeedConsumed]);
 
   const prepared = useMemo(() => prepareMusicConfiguration(form), [form]);
   const musicdlInstalled = dependency?.available ?? false;
   const pythonInstalled = pythonDependency?.available ?? false;
 
+  // 【Effect 白名单⑤】配置预览：表单连续编辑期间对后端做防抖预览取数
+  //（同 useDraftPreviewWorkspace 的防抖同步，版本守卫丢弃过期响应）
   useEffect(() => {
     const request = prepared.cli;
     if (!active || !musicdlInstalled || !pythonInstalled || !request) return;
@@ -233,6 +227,7 @@ export function MusicPage({
     }
 
     try {
+      setResultsCollapsed(false);
       await startSearch(createMusicSearchRequest(form, prepared.cli));
       setSelected([]);
     } catch {}
@@ -248,10 +243,11 @@ export function MusicPage({
     setConfigurationError(null);
     try {
       await musicdlDownload(sessionId, indices, denoise, form);
+      // markQueued 失败说明会话已漂移（防御路径）：保留勾选且不弹成功提示，避免误导
       if (markQueued(sessionId, indices)) {
         setSelected((current) => current.filter((value) => !submittedSet.has(value)));
+        notifications.show({ color: "green", message: t("music.downloadQueued") });
       }
-      notifications.show({ color: "green", message: t("music.downloadQueued") });
     } catch (error) {
       setConfigurationError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -296,114 +292,132 @@ export function MusicPage({
     form.sources.length === 0 ||
     !!prepared.error ||
     (form.mode === "search" ? !form.keyword.trim() : !form.playlistUrl.trim());
+  // 禁用原因按优先级给出（submitting/会话切换是短暂过渡态，不给文案）
+  const runDisabledReason = taskSubmitting
+    ? null
+    : form.sources.length === 0
+      ? t("music.run.needSource")
+      : prepared.error
+        ? prepared.error
+        : form.mode === "search" && !form.keyword.trim()
+          ? t("music.run.needInput")
+          : form.mode === "playlist" && !form.playlistUrl.trim()
+            ? t("music.run.needInput")
+            : null;
   const displayedError = configurationError || sessionError || prepared.error;
   const preview = previewResult?.display ?? null;
   const previewError = previewResult?.error ?? null;
 
   return (
-    <Box mih="100%">
-      <Stack gap="md" p="lg">
-        {active && (
-          <MusicPageHeader
-            mode={form.mode}
-            runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
-            runDisabled={runDisabled}
-            onRun={() => void run()}
-            searching={sessionPhase === "searching" || sessionPhase === "canceling"}
-            stopping={sessionPhase === "canceling"}
-            onStopSearch={() => void stopSearch()}
-            denoise={denoise}
-            onDenoiseChange={setDenoise}
-            dependencyLabels={dependencyLabels}
-            onOpenDependencies={onOpenDependencies}
-          />
-        )}
-        <L2TabNav
-          items={[
-            { page: "search", label: t("music.mode.search") },
-            { page: "playlist", label: t("music.mode.playlist") }
-          ]}
-          value={form.mode}
-          onChange={(mode) => updateForm({ mode })}
-          aria-label={t("music.mode.aria")}
+    <div className="flex min-h-full flex-col gap-4 p-5">
+      {active && (
+        <MusicPageHeader
+          mode={form.mode}
+          runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
+          runDisabled={runDisabled}
+          runDisabledReason={runDisabledReason}
+          onRun={() => void run()}
+          searching={sessionPhase === "searching" || sessionPhase === "canceling"}
+          stopping={sessionPhase === "canceling"}
+          onStopSearch={() => void stopSearch()}
+          denoise={denoise}
+          onDenoiseChange={setDenoise}
+          dependencyLabels={dependencyLabels}
+          onOpenDependencies={onOpenDependencies}
         />
-        <SettingsSection>
-          <MusicConfigurationPanel
-            form={form}
-            onChange={updateForm}
-            onPickOutputDirectory={() => void pickOutputDirectory()}
-            onPickCookieFile={() => void pickCookieFile()}
-            globalProxy={globalProxy}
-            defaultOutputDirectory={defaultOutputDirectory}
-            cookieFiles={cookieFiles}
-            onAddCookieFile={onAddCookieFile}
-          />
-        </SettingsSection>
-        <MusicSourcePicker sources={form.sources} onChange={(sources) => updateForm({ sources })} />
-        <SettingsSection
-          icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
-          title={t("music.advanced.title")}
-          opened={advancedOpen}
-          onToggle={advancedToggle.toggle}
-        >
-          <Stack gap="md">
-            <Card withBorder padding="md" radius="md">
-              <MusicCommandPanel
-                preview={preview}
-                previewError={previewError}
-                sessionPhase={sessionPhase}
-                sourceCount={form.sources.length}
-              />
-            </Card>
-            <MusicAdvancedSettings form={form} onChange={updateForm} />
-          </Stack>
-        </SettingsSection>
-        {displayedError ? (
-          <Alert color="red" icon={<IconAlertTriangle size={16} />} title={t("music.errorTitle")}>
-            {displayedError}
-          </Alert>
-        ) : null}
-
-        <SettingsSection
-          icon={<IconListDetails size={20} stroke={1.8} />}
-          title={t("music.results.title")}
-          action={
-            searchResponse ? (
-              <Text size="xs" c="dimmed">
-                {t("music.results.count", { count: searchResponse.results.length })}
-              </Text>
-            ) : null
-          }
-          opened={resultsOpen}
-          onToggle={resultsHandlers.toggle}
-        >
-          {searchResponse ? (
-            <MusicSearchResults
-              key={searchResponse.sessionId}
-              response={searchResponse}
-              selected={selected}
-              queuedIndices={queuedIndices}
+      )}
+      <L2TabNav
+        items={[
+          { page: "search", label: t("music.mode.search") },
+          { page: "playlist", label: t("music.mode.playlist") }
+        ]}
+        value={form.mode}
+        onChange={(mode) => updateForm({ mode })}
+        aria-label={t("music.mode.aria")}
+      />
+      <SettingsSection>
+        <MusicConfigurationPanel
+          form={form}
+          onChange={updateForm}
+          onPickOutputDirectory={() => void pickOutputDirectory()}
+          onPickCookieFile={() => void pickCookieFile()}
+          globalProxy={globalProxy}
+          defaultOutputDirectory={defaultOutputDirectory}
+          cookieFiles={cookieFiles}
+          onAddCookieFile={onAddCookieFile}
+        />
+      </SettingsSection>
+      <MusicSourcePicker sources={form.sources} onChange={(sources) => updateForm({ sources })} />
+      <SettingsSection
+        icon={<SlidersHorizontal size={20} />}
+        title={t("music.advanced.title")}
+        // 渲染期派生：配置出错时高级区强制展开——错误详情指向的字段藏在里面，
+        // 不能让用户自己找路（原先用 Effect 观察 prepared.error 再 setState）
+        opened={advancedOpen || prepared.error !== null}
+        onToggle={() => setAdvancedOpen((value) => !value)}
+      >
+        <div className="flex flex-col gap-4">
+          <Card padding="md">
+            <MusicCommandPanel
+              preview={preview}
+              previewError={previewError}
               sessionPhase={sessionPhase}
-              taskSubmitting={taskSubmitting}
-              denoise={denoise}
-              onSelectedChange={setSelected}
-              onDownload={() => void downloadSelected()}
-              onEndSession={() => void endSearchSession()}
+              sourceCount={form.sources.length}
             />
-          ) : isSearchBusy(sessionPhase) ? (
-            <Group gap="sm" justify="center" py="lg">
-              <Loader size="xs" />
-              <Text size="sm" c="dimmed">
-                {t("music.searchingHint")}
-              </Text>
-            </Group>
-          ) : (
-            <Text size="sm" c="dimmed" ta="center" py="lg">
-              {t("music.emptyResultsHint")}
-            </Text>
-          )}
-        </SettingsSection>
-      </Stack>
-    </Box>
+          </Card>
+          <MusicAdvancedSettings form={form} onChange={updateForm} />
+        </div>
+      </SettingsSection>
+      {displayedError ? (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5"
+        >
+          <Warning size={16} className="mt-0.5 shrink-0 text-destructive" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-destructive">{t("music.errorTitle")}</p>
+            <p className="mt-0.5 text-sm break-words text-foreground">{displayedError}</p>
+          </div>
+        </div>
+      ) : null}
+
+      <SettingsSection
+        icon={<ListBullets size={20} />}
+        title={t("music.results.title")}
+        action={
+          searchResponse ? (
+            <span className="text-xs text-muted-foreground">
+              {t("music.results.count", { count: searchResponse.results.length })}
+            </span>
+          ) : null
+        }
+        opened={!resultsCollapsed}
+        onToggle={() => setResultsCollapsed((value) => !value)}
+      >
+        {searchResponse ? (
+          <MusicSearchResults
+            key={searchResponse.sessionId}
+            response={searchResponse}
+            selected={selected}
+            queuedIndices={queuedIndices}
+            sessionPhase={sessionPhase}
+            taskSubmitting={taskSubmitting}
+            denoise={denoise}
+            onSelectedChange={setSelected}
+            onDownload={() => void downloadSelected()}
+            onEndSession={() => void endSearchSession()}
+          />
+        ) : isSearchBusy(sessionPhase) ? (
+          <div className="flex items-center justify-center gap-2 py-6">
+            <CircleNotch size={16} className="animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">{t("music.searchingHint")}</span>
+          </div>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {t("music.emptyResultsHint")}
+          </p>
+        )}
+      </SettingsSection>
+    </div>
   );
 }
