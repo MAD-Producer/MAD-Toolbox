@@ -1,6 +1,7 @@
-import { Card, Collapse, Group, UnstyledButton } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { Card } from "../ui/card";
+import { Collapse } from "../ui/collapse";
 
 interface CollapsibleSectionProps {
   title: ReactNode;
@@ -11,6 +12,7 @@ interface CollapsibleSectionProps {
   children: ReactNode;
 }
 
+/** 紧凑型折叠卡片：行内标题（右箭头指示）+ 折叠内容，用于页内二级折叠 */
 export function CollapsibleSection({
   title,
   opened,
@@ -18,29 +20,34 @@ export function CollapsibleSection({
   action,
   children
 }: CollapsibleSectionProps) {
+  const contentId = useId();
+
   return (
-    <Card withBorder padding="sm">
-      <Group justify="space-between" wrap="nowrap">
-        <UnstyledButton
+    <Card padding="sm">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
           onClick={onToggle}
           aria-expanded={opened}
-          style={{ flex: "1 1 auto", minWidth: 0 }}
+          aria-controls={contentId}
+          className="group flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
         >
-          <Group gap="xs" wrap="nowrap">
-            <IconChevronRight
-              size={16}
-              style={{
-                transform: opened ? "rotate(90deg)" : "none",
-                transition: "transform 150ms ease"
-              }}
-            />
-            {title}
-          </Group>
-        </UnstyledButton>
+          <IconChevronRight
+            size={16}
+            stroke={1.8}
+            aria-hidden="true"
+            className={
+              opened
+                ? "shrink-0 rotate-90 text-muted-foreground transition-transform duration-150 group-hover:text-foreground"
+                : "shrink-0 rotate-0 text-muted-foreground transition-transform duration-150 group-hover:text-foreground"
+            }
+          />
+          {title}
+        </button>
         {action}
-      </Group>
-      <Collapse expanded={opened}>
-        <div style={{ paddingTop: "var(--mantine-spacing-md)" }}>{children}</div>
+      </div>
+      <Collapse open={opened} id={contentId}>
+        <div className="pt-4">{children}</div>
       </Collapse>
     </Card>
   );

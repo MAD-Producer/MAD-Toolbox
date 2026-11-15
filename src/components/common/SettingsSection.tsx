@@ -1,6 +1,7 @@
-import { Box, Card, Collapse, Group, Text, UnstyledButton } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { Card } from "../ui/card";
+import { Collapse } from "../ui/collapse";
 
 interface SettingsSectionProps {
   icon?: ReactNode;
@@ -12,6 +13,10 @@ interface SettingsSectionProps {
   children: ReactNode;
 }
 
+/**
+ * 通用区块卡片：无标题时为纯卡片容器；带标题时为可折叠区块（标题行 +
+ * 折叠内容）。API 与旧 Mantine 实现一致，调用点无需改动。
+ */
 export function SettingsSection({
   icon,
   title,
@@ -21,64 +26,65 @@ export function SettingsSection({
   onToggle,
   children
 }: SettingsSectionProps) {
+  const contentId = useId();
+
   if (!title) {
-    return (
-      <Card withBorder padding={0} radius="md">
-        <Box p="lg">{children}</Box>
-      </Card>
-    );
+    return <Card padding="lg">{children}</Card>;
   }
 
   const collapsible = typeof opened === "boolean" && typeof onToggle === "function";
   const heading = (
-    <Group gap="sm" wrap="nowrap">
-      <Box c="var(--mantine-color-blue-filled)" style={{ display: "flex" }} lh={0}>
-        {icon}
-      </Box>
-      <Box>
-        <Text size="md" fw={600}>
-          {title}
-        </Text>
+    <div className="flex items-center gap-3">
+      {icon ? <span className="flex shrink-0 text-primary">{icon}</span> : null}
+      <div className="min-w-0">
+        <p className="text-base font-semibold leading-snug">{title}</p>
         {description ? (
-          <Text size="sm" c="dimmed">
-            {description}
-          </Text>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         ) : null}
-      </Box>
-    </Group>
+      </div>
+    </div>
   );
 
   return (
-    <Card withBorder padding={0} radius="md">
-      <Group justify="space-between" wrap="nowrap" px="lg" py="md" gap="sm">
+    <Card>
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
         {collapsible ? (
-          <UnstyledButton
+          <button
+            type="button"
             onClick={onToggle}
             aria-expanded={opened}
-            style={{ flex: "1 1 auto", minWidth: 0, display: "block", textAlign: "left" }}
+            aria-controls={contentId}
+            className="group flex min-w-0 flex-1 cursor-pointer items-start rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           >
             {heading}
-          </UnstyledButton>
+          </button>
         ) : (
-          <Box style={{ flex: "1 1 auto", minWidth: 0 }}>{heading}</Box>
+          <div className="min-w-0 flex-1">{heading}</div>
         )}
-        <Group gap="xs" wrap="nowrap">
+        <div className="flex shrink-0 items-center gap-2">
           {action}
           {collapsible ? (
             <IconChevronDown
               size={18}
               stroke={1.8}
-              style={{
-                transform: opened ? "rotate(180deg)" : "none",
-                transition: "transform 150ms ease"
-              }}
+              className={cnRotate(opened)}
+              aria-hidden="true"
             />
           ) : null}
-        </Group>
-      </Group>
-      <Collapse expanded={!collapsible || opened}>
-        <Box p="lg">{children}</Box>
+        </div>
+      </div>
+      <Collapse open={!collapsible || opened} id={contentId}>
+        <div className="p-5">{children}</div>
       </Collapse>
     </Card>
   );
 }
+
+/** 折叠指示箭头：展开时旋转 180°；箭头不拦截点击（整行可点），hover 随标题行提亮 */
+function cnRotate(opened: boolean): string {
+  const shared = "pointer-events-none text-muted-foreground transition-transform duration-150 group-hover:text-foreground";
+  return opened
+    ? `shrink-0 rotate-180 ${shared}`
+    : `shrink-0 rotate-0 ${shared}`;
+}
+

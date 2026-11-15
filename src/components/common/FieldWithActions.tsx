@@ -1,16 +1,17 @@
-import { Box, Group, type GroupProps } from "@mantine/core";
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
-interface FieldWithActionsProps extends GroupProps {
+export interface FieldWithActionsProps extends ComponentPropsWithoutRef<"div"> {
   children: ReactNode;
   actions?: ReactNode;
 }
 
-export function FieldWithActions({ children, actions, ...groupProps }: FieldWithActionsProps) {
+/** 控件行：输入控件占满 + 右侧动作按钮列（不换行，间距 8px） */
+export function FieldWithActions({ children, actions, className, ...props }: FieldWithActionsProps) {
   return (
-    <Group gap={8} wrap="nowrap" align="center" {...groupProps}>
-      <Box style={{ flex: "1 1 auto", minWidth: 0 }}>{children}</Box>
+    <div className={cn("flex items-center gap-2", className)} {...props}>
+      <div className="min-w-0 flex-1">{children}</div>
       {actions}
-    </Group>
+    </div>
   );
 }
