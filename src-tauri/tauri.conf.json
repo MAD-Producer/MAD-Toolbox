@@ -14,10 +14,10 @@
     "windows": [
       {
         "title": "MAD Toolbox",
-        "width": 1120,
-        "height": 760,
-        "minWidth": 900,
-        "minHeight": 600,
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1200,
+        "minHeight": 680,
         "resizable": true,
         "fullscreen": false
       }

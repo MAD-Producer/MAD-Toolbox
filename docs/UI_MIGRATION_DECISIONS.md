@@ -6,39 +6,40 @@
 
 ## 记录索引
 
-| #   | 阶段 | 主题                                                                                | 状态                                                  |
-| --- | ---- | ----------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| D1  | -1   | tsconfig 删除 composite/references                                                  | 已执行                                                |
-| D2  | -1   | TypeScript 7.0 vs 7.1 的版本选择                                                    | 已执行                                                |
-| D3  | 0    | 跳过 shadcn CLI，手写 components.json 与组件源码                                    | 已执行                                                |
-| D4  | 0    | 通知的自绘生命周期进度条换 sonner 原生外观                                          | 已执行                                                |
-| D5  | 0    | 主题切换收口提前到阶段 0（而非阶段 1）                                              | 已执行                                                |
-| D6  | -1   | Tauri npm 包降回与 Rust crate 同 minor                                              | 已执行                                                |
-| D7  | 0    | Toaster 配置：token 注入而非 richColors                                             | 已执行                                                |
-| D8  | 0    | 通知语义色恢复方案（icon 四色 + 左边条）                                            | 已执行                                                |
-| D9  | 0    | Tailwind utilities 与 Mantine 样式的级联策略                                        | 已执行                                                |
-| D10 | 0    | Styleguide 主题按钮截图异常的结案                                                   | 已执行                                                |
-| D11 | 0    | 启动时 invoke TypeError 四连发（范围外）                                            | 记录待办（D22④ stop/end toast 同源，合并处理）        |
-| D12 | 1    | @tailwindcss/vite 对启动后新建文件不重扫（dev 缓存）                                | 已执行                                                |
-| D13 | 1    | 浏览器环境 Mantine Modal Portal 内点击失效（范围外）                                | 已消解（弹窗迁 Radix 后自然消失，见 D25/D27）         |
-| D14 | 1    | 折叠动画学习 MangoDisk：文字盒独立过渡替代条件渲染                                  | 已执行                                                |
-| D15 | 1    | D5 的修正：Mantine legacy key 实为 mantine-color-scheme-value                       | 已执行（双写已随阶段 7 移除，见 D26⑤）                |
-| D16 | 1    | 验收决策：侧栏分层贴 MangoDisk 轨道结构 + Tooltip 统一 top + media sticky 延后      | 已执行（遗留三项闭环：→D20批4 / D19④ / D27 真机清单） |
-| D17 | 2    | dev 环境两类陈旧缓存：Tailwind 扫描缓存与浏览器 HTTP 模块缓存                       | 已执行（对策纳入验收流程）                            |
-| D18 | 2    | 阶段 2 验收记录（21 项修复 + 记档 5 + 移交 2）                                      | 已执行（移交闭环：rerun→D21⑤；deleteTasks→D27 清单）  |
-| D19 | 3    | 阶段 3 迁移决策（bilibili + network + common 表单件层）                             | 已执行                                                |
-| D20 | 3    | 阶段 3 验收裁决与修复记录                                                           | 已执行（记档 5 见汇总索引）                           |
-| D21 | 4    | 阶段 4 迁移决策（music + L2TabNav + Mantine 样式层化）                              | 已执行                                                |
-| D22 | 4    | 阶段 4 验收裁决与修复记录                                                           | 已执行（记档 6：两项由 D26 终审结案）                 |
-| D23 | 5    | 阶段 5 决策与验收（media 域 12 tsx + 吸顶工具栏）                                   | 已执行（NumberField clamp 移交项→D26 落地）           |
-| D24 | 6    | 阶段 6 迁移决策（settings 域 9 文件 + 语义映射表）                                  | 已执行                                                |
-| D25 | 6    | 阶段 6 验收裁决与修复记录                                                           | 已执行（记档 9 见汇总索引）                           |
-| D26 | 7    | 阶段 7：Mantine 移除与终态收敛                                                      | 已执行（真机复验移交用户，权威清单见 D27）            |
-| D27 | 7    | 终审验收裁决与修复记录（UI/UX 终审后 + 文档大修）                                   | 已执行                                                |
-| D28 | 收尾 | 页头吸顶工具栏统一为四页标准（用户两轮裁决：先线后吸顶）                            | 已执行（滚动观感归 D27 真机清单）                     |
-| D29 | 收尾 | 前后端通信完整性审计（3 agent 并行 + 主 agent 复核）                                | 已执行（结论：链路完整；P2 处置见正文）               |
-| D30 | 收尾 | Effect 白名单制度全面落地（Default Deny 清理 + 隐藏状态机精简 + seed 交付架构改造） | 已执行（⑤ 类保留项已获用户批准保留；3 处有意行为修正见正文） |
-| D31 | 收尾 | 图标库迁移 Tabler → Phosphor Regular（67 项语义映射 + 描线动效改淡入 + 卸载 @tabler） | 已执行（真机复验项并入 D27 清单）                     |
+| #   | 阶段 | 主题                                                                                  | 状态                                                         |
+| --- | ---- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| D1  | -1   | tsconfig 删除 composite/references                                                    | 已执行                                                       |
+| D2  | -1   | TypeScript 7.0 vs 7.1 的版本选择                                                      | 已执行                                                       |
+| D3  | 0    | 跳过 shadcn CLI，手写 components.json 与组件源码                                      | 已执行                                                       |
+| D4  | 0    | 通知的自绘生命周期进度条换 sonner 原生外观                                            | 已执行                                                       |
+| D5  | 0    | 主题切换收口提前到阶段 0（而非阶段 1）                                                | 已执行                                                       |
+| D6  | -1   | Tauri npm 包降回与 Rust crate 同 minor                                                | 已执行                                                       |
+| D7  | 0    | Toaster 配置：token 注入而非 richColors                                               | 已执行                                                       |
+| D8  | 0    | 通知语义色恢复方案（icon 四色 + 左边条）                                              | 已执行                                                       |
+| D9  | 0    | Tailwind utilities 与 Mantine 样式的级联策略                                          | 已执行                                                       |
+| D10 | 0    | Styleguide 主题按钮截图异常的结案                                                     | 已执行                                                       |
+| D11 | 0    | 启动时 invoke TypeError 四连发（范围外）                                              | 记录待办（D22④ stop/end toast 同源，合并处理）               |
+| D12 | 1    | @tailwindcss/vite 对启动后新建文件不重扫（dev 缓存）                                  | 已执行                                                       |
+| D13 | 1    | 浏览器环境 Mantine Modal Portal 内点击失效（范围外）                                  | 已消解（弹窗迁 Radix 后自然消失，见 D25/D27）                |
+| D14 | 1    | 折叠动画学习 MangoDisk：文字盒独立过渡替代条件渲染                                    | 已执行                                                       |
+| D15 | 1    | D5 的修正：Mantine legacy key 实为 mantine-color-scheme-value                         | 已执行（双写已随阶段 7 移除，见 D26⑤）                       |
+| D16 | 1    | 验收决策：侧栏分层贴 MangoDisk 轨道结构 + Tooltip 统一 top + media sticky 延后        | 已执行（遗留三项闭环：→D20批4 / D19④ / D27 真机清单）        |
+| D17 | 2    | dev 环境两类陈旧缓存：Tailwind 扫描缓存与浏览器 HTTP 模块缓存                         | 已执行（对策纳入验收流程）                                   |
+| D18 | 2    | 阶段 2 验收记录（21 项修复 + 记档 5 + 移交 2）                                        | 已执行（移交闭环：rerun→D21⑤；deleteTasks→D27 清单）         |
+| D19 | 3    | 阶段 3 迁移决策（bilibili + network + common 表单件层）                               | 已执行                                                       |
+| D20 | 3    | 阶段 3 验收裁决与修复记录                                                             | 已执行（记档 5 见汇总索引）                                  |
+| D21 | 4    | 阶段 4 迁移决策（music + L2TabNav + Mantine 样式层化）                                | 已执行                                                       |
+| D22 | 4    | 阶段 4 验收裁决与修复记录                                                             | 已执行（记档 6：两项由 D26 终审结案）                        |
+| D23 | 5    | 阶段 5 决策与验收（media 域 12 tsx + 吸顶工具栏）                                     | 已执行（NumberField clamp 移交项→D26 落地）                  |
+| D24 | 6    | 阶段 6 迁移决策（settings 域 9 文件 + 语义映射表）                                    | 已执行                                                       |
+| D25 | 6    | 阶段 6 验收裁决与修复记录                                                             | 已执行（记档 9 见汇总索引）                                  |
+| D26 | 7    | 阶段 7：Mantine 移除与终态收敛                                                        | 已执行（真机复验移交用户，权威清单见 D27）                   |
+| D27 | 7    | 终审验收裁决与修复记录（UI/UX 终审后 + 文档大修）                                     | 已执行                                                       |
+| D28 | 收尾 | 页头吸顶工具栏统一为四页标准（用户两轮裁决：先线后吸顶）                              | 已执行（滚动观感归 D27 真机清单）                            |
+| D29 | 收尾 | 前后端通信完整性审计（3 agent 并行 + 主 agent 复核）                                  | 已执行（结论：链路完整；P2 处置见正文）                      |
+| D30 | 收尾 | Effect 白名单制度全面落地（Default Deny 清理 + 隐藏状态机精简 + seed 交付架构改造）   | 已执行（⑤ 类保留项已获用户批准保留；3 处有意行为修正见正文） |
+| D31 | 收尾 | 图标库迁移 Tabler → Phosphor Regular（67 项语义映射 + 描线动效改淡入 + 卸载 @tabler） | 已执行（真机复验项并入 D27 清单）                            |
+| D32 | 收尾 | Windows 最小窗口尺寸提升至 1200×680（英文模式溢出实测驱动）                           | 已执行                                                       |
 
 > 状态说明：**已执行**＝决策已落地并验收；**已消解**＝记录的问题随后续迁移自然消失；**记录待办**＝范围外缺陷，建议迁移合并后独立 ticket；括号/箭头标注为闭环去向。全部「记档不修 / 待办 / 移交」事项的汇总索引见文末[记档项汇总索引](#记档项汇总索引)。
 
@@ -479,17 +480,35 @@ _music / media / tasks_
 
 以上全部记档项均已随对应阶段验收裁决，无未裁决项；「候选」为后续产品迭代输入而非缺陷。
 
+## D32 · Windows 最小窗口尺寸提升（用户裁决：提高 minWidth/minHeight 并审查英文溢出）
+
+**背景**：用户真机截图（窗口 ~1129×1021）显示英文 media 页 L2 页签条末项「Image & Frame Export」溢出容器右缘。当时配置：默认 1120×760 / 最小 900×600（`tauri.conf.json` + `tauri.windows.conf.json`）。
+
+**实测**（IAB 英文模式逐宽度扫描 media 页签条）：视口 900 溢 20px → 1100 溢 3px → **1150 起 0 溢出**（断点 ∈ (1100, 1150]）。`L2TabNav` 为 `grid auto-cols-fr` 等宽页签，容器 < 列 min-content 总和时整体溢出、无收缩韧性。
+
+**决策**：min 900×600 → **1200×680**，默认 1120×760 → **1280×800**（两份 conf 同步）。依据：
+
+- 1200 minWidth 下真机 WebView2 经典滚动条压缩 ~17px 后视口 ≥1183，对断点留 ≥33px 余量；
+- 1200×680 仍落在 1366×768 最低配笔记本可用区内（宽 <1366、高 <768 含任务栏）；
+- 高度只需保证工具栏+首卡舒适，页面纵向本就可滚动，680 足够。
+
+**英文溢出审查**（1200×680，通用检测器扫 viewport-overflow + container-overflow 两类）：Tasks / Bilibili / Web Video / Media Tools / Music / Settings（General、Dependencies、About 三子页）共 8 页 **0 溢出**。残留约束：窗口 <1150 视口时 media 页签仍会溢出——已被 minWidth 排除；若未来语言标签加长再议 L2TabNav truncate 兜底。
+
+**真机复验**：Windows 拖拽缩放至最小尺寸确认钳制生效、media 页签无溢出（并入 D27 清单）。
+
 ## D31 · 图标库迁移 Tabler → Phosphor（用户裁决：默认 Regular）
 
 **背景**：Mantine 摆脱后图标仍用 `@tabler/icons-react`，用户要求统一为 Phosphor。初议 Light 系列，用户裁决「直接默认 regular」——不做 Light、不做小尺寸自动升档封装，全部组件默认 weight（Regular）。
 
 **映射**：67 项 Tabler→Phosphor 语义映射（IconX→X、IconChevronDown→CaretDown、IconLoader2→CircleNotch、IconLayoutSidebarLeft{Collapse,Expand}→ArrowLine{Left,Right} 等）经幂等脚本一次性落位（词边界用 lookaround，见工程教训）。四个特例：
+
 - `IconActivity`→**Pulse**：Phosphor 无 Activity，心电线即 Pulse（任务页「进行中」统计块）。
 - `IconCancel`→**Prohibit**：任务 canceled 态为中性灰，须与 failed 态红色 XCircle 形状区分（圈禁符号 vs 叉号）。
 - `IconClock`→`Clock`、tasks 导航 `ListChecks`→**Stack**：后者为用户走查时追加裁决（「task 的 icon 换成 layer」；Phosphor 层叠图标实名 Stack）。
 - 通知四语义图标保留 `weight="fill"`（notifications.tsx）、checkbox 勾选/半选用 `weight="bold"`（12px 小尺寸可读性）——Regular 为主的例外，逐处显式标注。
 
 **结构决策**：
+
 1. Tabler 的 `stroke={n}` 笔画粗细 prop 全仓删除（Phosphor 为 fill 路径体系，无此概念）；`type Icon as TablerIcon` 别名改为 Phosphor 原生 `Icon` 组件类型（navigation/Sidebar/TaskCard 三处 import 直用）。
 2. **Sidebar 描线动效退役**：原 strokeDasharray 划线（迁自旧 TopNavigation）依赖 stroke 路径，Phosphor fill 路径不兼容；改为 `enterIcon` 淡入 + scale(0.92→1)，时长 240ms 复用折叠主曲线 EASE——图标入场与侧栏收放共用一套动效语言。跳过逻辑不变（同页重复导航 / tasks 运行中不播）。
 3. **依赖审计**（用户要求「去掉无关依赖」）：32 个依赖全量 `git grep` 引用计数，仅 `@tabler/icons-react` 零引用 → 卸载；零引用假阴性四项保留——`@tauri-apps/cli`（`pnpm tauri` 脚本二进制）、`@types/*`（tsc 类型）、`prettier`（format 脚本）。
@@ -499,8 +518,6 @@ _music / media / tasks_
 **验证**：`pnpm check` 双 tsc 全绿、`pnpm i18n:check` 521 键通过、`pnpm build` 通过（452ms，chunk 体积警告为既有问题）。IAB 走查：五页导航图标 21–34 个 SVG **0 broken**、viewBox 统一 256×256（Phosphor 签名）、path fill 计算值继承 currentColor；入场动效以 `document.getAnimations()` 探针实证（点击导航即出现 target=svg 的 WAAPI Animation）；Tasks→Stack 经 HMR 复验。截图通道（IAB capture guest 失败）未用于本条，全部以 DOM/计算样式取证。
 
 **真机复验（并入 D27 清单）**：TaskCard 七态状态图标（Prohibit/Clock/旋转 CircleNotch 等在真实任务卡上的观感）、通知 fill 语义图标的视觉重量、暗色主题下图标取色、折叠态 sidebar 图标居中。
-
-
 
 ## D30 · Effect 白名单制度全面落地（用户提供《React 状态管理与 Effect 使用规范》，Default Deny 清理）
 
