@@ -1,4 +1,3 @@
-import { Stack, Text } from "@mantine/core";
 import { CommandPreview } from "../../components/common/CommandPreview";
 import { t } from "../../locale";
 import { isSearchBusy, type MusicSessionPhase } from "../../stores/music-session";
@@ -10,6 +9,7 @@ interface MusicCommandPanelProps {
   sourceCount: number;
 }
 
+/** 命令预览卡片内容：脱敏命令行 + 搜索进行中提示 */
 export function MusicCommandPanel({
   preview,
   previewError,
@@ -19,23 +19,19 @@ export function MusicCommandPanel({
   const searchInProgress = isSearchBusy(sessionPhase);
 
   return (
-    <Stack gap="xs">
-      <Text size="sm" fw={500}>
-        {t("music.preview.title")}
-      </Text>
-      <Text size="xs" c="dimmed">
-        {t("music.preview.hint")}
-      </Text>
+    <div className="flex flex-col gap-1.5">
+      <p className="text-sm font-medium">{t("music.preview.title")}</p>
+      <p className="text-xs text-muted-foreground">{t("music.preview.hint")}</p>
       <CommandPreview display={preview} error={previewError} />
       {searchInProgress && (
-        <Text size="sm" c="dimmed">
+        <p className="text-sm text-muted-foreground">
           {sessionPhase === "starting"
             ? t("music.preview.starting")
             : sessionPhase === "canceling"
               ? t("music.preview.canceling")
               : t("music.preview.searching", { count: sourceCount })}
-        </Text>
+        </p>
       )}
-    </Stack>
+    </div>
   );
 }

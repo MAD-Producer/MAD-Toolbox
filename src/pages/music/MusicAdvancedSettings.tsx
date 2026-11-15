@@ -1,5 +1,7 @@
-import { Group, NumberInput, Stack, Text, Textarea } from "@mantine/core";
+import { useId } from "react";
 import { FieldRow } from "../../components/common/FieldRow";
+import { NumberField } from "../../components/ui/number-field";
+import { Textarea } from "../../components/ui/textarea";
 import { t, type TranslationKey } from "../../locale";
 import { DEFAULT_THREAD_COUNT, type MusicFormPatch, type MusicFormState } from "./configuration";
 
@@ -24,38 +26,75 @@ const RAW_TEXTAREA_ROWS: ReadonlyArray<
 ];
 
 export function MusicAdvancedSettings({ form, onChange }: MusicAdvancedSettingsProps) {
+  const threadCountId = useId();
+  const threadCountHintId = useId();
+  const rawHintId = useId();
+
   return (
-    <Stack gap="md">
-      <FieldRow label={t("music.threadCount.label")} hint={t("music.threadCount.description")}>
-        <NumberInput
+    <div className="flex flex-col gap-4">
+      <FieldRow
+        label={t("music.threadCount.label")}
+        hint={t("music.threadCount.description")}
+        htmlFor={threadCountId}
+        hintId={threadCountHintId}
+      >
+        <NumberField
+          id={threadCountId}
+          aria-describedby={threadCountHintId}
           min={1}
           max={50}
           value={form.threadCount}
           onChange={(value) =>
-            onChange({ threadCount: typeof value === "number" ? value : DEFAULT_THREAD_COUNT })
+            onChange({ threadCount: value ?? DEFAULT_THREAD_COUNT })
           }
         />
       </FieldRow>
-      <Text size="xs" c="dimmed">
+      <p id={rawHintId} className="text-xs text-muted-foreground">
         {t("music.advanced.hint")}
-      </Text>
+      </p>
       {RAW_TEXTAREA_ROWS.map((row) => (
-        <Group key={row[0].field} grow align="start">
+        <div key={row[0].field} className="grid grid-cols-2 items-start gap-3">
           {row.map(({ field, labelKey }) => (
-            <Textarea
+            <RawConfigTextarea
               key={field}
               label={t(labelKey)}
-              autosize
-              minRows={3}
               value={form[field]}
-              onChange={(event) => onChange({ [field]: event.currentTarget.value })}
-              styles={{
-                input: { fontFamily: "monospace", fontSize: "var(--mantine-font-size-xs)" }
-              }}
+              describedById={rawHintId}
+              onChange={(value) => onChange({ [field]: value })}
             />
           ))}
-        </Group>
+        </div>
       ))}
-    </Stack>
+    </div>
+  );
+}
+
+function RawConfigTextarea({
+  label,
+  value,
+  describedById,
+  onChange
+}: {
+  label: string;
+  value: string;
+  describedById?: string;
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+      </label>
+      <Textarea
+        id={id}
+        aria-describedby={describedById}
+        autosize
+        rows={3}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        className="min-h-0 font-mono text-xs"
+      />
+    </div>
   );
 }
