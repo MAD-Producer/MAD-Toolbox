@@ -1,34 +1,14 @@
-import { Box } from "@mantine/core";
 import type { ReactNode } from "react";
 
 interface WorkspaceFrameProps {
   children: ReactNode;
 }
 
+/** 右侧工作区容器：占满侧栏以外的空间，内容为圆角卡片表面 */
 export function WorkspaceFrame({ children }: WorkspaceFrameProps) {
   return (
-    <Box
-      style={{
-        flex: 1,
-        minWidth: 0,
-        minHeight: 0,
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr)",
-        margin: "0 16px"
-      }}
-    >
-      <Box
-        component="main"
-        className="workspace-surface"
-        style={{
-          minWidth: 0,
-          minHeight: 0,
-          overflow: "auto",
-          borderRadius: "10px"
-        }}
-      >
-        {children}
-      </Box>
-    </Box>
+    <div className="grid min-w-0 min-h-0 flex-1 grid-cols-[minmax(0,1fr)] p-4 pl-0">
+      <main className="workspace-surface min-h-0 min-w-0 overflow-auto rounded-xl">{children}</main>
+    </div>
   );
 }

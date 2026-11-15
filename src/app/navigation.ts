@@ -22,6 +22,20 @@ export interface L2NavigationItem<
   labelKey: TranslationKey;
 }
 
+/** 导航项的状态徽标（任务运行数 / 依赖缺失数），由侧栏渲染 */
+export interface NavigationStatus {
+  count: number;
+  label: string;
+  color: string;
+}
+
+/** 侧栏分组：labelKey 为 null 时不渲染分组标题（置顶组） */
+export interface SidebarGroup {
+  id: string;
+  labelKey: TranslationKey | null;
+  items: readonly L1NavigationItem[];
+}
+
 export const L1_NAVIGATION = [
   { section: "tasks", labelKey: "nav.tasks", icon: IconListCheck },
   { section: "bilibili", labelKey: "nav.bilibili", icon: IconBrandBilibili },
@@ -29,6 +43,12 @@ export const L1_NAVIGATION = [
   { section: "media", labelKey: "nav.media", icon: IconMovie },
   { section: "music", labelKey: "nav.music", icon: IconMusic }
 ] as const satisfies readonly L1NavigationItem[];
+
+export const SIDEBAR_GROUPS = [
+  { id: "main", labelKey: null, items: [L1_NAVIGATION[0]] },
+  { id: "download", labelKey: "nav.groups.download", items: [L1_NAVIGATION[1], L1_NAVIGATION[2]] },
+  { id: "tools", labelKey: "nav.groups.tools", items: [L1_NAVIGATION[3], L1_NAVIGATION[4]] }
+] as const satisfies readonly SidebarGroup[];
 
 export const MEDIA_L2_NAVIGATION = [
   { page: "pr-compatible", labelKey: "nav.media.prCompatible" },
