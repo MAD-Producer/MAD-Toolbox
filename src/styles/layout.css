@@ -3,13 +3,17 @@ body {
   overscroll-behavior: none;
 }
 
-main,
-.general-settings-scroll {
+/* 全应用隐藏滚动条（MangoDisk 风格：滚动能力保留，滚动条视觉不出现——D28 后记补充）。
+   文本编辑面（textarea/pre/input）除外：代码类内容需要滚动位置指示。 */
+*:not(textarea):not(pre):not(input) {
   scrollbar-width: none;
-  overscroll-behavior: none;
 }
 
-main::-webkit-scrollbar,
-.general-settings-scroll::-webkit-scrollbar {
+*:not(textarea):not(pre):not(input)::-webkit-scrollbar {
   display: none;
+}
+
+main,
+.general-settings-scroll {
+  overscroll-behavior: none;
 }

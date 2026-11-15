@@ -1,0 +1,182 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * MAD Toolbox Design System tokens
+ *
+ * 风格基准：MangoDisk —— 浅灰底 + 纯白卡片分层、无边框无阴影、大圆角、胶囊选中态。
+ * 强调色：品牌蓝 blue[6] #0A84FF（src/theme/colors.ts，过渡期供 Mantine 使用）。
+ * 暗色调子对齐旧 tokens.css 的 dark 覆盖段（dark 色阶见 colors.ts）。
+ *
+ * 规则：组件一律使用语义 token 派生的 utility（bg-card、text-muted-foreground 等），
+ * 禁止直写 hex / 魔法值；本文件是唯一允许色值的地方。
+ */
+:root {
+  --radius: 0.625rem; /* 10px 控件圆角基准；卡片 12px 用 rounded-xl */
+
+  --background: #f5f5f7; /* 应用底（MangoDisk 灰白） */
+  --foreground: #1d1d1f; /* 主文字 */
+  --card: #ffffff; /* 卡片/工作区表面 */
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff; /* 弹层（下拉/浮层） */
+  --popover-foreground: #1d1d1f;
+
+  --primary: #0a84ff; /* blue[6] 品牌蓝 */
+  --primary-hover: #2f94ff; /* blue[5]，浅色下 hover 提亮 */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f0f0f2; /* 次级面：ghost 按钮 hover、灰色按钮底 */
+  --secondary-hover: #e4e4e8; /* 次级面 hover（浅色压暗一档） */
+  --secondary-foreground: #1d1d1f;
+
+  --muted: #f0f0f2;
+  --muted-foreground: #86868b; /* 次要文字 */
+
+  --accent: #eaf4ff; /* 选中态浅底 blue[0] */
+  --accent-foreground: #086acc; /* 选中态深字 blue[7] */
+
+  --destructive: #e03131;
+  --destructive-hover: #c92a2a; /* destructive hover（浅色压暗） */
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.12); /* 输入框描边，比 border 略实 */
+  --ring: #0a84ff; /* focus 环 */
+
+  /* 侧栏融入应用底色轨道（MangoDisk 结构：轨道 + 工作区白卡浮层），见 D16 */
+  --sidebar: #f5f5f7;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-muted: #86868b; /* 分组标题 */
+  --sidebar-accent: #f0f0f2; /* 导航项 hover */
+  --sidebar-accent-foreground: #1d1d1f;
+  --sidebar-active: #eaf4ff; /* 选中胶囊底 */
+  --sidebar-active-foreground: #086acc;
+  --sidebar-border: rgba(0, 0, 0, 0.06);
+  --sidebar-ring: #0a84ff;
+
+  /* 品牌标题文字（AppBrand / About 页标题），dark 下提亮保持观感 */
+  --title-foreground: #0a84ff;
+
+  /* 语义状态色（通知 / 成功 / 警告）。warning 取深橙档：浅色下 #f08c00
+     对白底仅 2.5:1，作为文字色不达 AA 大文本 3:1（D18）；dark 用亮档即可 */
+  --success: #2f9e44;
+  --warning: #e8590c;
+  --info: #0a84ff;
+
+  /* About 页结尾 quote 渐变（原 tokens.css 定义，Mantine 色板值固化；阶段 7 D26） */
+  --app-quote-gradient-from: #0a84ff; /* blue[6] 品牌蓝 */
+  --app-quote-gradient-to: #15aabf; /* cyan-4 */
+}
+
+.dark {
+  --background: #1d1d20; /* dark[7]，对齐旧 --app-surface-chrome */
+  --foreground: #f4f4f6; /* dark[0] */
+  --card: #242429; /* dark[6] */
+  --card-foreground: #f4f4f6;
+  --popover: #2e2e33; /* dark[5] */
+  --popover-foreground: #f4f4f6;
+
+  --primary: #0a84ff;
+  --primary-hover: #5ca9ff; /* blue[4]，暗色下 hover 提亮 */
+  --primary-foreground: #ffffff;
+
+  --secondary: #2e2e33;
+  --secondary-hover: #3c3c41; /* dark[4]，暗色下 hover 提亮一档 */
+  --secondary-foreground: #f4f4f6;
+
+  --muted: #2e2e33;
+  --muted-foreground: #98989f; /* dark[2] */
+
+  --accent: #0c2a47; /* 对齐旧 dark 覆盖 --mantine-color-blue-light */
+  --accent-foreground: #85bcff; /* blue[4]，对齐旧 blue-light-color */
+
+  --destructive: #e03131;
+  --destructive-hover: #fa5252; /* 暗色下 hover 提亮 */
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #0a84ff;
+
+  --sidebar: #1d1d20; /* 同 --background，融入轨道（见 D16） */
+  --sidebar-foreground: #f4f4f6;
+  --sidebar-muted: #98989f;
+  --sidebar-accent: rgba(255, 255, 255, 0.07); /* 对齐旧 --app-nav-hover-bg */
+  --sidebar-accent-foreground: #f4f4f6;
+  --sidebar-active: #0c2a47;
+  --sidebar-active-foreground: #85bcff;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #0a84ff;
+
+  --title-foreground: #5ca9ff;
+
+  --success: #51cf66;
+  --warning: #fab005;
+  --info: #0a84ff;
+
+  --app-quote-gradient-from: #5ca9ff; /* blue[4] 提亮 */
+  --app-quote-gradient-to: #66d9e8; /* cyan-3 */
+}
+
+/* token → Tailwind utility 映射（bg-background / text-foreground / rounded-lg …） */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 2px); /* 12px 卡片 */
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  /* 兜底字体/底色：Mantine 在场时其 body 规则（非 layer）优先级更高，删除 Mantine 后本规则自然接管 */
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}

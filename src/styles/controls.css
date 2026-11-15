@@ -1,71 +1,11 @@
-.top-nav .top-nav-item:not(.top-nav-item-active):hover,
-.app-header-icon:hover,
-.task-action:hover,
-.history-clear-all:hover,
-.about-action:hover,
-.dep-refresh:hover {
-  background: var(--app-nav-hover-bg);
-}
-
-.mantine-SegmentedControl-indicator {
-  display: none;
-}
-
-.mantine-SegmentedControl-control {
-  transition: background-color 150ms ease;
-}
-
-.mantine-SegmentedControl-control[data-active] {
-  background: var(--app-seg-active-bg);
-  border-radius: var(--sc-radius, var(--mantine-radius-sm));
-}
-
-.l2-tabnav {
-  background: transparent;
-  border: 1px solid var(--mantine-color-default-border);
-  padding: 4px;
-  gap: 2px;
-}
-
-.l2-tabnav .mantine-SegmentedControl-control {
-  flex: 1 1 0;
-  border-radius: calc(var(--mantine-radius-lg) - 6px);
-}
-
-.l2-tabnav .mantine-SegmentedControl-label {
-  white-space: nowrap;
-}
-
-.l2-tabnav .mantine-SegmentedControl-control:not([data-active]):hover {
-  background: var(--app-seg-hover-bg);
-}
-
-.l2-tabnav .mantine-SegmentedControl-control[data-active] {
-  background: var(--mantine-color-blue-filled);
-}
-
-.l2-tabnav .mantine-SegmentedControl-control[data-active] .mantine-SegmentedControl-label {
-  color: var(--mantine-color-white);
-  font-weight: 500;
-}
-
-.l2-tabnav .l2-tabnav-count {
-  color: var(--mantine-color-yellow-light-color);
-  font-weight: 500;
-}
-
-.l2-tabnav .mantine-SegmentedControl-control[data-active] .l2-tabnav-count {
-  color: var(--app-tab-count-active);
-}
-
 .task-action {
-  color: var(--mantine-color-dimmed);
+  color: var(--muted-foreground);
 }
 
 .task-action-open:hover {
-  color: var(--mantine-color-blue-filled);
+  color: var(--info);
 }
 
 .task-action-danger:hover {
-  color: var(--mantine-color-red-light-color);
+  color: var(--destructive);
 }
