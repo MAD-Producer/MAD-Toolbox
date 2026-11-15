@@ -1,7 +1,10 @@
-import { Button, Group, Stack, Text, Textarea } from "@mantine/core";
 import { IconPencil, IconRotate } from "@tabler/icons-react";
+import { useEffect, useRef } from "react";
 import type { PreviewResult } from "./api";
 import { CommandPreview } from "../../components/common/CommandPreview";
+import { Button } from "../../components/ui/button";
+import { Textarea } from "../../components/ui/textarea";
+import { Tooltip } from "../../components/ui/tooltip";
 import { t } from "../../locale";
 
 interface MediaCommandPanelProps {
@@ -15,6 +18,7 @@ interface MediaCommandPanelProps {
   onExpertTextChange: (value: string) => void;
 }
 
+/** 命令面板：PR 模式纯说明；其余模式预览 ↔ 专家编辑切换（与 ExpertCommandPanel 同构） */
 export function MediaCommandPanel({
   isPr,
   expertMode,
@@ -25,58 +29,77 @@ export function MediaCommandPanel({
   onExitExpert,
   onExpertTextChange
 }: MediaCommandPanelProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const prevExpertRef = useRef(expertMode);
+
+  // 进入专家模式时把焦点交给文本域；退出时焦点接回"编辑命令"，避免坠到 body
+  useEffect(() => {
+    if (expertMode) textareaRef.current?.focus();
+    else if (prevExpertRef.current) editButtonRef.current?.focus();
+    prevExpertRef.current = expertMode;
+  }, [expertMode]);
+
+  const title = isPr
+    ? t("media.op.prCompatible")
+    : expertMode
+      ? t("media.command.expertTitle")
+      : t("media.command.previewTitle");
+
+  const editButton = (
+    <Button
+      ref={editButtonRef}
+      size="sm"
+      variant="secondary"
+      className="h-8 gap-1.5 px-2.5 text-xs"
+      leftSection={<IconPencil size={14} stroke={1.8} />}
+      onClick={onEnterExpert}
+      disabled={!preview}
+    >
+      {t("media.command.editCommand")}
+    </Button>
+  );
+
   return (
-    <Stack gap="xs">
-      <Group justify="space-between">
-        <Text size="sm" fw={500}>
-          {isPr
-            ? t("media.op.prCompatible")
-            : expertMode
-              ? t("media.command.expertTitle")
-              : t("media.command.previewTitle")}
-        </Text>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">{title}</span>
         {!isPr &&
           (expertMode ? (
             <Button
-              size="compact-sm"
-              variant="light"
-              leftSection={<IconRotate size={14} />}
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1.5 px-2.5 text-xs"
+              leftSection={<IconRotate size={14} stroke={1.8} />}
               onClick={onExitExpert}
             >
               {t("media.command.restoreForm")}
             </Button>
+          ) : preview ? (
+            editButton
           ) : (
-            <Button
-              size="compact-sm"
-              variant="light"
-              leftSection={<IconPencil size={14} />}
-              onClick={onEnterExpert}
-              disabled={!preview}
-            >
-              {t("media.command.editCommand")}
-            </Button>
+            <Tooltip label={previewError ?? t("media.command.waitingPreview")}>
+              <span className="inline-flex">{editButton}</span>
+            </Tooltip>
           ))}
-      </Group>
+      </div>
       {isPr ? (
-        <Text size="sm" c="dimmed">
-          {t("media.command.prDescription")}
-        </Text>
+        <p className="text-sm text-muted-foreground">{t("media.command.prDescription")}</p>
       ) : expertMode ? (
         <>
-          <Text size="xs" c="yellow">
-            {t("media.command.expertNotice")}
-          </Text>
+          <p className="text-xs font-medium text-warning">{t("media.command.expertNotice")}</p>
           <Textarea
+            ref={textareaRef}
             autosize
-            minRows={4}
+            rows={4}
             value={expertText ?? ""}
             onChange={(event) => onExpertTextChange(event.currentTarget.value)}
-            styles={{ input: { fontFamily: "monospace", fontSize: 12 } }}
+            className="min-h-0 font-mono text-xs"
           />
         </>
       ) : (
         <CommandPreview display={preview?.display ?? null} error={previewError} />
       )}
-    </Stack>
+    </div>
   );
 }

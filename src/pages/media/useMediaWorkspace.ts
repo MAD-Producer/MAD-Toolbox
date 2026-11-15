@@ -27,7 +27,6 @@ import {
 export interface MediaWorkspacePageProps {
   active: boolean;
   seed?: TaskSeed | null;
-  onSeedConsumed?: () => void;
   onRetain?: () => void;
   onSubmitted?: () => void;
   onNavigatePage?: (page: MediaPageId) => void;
@@ -58,6 +57,7 @@ export interface MediaWorkspaceModel {
   availableVideoCodecs: string[];
   availableAudioCodecs: string[];
   update: (patch: Partial<MediaFormState>) => void;
+  switchPage: (page: MediaPageId) => void;
   setOperation: (operation: MediaPageOperation) => void;
   setExpertText: (value: string | null) => void;
   setInspection: (value: string | null) => void;
@@ -75,42 +75,55 @@ export function useMediaWorkspace({
   active,
   page,
   seed,
-  onSeedConsumed,
   onRetain,
-  onSubmitted
+  onSubmitted,
+  onNavigatePage
 }: UseMediaWorkspaceOptions): MediaWorkspaceModel {
   const pageConfig = MEDIA_PAGE_CONFIG[page];
-  const [inputs, setInputsState] = useState<string[]>([]);
+  // 任务种子只在挂载时消费一次（deliver → generation+1 → 重挂）；rerun 保留输入文件，reuse 不保留
+  const seedData =
+    seed?.task.intent.type === "form" ? (seed.task.intent.data as Record<string, unknown>) : null;
+  const [inputs, setInputsState] = useState<string[]>(() => {
+    if (!seedData || seed?.purpose !== "rerun") return [];
+    if (seedData.prCompatible === true) {
+      return typeof seedData.input === "string" ? [seedData.input] : [];
+    }
+    const restored = { ...defaultMediaForm, ...(seedData as Partial<MediaFormState>) };
+    return restored.input ? [restored.input] : [];
+  });
   const [form, setForm] = useState<MediaFormState>(() => {
     const stored = loadStoredForm(MEDIA_FORM_STORAGE_KEY, defaultMediaForm);
-    const initialOperation = pageConfig.operations.includes(stored.operation)
+    const storedOperation = pageConfig.operations.includes(stored.operation)
       ? stored.operation
       : pageConfig.operations[0];
-    return { ...stored, container: containerForOperation(initialOperation, stored.container) };
+    const base = { ...stored, container: containerForOperation(storedOperation, stored.container) };
+    if (!seedData) return base;
+    if (seedData.prCompatible === true) {
+      return {
+        ...base,
+        outputDirectory:
+          typeof seedData.outputDirectory === "string" ? seedData.outputDirectory : ""
+      };
+    }
+    const restored = { ...defaultMediaForm, ...(seedData as Partial<MediaFormState>) };
+    const restoredOperation = pageConfig.operations.includes(restored.operation)
+      ? restored.operation
+      : pageConfig.operations[0];
+    return { ...restored, container: containerForOperation(restoredOperation, restored.container) };
   });
-  const [operation, setOperationState] = useState<MediaPageOperation>(() =>
-    pageConfig.operations.includes(form.operation) ? form.operation : pageConfig.operations[0]
-  );
+  const [operation, setOperationState] = useState<MediaPageOperation>(() => {
+    if (seedData && seedData.prCompatible === true) return "pr-compatible";
+    if (seedData) {
+      const restored = { ...defaultMediaForm, ...(seedData as Partial<MediaFormState>) };
+      if (pageConfig.operations.includes(restored.operation)) return restored.operation;
+    }
+    return pageConfig.operations.includes(form.operation) ? form.operation : pageConfig.operations[0];
+  });
   const [encoders, setEncoders] = useState<string[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [inspection, setInspection] = useState<string | null>(null);
   const inspectionRequestRef = useRef(0);
-
-  const [draftPage, setDraftPage] = useState(page);
-  if (draftPage !== page) {
-    const nextOperation = pageConfig.operations[0];
-    setDraftPage(page);
-    setInputsState([]);
-    setOperationState(nextOperation);
-    setForm((current) => ({
-      ...defaultMediaForm,
-      outputDirectory: current.outputDirectory,
-      container: containerForOperation(nextOperation, defaultMediaForm.container)
-    }));
-    setAdvancedOpen(false);
-    setInspection(null);
-  }
 
   const firstInput = inputs[0] ?? "";
   const isPr = operation === "pr-compatible";
@@ -122,21 +135,15 @@ export function useMediaWorkspace({
   const draft = useDraftPreviewWorkspace({
     active,
     onRetain,
+    initialExpertText:
+      seed?.task.intent.type === "manual" ? seed.task.intent.data.argv.join("\n") : null,
     previewDisabled: isPr || !firstInput,
     clearPreviewWhenDisabled: !isPr && !firstInput,
     buildPreviewIntent,
-    runPreview: mediaPreview,
-    onDefaultOutputDirectory: (directory) =>
-      setForm((current) =>
-        current.outputDirectory ? current : { ...current, outputDirectory: directory }
-      )
+    runPreview: mediaPreview
   });
 
-  if (draftPage !== page) {
-    draft.restoreExpertText(null);
-    draft.resetPreview();
-  }
-
+  // 【Effect 白名单⑤】表单草稿持久化到 localStorage（同 bilibili/network 工作区，含 operation）
   useEffect(() => {
     const { input, ...persisted } = form;
     saveStoredForm(MEDIA_FORM_STORAGE_KEY, { ...persisted, operation });
@@ -145,6 +152,25 @@ export function useMediaWorkspace({
   const update = (patch: Partial<MediaFormState>) => {
     draft.reviseDraft();
     setForm((current) => ({ ...current, ...patch }));
+  };
+
+  // L2 页签切换：重置本页工作状态。由点击事件直接驱动（原先用 draftPage 影子 state
+  // 在渲染期观察 page prop 变化后重置，属于被禁止的渲染期写入）
+  const switchPage = (next: MediaPageId) => {
+    if (next === page) return;
+    const nextOperation = MEDIA_PAGE_CONFIG[next].operations[0];
+    setInputsState([]);
+    setOperationState(nextOperation);
+    setForm((current) => ({
+      ...defaultMediaForm,
+      outputDirectory: current.outputDirectory,
+      container: containerForOperation(nextOperation, defaultMediaForm.container)
+    }));
+    setAdvancedOpen(false);
+    setInspection(null);
+    draft.restoreExpertText(null);
+    draft.resetPreview();
+    onNavigatePage?.(next);
   };
 
   const setOperation = (nextOperation: MediaPageOperation) => {
@@ -156,6 +182,7 @@ export function useMediaWorkspace({
     }));
   };
 
+  // 【Effect 白名单⑤】进入本页时一次性拉取 FFmpeg 编码器清单（外部队列探测，结果缓存复用）
   useEffect(() => {
     if (!active || encoders.length > 0) return;
     let canceled = false;
@@ -168,35 +195,6 @@ export function useMediaWorkspace({
       canceled = true;
     };
   }, [active, encoders.length]);
-
-  useEffect(() => {
-    if (!seed) return;
-    draft.resetPreview();
-    const keepInputs = seed.purpose === "rerun";
-    if (seed.task.intent.type === "form") {
-      const data = seed.task.intent.data as Record<string, unknown>;
-      if (data.prCompatible === true) {
-        setOperationState("pr-compatible");
-        setInputsState(keepInputs && typeof data.input === "string" ? [data.input] : []);
-        setForm((current) => ({
-          ...current,
-          outputDirectory: typeof data.outputDirectory === "string" ? data.outputDirectory : ""
-        }));
-      } else {
-        const restored = { ...defaultMediaForm, ...(data as Partial<MediaFormState>) };
-        setOperationState(restored.operation);
-        setForm({
-          ...restored,
-          container: containerForOperation(restored.operation, restored.container)
-        });
-        setInputsState(keepInputs && restored.input ? [restored.input] : []);
-      }
-      draft.restoreExpertText(null);
-    } else {
-      draft.restoreExpertText(seed.task.intent.data.argv.join("\n"));
-    }
-    onSeedConsumed?.();
-  }, [seed, onSeedConsumed]);
 
   const addFiles = async () => {
     const selected = await openDialog({ multiple: true });
@@ -301,7 +299,9 @@ export function useMediaWorkspace({
     inputs,
     operation,
     form,
-    advancedOpen,
+    // 渲染期派生：预览失败时命令面板在折叠的高级区内，强制展开避免错误成为断头路
+    //（原先用 Effect 观察 previewError 再 setState，错误存在期间展开状态由派生保证）
+    advancedOpen: advancedOpen || draft.previewError !== null,
     expertText: draft.expertText,
     preview: draft.preview,
     previewError: draft.previewError,
@@ -314,6 +314,7 @@ export function useMediaWorkspace({
     availableVideoCodecs,
     availableAudioCodecs,
     update,
+    switchPage,
     setOperation,
     setExpertText: draft.setExpertText,
     setInspection,

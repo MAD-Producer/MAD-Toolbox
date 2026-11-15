@@ -1,7 +1,8 @@
-import { Select } from "@mantine/core";
+import { useId } from "react";
 import { FieldRow } from "../../components/common/FieldRow";
-import { MEDIA_OPERATION_OPTIONS, type MediaPageOperation } from "./workflow";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { t } from "../../locale";
+import { MEDIA_OPERATION_OPTIONS, type MediaPageOperation } from "./workflow";
 
 interface MediaOperationSelectorProps {
   operations: readonly MediaPageOperation[];
@@ -16,19 +17,29 @@ export function MediaOperationSelector({
   disabled,
   onChange
 }: MediaOperationSelectorProps) {
+  const triggerId = useId();
   if (operations.length <= 1) return null;
 
   return (
-    <FieldRow label={t("media.operationLabel")}>
+    <FieldRow label={t("media.operationLabel")} htmlFor={triggerId}>
       <Select
-        data={MEDIA_OPERATION_OPTIONS.filter((option) => operations.includes(option.value)).map(
-          ({ value, labelKey }) => ({ value, label: t(labelKey) })
-        )}
         value={value}
-        onChange={(nextValue) => nextValue && onChange(nextValue as MediaPageOperation)}
+        onValueChange={(next) => onChange(next as MediaPageOperation)}
         disabled={disabled}
-        allowDeselect={false}
-      />
+      >
+        <SelectTrigger id={triggerId} aria-label={t("media.operationLabel")}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {MEDIA_OPERATION_OPTIONS.filter((option) => operations.includes(option.value)).map(
+            ({ value, labelKey }) => (
+              <SelectItem key={value} value={value}>
+                {t(labelKey)}
+              </SelectItem>
+            )
+          )}
+        </SelectContent>
+      </Select>
     </FieldRow>
   );
 }

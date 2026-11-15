@@ -1,12 +1,17 @@
-import { Badge, Box, Button, Card, Group, Stack, Text } from "@mantine/core";
 import { IconAdjustmentsHorizontal, IconInfoCircle, IconPlayerPlay } from "@tabler/icons-react";
+import { useId, useRef } from "react";
 import type { MediaPageId } from "../../app/route";
 import { MEDIA_L2_NAVIGATION } from "../../app/navigation";
 import { useMediaWorkspace, type MediaWorkspacePageProps } from "./useMediaWorkspace";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
 import { L2TabNav } from "../../components/common/L2TabNav";
-import { HeaderActions, HeaderIconButton } from "../../components/layout/HeaderActions";
+import { PageToolbar } from "../../components/common/PageToolbar";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
+import { IconButton } from "../../components/ui/icon-button";
+import { Tooltip } from "../../components/ui/tooltip";
 import { MediaAdvancedFields } from "./MediaAdvancedFields";
 import { MediaCommandPanel } from "./MediaCommandPanel";
 import { MediaDropzone } from "./MediaDropzone";
@@ -32,12 +37,18 @@ interface MediaWorkspaceProps extends MediaWorkspacePageProps {
 export function MediaWorkspace({
   active,
   page,
-  onNavigatePage,
   dependencyLabels,
   onOpenDependencies,
   ...pageProps
 }: MediaWorkspaceProps) {
   const workspace = useMediaWorkspace({ page, active, ...pageProps });
+  const outputId = useId();
+  const outputHintId = useId();
+  const dropzoneWrapRef = useRef<HTMLDivElement>(null);
+
+  // 文件清单删空后把焦点交回拖放区（D18 焦点管理模式）
+  const focusDropzone = () =>
+    dropzoneWrapRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
 
   const commandPanel = (
     <MediaCommandPanel
@@ -53,144 +64,170 @@ export function MediaWorkspace({
   );
 
   return (
-    <Box mih="100%">
-      <Stack gap="md" p="lg">
-        {active && (
-          <HeaderActions section="media">
-            <Group gap="xs" wrap="nowrap">
-              <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-              <HeaderIconButton
+    <div className="flex min-h-full flex-col gap-4 p-5">
+      {active && (
+        <PageToolbar>
+          <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
+          <Tooltip label={t("media.inspectFirst")}>
+            <span className="inline-flex">
+              <IconButton
                 label={t("media.inspectFirst")}
-                variant="default"
+                variant="outline"
+                size="sm"
                 disabled={!workspace.firstInput}
                 onClick={() => void workspace.inspectFirst()}
               >
-                <IconInfoCircle size={20} />
-              </HeaderIconButton>
-              <Button
-                size="compact-md"
-                leftSection={<IconPlayerPlay size={16} />}
-                onClick={() => void workspace.submit()}
-                loading={workspace.submitting}
-                disabled={workspace.expertMode ? false : workspace.inputs.length === 0}
-              >
-                {t("media.submit")}
-              </Button>
-            </Group>
-          </HeaderActions>
-        )}
+                <IconInfoCircle size={16} stroke={1.8} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          {workspace.expertMode || workspace.inputs.length > 0 ? (
+            <Button
+              size="sm"
+              className="h-8 gap-1.5"
+              leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+              onClick={() => void workspace.submit()}
+              loading={workspace.submitting}
+              disabled={workspace.expertMode ? false : workspace.inputs.length === 0}
+            >
+              {t("media.submit")}
+            </Button>
+          ) : (
+            <Tooltip label={t("media.submit.needFiles")}>
+              <span className="inline-flex">
+                <Button
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+                  onClick={() => void workspace.submit()}
+                  loading={workspace.submitting}
+                  disabled
+                >
+                  {t("media.submit")}
+                </Button>
+              </span>
+            </Tooltip>
+          )}
+        </PageToolbar>
+      )}
 
-        <L2TabNav
-          items={MEDIA_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
-            page: id,
-            label: t(labelKey)
-          }))}
-          value={page}
-          onChange={(next) => onNavigatePage?.(next)}
-          aria-label={t("media.workflowAria")}
-        />
+      <L2TabNav
+        items={MEDIA_L2_NAVIGATION.map(({ page: id, labelKey }) => ({
+          page: id,
+          label: t(labelKey)
+        }))}
+        value={page}
+        onChange={workspace.switchPage}
+        aria-label={t("media.workflowAria")}
+      />
 
+      <div ref={dropzoneWrapRef}>
         <MediaDropzone onPickFiles={workspace.addFiles} onDropPaths={workspace.addPaths} />
-        {workspace.inputs.length > 0 && (
-          <Stack gap="xs">
-            <Badge variant="light" color="gray" style={{ alignSelf: "flex-start" }}>
-              {t("media.fileCount", { count: workspace.inputs.length })}
-            </Badge>
-            <MediaFileList inputs={workspace.inputs} onRemove={workspace.removeInput} />
-          </Stack>
-        )}
+      </div>
+      {workspace.inputs.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <Badge variant="default" className="self-start">
+            {t("media.fileCount", { count: workspace.inputs.length })}
+          </Badge>
+          <MediaFileList
+            inputs={workspace.inputs}
+            onRemove={workspace.removeInput}
+            onEmptied={focusDropzone}
+          />
+        </div>
+      )}
 
-        <SettingsSection>
-          <Stack gap="md">
-            <MediaOperationSelector
-              operations={workspace.operations}
-              value={workspace.operation}
-              disabled={workspace.expertMode}
-              onChange={workspace.setOperation}
-            />
-            <FieldRow label={t("common.outputDirectory")} hint={t("media.outputToSourceHint")}>
-              <OutputDirectoryField
-                value={workspace.form.outputDirectory}
-                disabled={workspace.expertMode}
-                onChange={(outputDirectory) => workspace.update({ outputDirectory })}
-                onBrowse={workspace.pickOutputDirectory}
-                resolveDefault={resolveDefaultOutputDirectory}
-              />
-            </FieldRow>
-
-            {!workspace.isPr && (
-              <>
-                <MediaEncodingFields
-                  operation={workspace.operation}
-                  form={workspace.form}
-                  containers={workspace.containers}
-                  videoCodecs={workspace.availableVideoCodecs}
-                  audioCodecs={workspace.availableAudioCodecs}
-                  disabled={workspace.expertMode}
-                  onUpdate={workspace.update}
-                />
-                <MediaTimeRangeFields
-                  form={workspace.form}
-                  disabled={workspace.expertMode}
-                  onUpdate={workspace.update}
-                />
-                <MediaGifFields
-                  operation={workspace.operation}
-                  form={workspace.form}
-                  disabled={workspace.expertMode}
-                  onUpdate={workspace.update}
-                />
-                <MediaExtractFields
-                  operation={workspace.operation}
-                  form={workspace.form}
-                  disabled={workspace.expertMode}
-                  onUpdate={workspace.update}
-                />
-                <MediaTaskOptions
-                  form={workspace.form}
-                  disabled={workspace.expertMode}
-                  onUpdate={workspace.update}
-                />
-              </>
-            )}
-          </Stack>
-        </SettingsSection>
-
-        {workspace.isPr ? (
-          <Card withBorder padding="md" radius="md">
-            {commandPanel}
-          </Card>
-        ) : (
-          <SettingsSection
-            icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
-            title={t("media.advancedTitle")}
-            action={
-              workspace.expertMode ? (
-                <Badge size="xs" variant="light" color="orange">
-                  {t("media.expertModeBadge")}
-                </Badge>
-              ) : null
-            }
-            opened={workspace.advancedOpen}
-            onToggle={workspace.toggleAdvanced}
+      <SettingsSection>
+        <div className="flex flex-col gap-4">
+          <MediaOperationSelector
+            operations={workspace.operations}
+            value={workspace.operation}
+            disabled={workspace.expertMode}
+            onChange={workspace.setOperation}
+          />
+          <FieldRow
+            label={t("common.outputDirectory")}
+            hint={t("media.outputToSourceHint")}
+            htmlFor={outputId}
+            hintId={outputHintId}
           >
-            <Stack gap="md">
-              <Card withBorder padding="md" radius="md">
-                {commandPanel}
-              </Card>
-              {!workspace.expertMode && (
-                <MediaAdvancedFields form={workspace.form} onUpdate={workspace.update} />
-              )}
-            </Stack>
-          </SettingsSection>
-        )}
+            <OutputDirectoryField
+              value={workspace.form.outputDirectory}
+              disabled={workspace.expertMode}
+              inputId={outputId}
+              describedById={outputHintId}
+              onChange={(outputDirectory) => workspace.update({ outputDirectory })}
+              onBrowse={workspace.pickOutputDirectory}
+              resolveDefault={resolveDefaultOutputDirectory}
+            />
+          </FieldRow>
 
-        <MediaInspectionDialog
-          active={workspace.active}
-          summary={workspace.inspection}
-          onClose={() => workspace.setInspection(null)}
-        />
-      </Stack>
-    </Box>
+          {!workspace.isPr && (
+            <>
+              <MediaEncodingFields
+                operation={workspace.operation}
+                form={workspace.form}
+                containers={workspace.containers}
+                videoCodecs={workspace.availableVideoCodecs}
+                audioCodecs={workspace.availableAudioCodecs}
+                disabled={workspace.expertMode}
+                onUpdate={workspace.update}
+              />
+              <MediaTimeRangeFields
+                form={workspace.form}
+                disabled={workspace.expertMode}
+                onUpdate={workspace.update}
+              />
+              <MediaGifFields
+                operation={workspace.operation}
+                form={workspace.form}
+                disabled={workspace.expertMode}
+                onUpdate={workspace.update}
+              />
+              <MediaExtractFields
+                operation={workspace.operation}
+                form={workspace.form}
+                disabled={workspace.expertMode}
+                onUpdate={workspace.update}
+              />
+              <MediaTaskOptions
+                form={workspace.form}
+                disabled={workspace.expertMode}
+                onUpdate={workspace.update}
+              />
+            </>
+          )}
+        </div>
+      </SettingsSection>
+
+      {workspace.isPr ? (
+        <Card padding="md">{commandPanel}</Card>
+      ) : (
+        <SettingsSection
+          icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
+          title={t("media.advancedTitle")}
+          action={
+            workspace.expertMode ? (
+              <Badge variant="warning">{t("media.expertModeBadge")}</Badge>
+            ) : null
+          }
+          opened={workspace.advancedOpen}
+          onToggle={workspace.toggleAdvanced}
+        >
+          <div className="flex flex-col gap-4">
+            <Card padding="md">{commandPanel}</Card>
+            {!workspace.expertMode && (
+              <MediaAdvancedFields form={workspace.form} onUpdate={workspace.update} />
+            )}
+          </div>
+        </SettingsSection>
+      )}
+
+      <MediaInspectionDialog
+        active={workspace.active}
+        summary={workspace.inspection}
+        onClose={() => workspace.setInspection(null)}
+      />
+    </div>
   );
 }
