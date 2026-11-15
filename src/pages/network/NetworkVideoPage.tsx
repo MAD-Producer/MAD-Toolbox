@@ -1,6 +1,7 @@
-import { Badge, Box, Card, Stack } from "@mantine/core";
 import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
 import { t } from "../../locale";
+import { Badge } from "../../components/ui/badge";
+import { Card } from "../../components/ui/card";
 import { ExpertCommandPanel } from "../../components/common/ExpertCommandPanel";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { NetworkVideoAdvancedFields } from "./NetworkVideoAdvancedFields";
@@ -21,8 +22,8 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
   const workspace = useNetworkVideoWorkspace(props);
 
   return (
-    <Box mih="100%">
-      <Stack gap="md" p="lg">
+    <div className="min-h-full">
+      <div className="flex flex-col gap-4 p-5">
         {props.active && (
           <NetworkVideoPageHeader
             probing={workspace.probing}
@@ -59,16 +60,14 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
           title={t("network.advanced")}
           action={
             workspace.expertMode ? (
-              <Badge size="xs" variant="light" color="orange">
-                {t("network.expertBadge")}
-              </Badge>
+              <Badge variant="warning">{t("network.expertBadge")}</Badge>
             ) : null
           }
           opened={workspace.advancedOpen}
           onToggle={workspace.toggleAdvanced}
         >
-          <Stack gap="md">
-            <Card withBorder padding="md" radius="md">
+          <div className="flex flex-col gap-4">
+            <Card padding="md">
               <ExpertCommandPanel
                 labels={COMMAND_LABELS}
                 expertText={workspace.expertText}
@@ -84,15 +83,15 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
               disabled={workspace.expertMode}
               onUpdate={workspace.update}
             />
-          </Stack>
+          </div>
         </SettingsSection>
-      </Stack>
+      </div>
 
       <NetworkVideoProbeDialog
         active={workspace.active}
         result={workspace.probeResult}
         onClose={() => workspace.setProbeResult(null)}
       />
-    </Box>
+    </div>
   );
 }

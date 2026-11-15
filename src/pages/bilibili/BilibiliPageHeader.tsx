@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { IconCircleCheck, IconLogout, IconPlayerPlay, IconQrcode } from "@tabler/icons-react";
+import { useState } from "react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
-import { HeaderActions } from "../../components/layout/HeaderActions";
+import { PageToolbar } from "../../components/common/PageToolbar";
+import { Button } from "../../components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Tooltip } from "../../components/ui/tooltip";
 import { t } from "../../locale";
 
 interface BilibiliPageHeaderProps {
@@ -17,16 +19,21 @@ interface BilibiliPageHeaderProps {
   onOpenDependencies?: () => void;
 }
 
+/**
+ * 已登录指示 + 登出入口：文案恒为"登出"（accessible name 稳定），hover/focus
+ * 时切换登出图标并转 destructive 语义；语义色只上图标与底色，文字保持默认色
+ * （success/destructive 做文字色在浅色下不达 AA，见 D20）。
+ */
 function LogoutButton({ onLogout }: { onLogout: () => Promise<void> }) {
   const [hovered, setHovered] = useState(false);
-  const [opened, setOpened] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   const confirmLogout = async () => {
     setPending(true);
     try {
       await onLogout();
-      setOpened(false);
+      setConfirmOpen(false);
     } catch {
     } finally {
       setPending(false);
@@ -36,34 +43,49 @@ function LogoutButton({ onLogout }: { onLogout: () => Promise<void> }) {
   return (
     <>
       <Button
-        size="compact-md"
-        variant="light"
-        color={hovered ? "red" : "green"}
-        leftSection={hovered ? <IconLogout size={16} /> : <IconCircleCheck size={16} />}
+        size="sm"
+        variant="secondary"
+        className={
+          hovered
+            ? "h-8 gap-1.5 bg-destructive/10 hover:bg-destructive/10"
+            : "h-8 gap-1.5 text-secondary-foreground hover:bg-destructive/10"
+        }
+        leftSection={
+          hovered ? (
+            <IconLogout size={16} stroke={1.8} className="text-destructive" />
+          ) : (
+            <IconCircleCheck size={16} stroke={1.8} className="text-success" />
+          )
+        }
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        onClick={() => setOpened(true)}
+        onClick={() => setConfirmOpen(true)}
       >
-        {hovered ? t("bilibili.login.logout") : t("bilibili.login.signedIn")}
+        {t("bilibili.login.logout")}
       </Button>
-      <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title={t("bilibili.login.logoutConfirmTitle")}
-        centered
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          // 请求进行中禁止 Esc/遮罩关闭——关闭会被读作"取消"，登出却继续执行
+          if (pending) return;
+          setConfirmOpen(open);
+        }}
       >
-        <Stack gap="md">
-          <Text size="sm">{t("bilibili.login.logoutConfirmBody")}</Text>
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setOpened(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("bilibili.login.logoutConfirmTitle")}</DialogTitle>
+            <DialogDescription>{t("bilibili.login.logoutConfirmBody")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               {t("bilibili.login.logoutCancel")}
             </Button>
-            <Button color="red" loading={pending} onClick={() => void confirmLogout()}>
+            <Button variant="destructive" loading={pending} onClick={() => void confirmLogout()}>
               {t("bilibili.login.logoutConfirm")}
             </Button>
-          </Group>
-        </Stack>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -83,34 +105,44 @@ export function BilibiliPageHeader({
   const loginLabel =
     loginPhase === "running" ? t("bilibili.login.waitingScan") : t("bilibili.login.qrLogin");
 
+  const submitButton = (
+    <Button
+      size="sm"
+      className="h-8 gap-1.5"
+      leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+      loading={submitting}
+      disabled={submitDisabled}
+      onClick={onSubmit}
+    >
+      {submitLabel}
+    </Button>
+  );
+
   return (
-    <HeaderActions section="bilibili">
-      <Group gap="xs" wrap="nowrap">
-        <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
-        {loggedIn ? (
-          <LogoutButton onLogout={onLogout} />
-        ) : (
-          <Button
-            size="compact-md"
-            variant="light"
-            leftSection={<IconQrcode size={16} />}
-            loading={loginPhase === "starting"}
-            disabled={loginPhase !== "idle"}
-            onClick={onBeginLogin}
-          >
-            {loginLabel}
-          </Button>
-        )}
+    <PageToolbar>
+      <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
+      {loggedIn ? (
+        <LogoutButton onLogout={onLogout} />
+      ) : (
         <Button
-          size="compact-md"
-          leftSection={<IconPlayerPlay size={16} />}
-          loading={submitting}
-          disabled={submitDisabled}
-          onClick={onSubmit}
+          size="sm"
+          variant="secondary"
+          className="h-8 gap-1.5"
+          leftSection={<IconQrcode size={16} stroke={1.8} />}
+          loading={loginPhase === "starting"}
+          disabled={loginPhase !== "idle"}
+          onClick={onBeginLogin}
         >
-          {submitLabel}
+          {loginLabel}
         </Button>
-      </Group>
-    </HeaderActions>
+      )}
+      {submitDisabled && !submitting ? (
+        <Tooltip label={t("common.submitWaitingPreview")}>
+          <span className="inline-flex">{submitButton}</span>
+        </Tooltip>
+      ) : (
+        submitButton
+      )}
+    </PageToolbar>
   );
 }

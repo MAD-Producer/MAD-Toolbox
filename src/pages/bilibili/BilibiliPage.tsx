@@ -1,6 +1,7 @@
-import { Badge, Box, Card, Stack } from "@mantine/core";
 import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
 import { t } from "../../locale";
+import { Badge } from "../../components/ui/badge";
+import { Card } from "../../components/ui/card";
 import { ExpertCommandPanel } from "../../components/common/ExpertCommandPanel";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { BilibiliAdvancedFields } from "./BilibiliAdvancedFields";
@@ -21,8 +22,8 @@ export function BilibiliPage(props: BilibiliPageProps) {
   const workspace = useBilibiliWorkspace(props);
 
   return (
-    <Box mih="100%">
-      <Stack gap="md" p="lg">
+    <div className="min-h-full">
+      <div className="flex flex-col gap-4 p-5">
         {props.active && (
           <BilibiliPageHeader
             loginPhase={workspace.loginPhase}
@@ -51,16 +52,14 @@ export function BilibiliPage(props: BilibiliPageProps) {
           title={t("bilibili.advanced.title")}
           action={
             workspace.expertMode ? (
-              <Badge size="xs" variant="light" color="orange">
-                {t("bilibili.command.expertBadge")}
-              </Badge>
+              <Badge variant="warning">{t("bilibili.command.expertBadge")}</Badge>
             ) : null
           }
           opened={workspace.advancedOpen}
           onToggle={workspace.toggleAdvanced}
         >
-          <Stack gap="md">
-            <Card withBorder padding="md" radius="md">
+          <div className="flex flex-col gap-4">
+            <Card padding="md">
               <ExpertCommandPanel
                 labels={COMMAND_LABELS}
                 expertText={workspace.expertText}
@@ -76,15 +75,15 @@ export function BilibiliPage(props: BilibiliPageProps) {
               disabled={workspace.expertMode}
               onUpdate={workspace.update}
             />
-          </Stack>
+          </div>
         </SettingsSection>
-      </Stack>
+      </div>
 
       <BilibiliLoginDialog
         active={workspace.active}
         qrDataUrl={workspace.loginQr}
         onClose={workspace.dismissLoginQr}
       />
-    </Box>
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
@@ -15,30 +14,33 @@ const BILIBILI_FORM_STORAGE_KEY = "bilibili.form";
 export interface BilibiliPageProps {
   active: boolean;
   seed?: TaskSeed | null;
-  onSeedConsumed?: () => void;
   onRetain?: () => void;
   onSubmitted?: () => void;
   dependencyLabels?: string[];
   onOpenDependencies?: () => void;
 }
 
-export function useBilibiliWorkspace({
-  active,
-  seed,
-  onSeedConsumed,
-  onRetain,
-  onSubmitted
-}: BilibiliPageProps) {
-  const [form, setForm] = useState<BilibiliFormState>(() =>
-    loadStoredForm(BILIBILI_FORM_STORAGE_KEY, defaultBilibiliForm)
-  );
-  const [advancedOpen, advanced] = useDisclosure(false);
+export function useBilibiliWorkspace({ active, seed, onRetain, onSubmitted }: BilibiliPageProps) {
+  // 任务种子只在挂载时消费一次（deliver → generation+1 → 重挂），表单按种子恢复；
+  // 无种子时读持久化草稿
+  const [form, setForm] = useState<BilibiliFormState>(() => {
+    if (seed?.task.intent.type === "form") {
+      const restored = {
+        ...defaultBilibiliForm,
+        ...(seed.task.intent.data as Partial<BilibiliFormState>)
+      };
+      if (seed.purpose === "reuse") restored.url = "";
+      return restored;
+    }
+    return loadStoredForm(BILIBILI_FORM_STORAGE_KEY, defaultBilibiliForm);
+  });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const toggleAdvanced = useCallback(() => setAdvancedOpen((open) => !open), []);
   const [submitting, setSubmitting] = useState(false);
   const loginQr = useBilibiliLoginStore((state) => state.qrDataUrl);
   const loginPhase = useBilibiliLoginStore((state) => state.phase);
   const loginLoggedIn = useBilibiliLoginStore((state) => state.loggedIn);
   const startLogin = useBilibiliLoginStore((state) => state.start);
-  const refreshLoginStatus = useBilibiliLoginStore((state) => state.refresh);
   const logout = useBilibiliLoginStore((state) => state.logout);
   const dismissLoginQr = useBilibiliLoginStore((state) => state.dismissQr);
 
@@ -49,12 +51,10 @@ export function useBilibiliWorkspace({
   const draft = useDraftPreviewWorkspace({
     active,
     onRetain,
+    initialExpertText:
+      seed?.task.intent.type === "manual" ? seed.task.intent.data.argv.join("\n") : null,
     buildPreviewIntent,
-    runPreview: bilibiliPreview,
-    onDefaultOutputDirectory: (directory) =>
-      setForm((current) =>
-        current.outputDirectory ? current : { ...current, outputDirectory: directory }
-      )
+    runPreview: bilibiliPreview
   });
 
   const update = (patch: Partial<BilibiliFormState>) => {
@@ -62,37 +62,12 @@ export function useBilibiliWorkspace({
     setForm((current) => ({ ...current, ...patch }));
   };
 
+  // 【Effect 白名单⑤】表单草稿持久化到 localStorage：与 BilibiliPage 挂载期的
+  // loadStoredForm 初始化构成一对读写。表单是持续镜像的外部草稿，不参与渲染派生。
   useEffect(() => {
     const { url, ...persisted } = form;
     saveStoredForm(BILIBILI_FORM_STORAGE_KEY, persisted);
   }, [form]);
-
-  useEffect(() => {
-    if (!seed) return;
-    draft.resetPreview();
-    if (seed.task.intent.type === "form") {
-      draft.restoreExpertText(null);
-      const restored = {
-        ...defaultBilibiliForm,
-        ...(seed.task.intent.data as Partial<BilibiliFormState>)
-      };
-      if (seed.purpose === "reuse") restored.url = "";
-      setForm(restored);
-    } else {
-      draft.restoreExpertText(seed.task.intent.data.argv.join("\n"));
-      if (seed.task.intent.data.argv.some((argument) => argument === "***")) {
-        notifications.show({
-          color: "yellow",
-          message: t("bilibili.notice.redactedArgs")
-        });
-      }
-    }
-    onSeedConsumed?.();
-  }, [seed, onSeedConsumed]);
-
-  useEffect(() => {
-    if (active) void refreshLoginStatus();
-  }, [active, refreshLoginStatus]);
 
   const beginLogin = () => {
     void startLogin().catch((error) =>
@@ -138,7 +113,7 @@ export function useBilibiliWorkspace({
     form,
     update,
     advancedOpen,
-    toggleAdvanced: advanced.toggle,
+    toggleAdvanced,
     expertMode: draft.expertText !== null,
     expertText: draft.expertText,
     setExpertText: draft.setExpertText,
