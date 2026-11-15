@@ -85,7 +85,8 @@ export function SelectItem({ className, children, ...props }: SelectItemProps) {
       )}
       {...props}
     >
-      {children}
+      {/* 必须包 ItemText：触发器 SelectValue 的回显与 typeahead 均取自已选项的 ItemText 文案 */}
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator className="absolute right-2 flex size-4 items-center justify-center">
         <Check size={16} />
       </SelectPrimitive.ItemIndicator>
