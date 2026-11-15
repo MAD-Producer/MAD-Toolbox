@@ -25,13 +25,17 @@ export const useTasksStore = create<TasksStore>((set, get) => ({
   init: async () => {
     if (initStarted) return;
     initStarted = true;
+    let unlisten: (() => void) | null = null;
     try {
-      await listen<TaskEvent>("task-event", (event) => {
+      const off = await listen<TaskEvent>("task-event", (event) => {
         set((state) => applyTaskEvent(state, event.payload));
       });
+      unlisten = off;
       const snapshot = await fetchTasksSnapshot();
       set((state) => applySnapshot(state, snapshot));
     } catch (error) {
+      // 快照拉取失败时先注销本次监听再放行重试，否则重试路径会双订 task-event
+      unlisten?.();
       initStarted = false;
       console.warn("tasks store init failed:", error);
     }
