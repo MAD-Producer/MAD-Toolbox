@@ -1,4 +1,4 @@
-import { IconMusic } from "@tabler/icons-react";
+import { MusicNotes } from "@phosphor-icons/react";
 import { useState } from "react";
 import { SettingsSection } from "../../components/common/SettingsSection";
 import { Button } from "../../components/ui/button";
@@ -18,15 +18,13 @@ export function MusicSourcePicker({ sources, onChange }: MusicSourcePickerProps)
 
   const toggleSource = (source: string) => {
     onChange(
-      sources.includes(source)
-        ? sources.filter((value) => value !== source)
-        : [...sources, source]
+      sources.includes(source) ? sources.filter((value) => value !== source) : [...sources, source]
     );
   };
 
   return (
     <SettingsSection
-      icon={<IconMusic size={20} stroke={1.8} />}
+      icon={<MusicNotes size={20} />}
       title={t("music.sources.title")}
       action={
         <div className="flex items-center gap-2">

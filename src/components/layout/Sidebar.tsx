@@ -1,10 +1,10 @@
 import {
-  IconCircleArrowDown,
-  IconLayoutSidebarLeftCollapse,
-  IconLayoutSidebarLeftExpand,
-  IconSettings,
-  type Icon as TablerIcon
-} from "@tabler/icons-react";
+  ArrowCircleDown,
+  ArrowLineLeft,
+  ArrowLineRight,
+  Gear,
+  type Icon
+} from "@phosphor-icons/react";
 import { useMemo, useRef, useState } from "react";
 import type { NavigationStatus, SidebarGroup } from "../../app/navigation";
 import type { AppRoute, AppSection } from "../../app/route";
@@ -18,8 +18,8 @@ import { AppBrand } from "./AppBrand";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "mad-toolbox:sidebar-collapsed";
 
-const DRAW_DURATION_MS = 700;
-const DRAW_EASING = "cubic-bezier(0.45, 0, 0.2, 1)";
+/** 图标入场动效时长（曲线复用下方折叠主曲线 EASE，保持动效语言统一） */
+const ICON_ENTER_MS = 240;
 
 /** 折叠过渡主曲线与时长（nav 宽度、文字 max-width、gap、padding 共用） */
 const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
@@ -108,12 +108,12 @@ function useTasksStatus(): NavigationStatus | null {
 
 interface SidebarNavItemProps {
   label: string;
-  icon: TablerIcon;
+  icon: Icon;
   active: boolean;
   /** 状态徽标（null = 不显示） */
   status: NavigationStatus | null;
   collapsed: boolean;
-  /** ref 注册回调，供描线动效定位按钮 */
+  /** ref 注册回调，供图标入场动效定位按钮 */
   registerRef: (node: HTMLButtonElement | null) => void;
   onClick: () => void;
 }
@@ -145,7 +145,7 @@ function SidebarNavItem({
       )}
     >
       <span className="relative shrink-0">
-        <Icon size={20} stroke={1.7} />
+        <Icon size={20} />
         {collapsed && status !== null && status.count > 0 ? (
           <span
             className={cn(
@@ -182,7 +182,11 @@ function SidebarNavItem({
 
   // Tooltip 常驻包裹（disabled 在展开态跳过 Content），切换折叠时按钮不 remount
   return (
-    <Tooltip label={status ? `${label} · ${status.label}` : label} side="right" disabled={!collapsed}>
+    <Tooltip
+      label={status ? `${label} · ${status.label}` : label}
+      side="right"
+      disabled={!collapsed}
+    >
       {button}
     </Tooltip>
   );
@@ -203,7 +207,7 @@ export function Sidebar({ route, groups, statuses, onNavigate, onOpenUpdatePage 
   const tasksStatus = useTasksStatus();
   const update = useUpdateStore((state) => state.update);
 
-  /** 扁平化导航项并记录全局序号，供 ref 数组与描线动效对位 */
+  /** 扁平化导航项并记录全局序号，供 ref 数组与图标入场动效对位 */
   const groupsWithIndex = useMemo(() => {
     let index = 0;
     return groups.map((group) => ({
@@ -221,33 +225,32 @@ export function Sidebar({ route, groups, statuses, onNavigate, onOpenUpdatePage 
 
   /** tasks 项优先使用内部计算的运行数，其余用外部传入 statuses */
   const statusFor = (section: AppSection): NavigationStatus | null =>
-    section === "tasks" && tasksStatus !== null ? tasksStatus : statuses?.[section] ?? null;
+    section === "tasks" && tasksStatus !== null ? tasksStatus : (statuses?.[section] ?? null);
 
-  /** 描线动效：strokeDasharray 从全长到 0（迁移自旧 TopNavigation） */
-  const drawIcon = (node: HTMLButtonElement | null) => {
+  /** 图标入场动效：淡入 + 轻微缩放（Phosphor 为 fill 路径，不适用旧 Tabler 的描线动画） */
+  const enterIcon = (node: HTMLButtonElement | null) => {
     if (!node) return;
-    node.querySelectorAll<SVGPathElement>("svg path").forEach((path) => {
-      const length = path.getTotalLength();
-      path.animate(
+    node.querySelectorAll("svg").forEach((svg) => {
+      svg.animate(
         [
-          { strokeDasharray: `${length}`, strokeDashoffset: `${length}` },
-          { strokeDasharray: `${length}`, strokeDashoffset: "0" }
+          { opacity: 0, transform: "scale(0.92)" },
+          { opacity: 1, transform: "scale(1)" }
         ],
-        { duration: DRAW_DURATION_MS, easing: DRAW_EASING }
+        { duration: ICON_ENTER_MS, easing: EASE }
       );
     });
   };
 
   const handleNavigate = (section: AppSection, index: number) => {
     onNavigate(section);
-    // 已在当前页或 tasks 运行中（徽标提示状态变化）时跳过描线，避免重复/误导动效
+    // 已在当前页或 tasks 运行中（徽标提示状态变化）时跳过入场动效，避免重复
     const running = section === "tasks" && (statusFor(section)?.count ?? 0) > 0;
-    if (route.section !== section && !running) drawIcon(itemRefs.current[index]);
+    if (route.section !== section && !running) enterIcon(itemRefs.current[index]);
   };
 
   const handleSettingsNavigate = () => {
     onNavigate("settings");
-    drawIcon(settingsRef.current);
+    enterIcon(settingsRef.current);
   };
 
   const settingsActive = route.section === "settings";
@@ -285,11 +288,7 @@ export function Sidebar({ route, groups, statuses, onNavigate, onOpenUpdatePage 
           aria-expanded={!collapsed}
           onClick={toggleCollapsed}
         >
-          {collapsed ? (
-            <IconLayoutSidebarLeftExpand size={18} stroke={1.7} />
-          ) : (
-            <IconLayoutSidebarLeftCollapse size={18} stroke={1.7} />
-          )}
+          {collapsed ? <ArrowLineRight size={18} /> : <ArrowLineLeft size={18} />}
         </IconButton>
       </div>
 
@@ -361,7 +360,7 @@ export function Sidebar({ route, groups, statuses, onNavigate, onOpenUpdatePage 
                 collapsed ? "w-9 justify-center px-0" : "w-full justify-start px-2.5 gap-2.5"
               )}
             >
-              <IconCircleArrowDown size={20} stroke={1.7} className="shrink-0" />
+              <ArrowCircleDown size={20} className="shrink-0" />
               <span
                 className={cn(
                   "truncate text-xs",
@@ -378,7 +377,7 @@ export function Sidebar({ route, groups, statuses, onNavigate, onOpenUpdatePage 
         ) : null}
         <SidebarNavItem
           label={settingsLabel}
-          icon={IconSettings}
+          icon={Gear}
           active={settingsActive}
           status={settingsStatus}
           collapsed={collapsed}

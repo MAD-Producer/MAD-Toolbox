@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { IconLoader2 } from "@tabler/icons-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import type { ComponentPropsWithRef } from "react";
 import { cn } from "../../lib/cn";
 
@@ -62,7 +62,7 @@ export function IconButton({
       )}
       {...props}
     >
-      {loading ? <IconLoader2 size={20} stroke={1.7} className="animate-spin" /> : children}
+      {loading ? <CircleNotch size={20} className="animate-spin" /> : children}
     </button>
   );
 }

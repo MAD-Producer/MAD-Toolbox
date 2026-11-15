@@ -1,5 +1,5 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { IconX } from "@tabler/icons-react";
+import { X } from "@phosphor-icons/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "../../lib/cn";
 import { t } from "../../locale";
@@ -41,7 +41,7 @@ export function DialogContent({ className, children, closeLabel, ...props }: Dia
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
           )}
         >
-          <IconX size={16} stroke={1.7} />
+          <X size={16} />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>

@@ -1,13 +1,13 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  IconCircleCheck,
-  IconCircleX,
-  IconFolderOpen,
-  IconHelp,
-  IconPlus,
-  IconShieldCheck,
-  IconX
-} from "@tabler/icons-react";
+  CheckCircle,
+  XCircle,
+  FolderOpen,
+  Question,
+  Plus,
+  ShieldCheck,
+  X
+} from "@phosphor-icons/react";
 import type { CookieFileOption } from "../../contracts/types";
 import { t } from "../../locale";
 import { IconButton } from "../ui/icon-button";
@@ -47,9 +47,9 @@ function verificationLabel(status: CookieVerificationStatus) {
 }
 
 function verificationIcon(status: CookieVerificationStatus) {
-  if (status === "valid") return <IconCircleCheck size={16} stroke={1.8} className="text-success" />;
-  if (status === "invalid") return <IconCircleX size={16} stroke={1.8} className="text-destructive" />;
-  return <IconShieldCheck size={16} stroke={1.8} />;
+  if (status === "valid") return <CheckCircle size={16} className="text-success" />;
+  if (status === "invalid") return <XCircle size={16} className="text-destructive" />;
+  return <ShieldCheck size={16} />;
 }
 
 /**
@@ -95,7 +95,7 @@ export function CookieFileField({
             disabled={disabled}
             onClick={() => void openUrl(COOKIE_HELP_URL)}
           >
-            <IconHelp size={16} stroke={1.8} />
+            <Question size={16} />
           </IconButton>
         </span>
       </Tooltip>
@@ -108,7 +108,7 @@ export function CookieFileField({
             disabled={disabled}
             onClick={() => void onBrowse()}
           >
-            <IconFolderOpen size={16} stroke={1.8} />
+            <FolderOpen size={16} />
           </IconButton>
         </span>
       </Tooltip>
@@ -123,7 +123,7 @@ export function CookieFileField({
               disabled={disabled}
               onClick={() => onChange("")}
             >
-              <IconX size={16} stroke={1.8} />
+              <X size={16} />
             </IconButton>
           </span>
         </Tooltip>
@@ -163,7 +163,7 @@ export function CookieFileField({
               <SelectSeparator />
               <SelectItem value={ADD_COOKIE_FILE}>
                 <span className="flex items-center gap-1.5">
-                  <IconPlus size={16} stroke={1.8} />
+                  <Plus size={16} />
                   {t("common.addCookieFileInSettings")}
                 </span>
               </SelectItem>

@@ -1,4 +1,4 @@
-import { IconChevronDown } from "@tabler/icons-react";
+import { CaretDown } from "@phosphor-icons/react";
 import { useId, type ReactNode } from "react";
 import { Card } from "../ui/card";
 import { Collapse } from "../ui/collapse";
@@ -38,9 +38,7 @@ export function SettingsSection({
       {icon ? <span className="flex shrink-0 text-primary">{icon}</span> : null}
       <div className="min-w-0">
         <p className="text-base font-semibold leading-snug">{title}</p>
-        {description ? (
-          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
-        ) : null}
+        {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}
       </div>
     </div>
   );
@@ -64,9 +62,9 @@ export function SettingsSection({
         <div className="flex shrink-0 items-center gap-2">
           {action}
           {collapsible ? (
-            <IconChevronDown
+            <CaretDown
               size={18}
-              stroke={1.8}
+
               className={cnRotate(opened)}
               aria-hidden="true"
             />
@@ -82,9 +80,7 @@ export function SettingsSection({
 
 /** 折叠指示箭头：展开时旋转 180°；箭头不拦截点击（整行可点），hover 随标题行提亮 */
 function cnRotate(opened: boolean): string {
-  const shared = "pointer-events-none text-muted-foreground transition-transform duration-150 group-hover:text-foreground";
-  return opened
-    ? `shrink-0 rotate-180 ${shared}`
-    : `shrink-0 rotate-0 ${shared}`;
+  const shared =
+    "pointer-events-none text-muted-foreground transition-transform duration-150 group-hover:text-foreground";
+  return opened ? `shrink-0 rotate-180 ${shared}` : `shrink-0 rotate-0 ${shared}`;
 }
-

@@ -1,5 +1,5 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { Check, CaretDown } from "@phosphor-icons/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "../../lib/cn";
 
@@ -10,7 +10,9 @@ export type SelectSeparatorProps = ComponentPropsWithoutRef<typeof SelectPrimiti
 
 /** 分隔线：Radix Separator 裸件无默认样式，这里补 shadcn 惯例的 1px 横线 */
 export function SelectSeparator({ className, ...props }: SelectSeparatorProps) {
-  return <SelectPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />;
+  return (
+    <SelectPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
+  );
 }
 
 export type SelectTriggerProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>;
@@ -30,7 +32,7 @@ export function SelectTrigger({ className, children, ...props }: SelectTriggerPr
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <IconChevronDown size={16} stroke={1.7} className="opacity-60" />
+        <CaretDown size={16} className="opacity-60" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -85,7 +87,7 @@ export function SelectItem({ className, children, ...props }: SelectItemProps) {
     >
       {children}
       <SelectPrimitive.ItemIndicator className="absolute right-2 flex size-4 items-center justify-center">
-        <IconCheck size={16} stroke={1.7} />
+        <Check size={16} />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );

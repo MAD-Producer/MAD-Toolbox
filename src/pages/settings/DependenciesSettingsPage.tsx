@@ -1,4 +1,4 @@
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { Warning } from "@phosphor-icons/react";
 import { useState } from "react";
 import { notifications } from "../../lib/notifications";
 import { DependencyStatusPanel } from "../../components/common/DependencyStatusPanel";
@@ -106,8 +106,11 @@ export function DependenciesSettingsPage({
         </SettingsRow>
       </SettingsSectionCard>
       {mirrorError && (
-        <div role="alert" className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-3.5 py-2.5">
-          <IconAlertTriangle size={16} stroke={1.8} className="mt-0.5 shrink-0 text-warning" />
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-3.5 py-2.5"
+        >
+          <Warning size={16} className="mt-0.5 shrink-0 text-warning" />
           <div className="min-w-0">
             <p className="text-sm font-medium">{t("deps.mirrorCheckFailed")}</p>
             <p className="mt-0.5 text-xs text-foreground">{mirrorError}</p>

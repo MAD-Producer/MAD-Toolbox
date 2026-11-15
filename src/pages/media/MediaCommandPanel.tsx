@@ -1,4 +1,4 @@
-import { IconPencil, IconRotate } from "@tabler/icons-react";
+import { Pencil, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { useEffect, useRef } from "react";
 import type { PreviewResult } from "./api";
 import { CommandPreview } from "../../components/common/CommandPreview";
@@ -52,7 +52,7 @@ export function MediaCommandPanel({
       size="sm"
       variant="secondary"
       className="h-8 gap-1.5 px-2.5 text-xs"
-      leftSection={<IconPencil size={14} stroke={1.8} />}
+      leftSection={<Pencil size={14} />}
       onClick={onEnterExpert}
       disabled={!preview}
     >
@@ -70,7 +70,7 @@ export function MediaCommandPanel({
               size="sm"
               variant="secondary"
               className="h-8 gap-1.5 px-2.5 text-xs"
-              leftSection={<IconRotate size={14} stroke={1.8} />}
+              leftSection={<ArrowCounterClockwise size={14} />}
               onClick={onExitExpert}
             >
               {t("media.command.restoreForm")}

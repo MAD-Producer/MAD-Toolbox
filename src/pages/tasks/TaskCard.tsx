@@ -1,23 +1,23 @@
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
-  IconArrowUp,
-  IconCancel,
-  IconChevronRight,
-  IconCircleCheck,
-  IconCircleX,
-  IconClock,
-  IconCopyPlus,
-  IconFileDownload,
-  IconFileText,
-  IconFolderOpen,
-  IconLinkOff,
-  IconLoader,
-  IconRefresh,
-  IconTrash,
-  IconX,
-  type Icon as TablerIcon
-} from "@tabler/icons-react";
+  ArrowUp,
+  Prohibit,
+  CaretRight,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Copy,
+  FileArrowDown,
+  FileText,
+  FolderOpen,
+  LinkBreak,
+  CircleNotch,
+  ArrowsClockwise,
+  Trash,
+  X,
+  type Icon
+} from "@phosphor-icons/react";
 import { notifications } from "../../lib/notifications";
 import { memo, useId, useState } from "react";
 import { cn } from "../../lib/cn";
@@ -44,7 +44,7 @@ const STATUS_META: Record<
     toneClass: string;
     barClass: "primary" | "success" | "warning" | "destructive" | "muted";
     borderClass: string;
-    icon: TablerIcon;
+    icon: Icon;
     spinning?: boolean;
   }
 > = {
@@ -53,14 +53,14 @@ const STATUS_META: Record<
     toneClass: "text-muted-foreground",
     barClass: "muted",
     borderClass: "border-l-muted-foreground/40",
-    icon: IconClock
+    icon: Clock
   },
   running: {
     labelKey: "tasks.status.running",
     toneClass: "text-warning",
     barClass: "warning",
     borderClass: "border-l-warning",
-    icon: IconLoader,
+    icon: CircleNotch,
     spinning: true
   },
   canceling: {
@@ -68,7 +68,7 @@ const STATUS_META: Record<
     toneClass: "text-warning",
     barClass: "warning",
     borderClass: "border-l-warning",
-    icon: IconLoader,
+    icon: CircleNotch,
     spinning: true
   },
   success: {
@@ -76,28 +76,28 @@ const STATUS_META: Record<
     toneClass: "text-success",
     barClass: "success",
     borderClass: "border-l-success",
-    icon: IconCircleCheck
+    icon: CheckCircle
   },
   failed: {
     labelKey: "tasks.status.failed",
     toneClass: "text-destructive",
     barClass: "destructive",
     borderClass: "border-l-destructive",
-    icon: IconCircleX
+    icon: XCircle
   },
   canceled: {
     labelKey: "tasks.status.canceled",
     toneClass: "text-muted-foreground",
     barClass: "muted",
     borderClass: "border-l-muted-foreground/40",
-    icon: IconCancel
+    icon: Prohibit
   },
   interrupted: {
     labelKey: "tasks.status.interrupted",
     toneClass: "text-warning",
     barClass: "warning",
     borderClass: "border-l-warning",
-    icon: IconLinkOff
+    icon: LinkBreak
   }
 };
 
@@ -210,9 +210,9 @@ export const TaskCard = memo(function TaskCard({
           aria-controls={contentId}
           className="group flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
         >
-          <IconChevronRight
+          <CaretRight
             size={16}
-            stroke={1.8}
+
             aria-hidden="true"
             className={
               opened
@@ -222,7 +222,7 @@ export const TaskCard = memo(function TaskCard({
           />
           <StatusIcon
             size={16}
-            stroke={1.8}
+
             role="img"
             aria-label={t(status.labelKey)}
             className={`shrink-0 ${status.toneClass} ${status.spinning ? "task-status-spinning" : ""}`}
@@ -241,7 +241,7 @@ export const TaskCard = memo(function TaskCard({
                 className="task-action"
                 onClick={() => onReuse(task)}
               >
-                <IconCopyPlus size={16} stroke={1.8} />
+                <Copy size={16} />
               </IconButton>
             </Tooltip>
           )}
@@ -254,7 +254,7 @@ export const TaskCard = memo(function TaskCard({
                 className="task-action"
                 onClick={() => onCancel(task.id)}
               >
-                <IconX size={16} stroke={1.8} />
+                <X size={16} />
               </IconButton>
             </Tooltip>
           )}
@@ -267,7 +267,7 @@ export const TaskCard = memo(function TaskCard({
                 className="task-action"
                 onClick={() => onRerun(task)}
               >
-                <IconRefresh size={16} stroke={1.8} />
+                <ArrowsClockwise size={16} />
               </IconButton>
             </Tooltip>
           )}
@@ -280,7 +280,7 @@ export const TaskCard = memo(function TaskCard({
                 className="task-action"
                 onClick={openLogFile}
               >
-                <IconFileText size={16} stroke={1.8} />
+                <FileText size={16} />
               </IconButton>
             </Tooltip>
           )}
@@ -293,7 +293,7 @@ export const TaskCard = memo(function TaskCard({
                 className="task-action"
                 onClick={() => void exportDiagnostics()}
               >
-                <IconFileDownload size={16} stroke={1.8} />
+                <FileArrowDown size={16} />
               </IconButton>
             </Tooltip>
           )}
@@ -306,7 +306,7 @@ export const TaskCard = memo(function TaskCard({
                 className="task-action task-action-open"
                 onClick={revealOutput}
               >
-                <IconFolderOpen size={16} stroke={1.8} />
+                <FolderOpen size={16} />
               </IconButton>
             </Tooltip>
           )}
@@ -319,7 +319,7 @@ export const TaskCard = memo(function TaskCard({
                 className="task-action task-action-danger"
                 onClick={() => onDelete(task.id)}
               >
-                <IconTrash size={16} stroke={1.8} />
+                <Trash size={16} />
               </IconButton>
             </Tooltip>
           )}
@@ -352,7 +352,7 @@ export const TaskCard = memo(function TaskCard({
                   className="text-muted-foreground"
                   onClick={() => onPromote(task.id)}
                 >
-                  <IconArrowUp size={16} stroke={1.8} />
+                  <ArrowUp size={16} />
                 </IconButton>
               </Tooltip>
             </div>

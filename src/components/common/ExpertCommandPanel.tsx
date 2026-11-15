@@ -1,4 +1,4 @@
-import { IconPencil, IconRotate } from "@tabler/icons-react";
+import { Pencil, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { useEffect, useRef } from "react";
 import type { PreviewResult } from "../../contracts/types";
 import { t, type TranslationKey } from "../../locale";
@@ -6,7 +6,6 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { Tooltip } from "../ui/tooltip";
 import { CommandPreview } from "./CommandPreview";
-
 
 interface ExpertCommandPanelLabels {
   previewTitle: TranslationKey;
@@ -55,7 +54,7 @@ export function ExpertCommandPanel({
       size="sm"
       variant="secondary"
       className="h-8 gap-1.5 px-2.5 text-xs"
-      leftSection={<IconPencil size={14} stroke={1.8} />}
+      leftSection={<Pencil size={14} />}
       onClick={onEnterExpert}
       disabled={!preview}
     >
@@ -74,7 +73,7 @@ export function ExpertCommandPanel({
             size="sm"
             variant="secondary"
             className="h-8 gap-1.5 px-2.5 text-xs"
-            leftSection={<IconRotate size={14} stroke={1.8} />}
+            leftSection={<ArrowCounterClockwise size={14} />}
             onClick={onExitExpert}
           >
             {t(labels.restoreForm)}

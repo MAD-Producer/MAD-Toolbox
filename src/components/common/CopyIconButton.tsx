@@ -1,4 +1,4 @@
-import { IconCheck, IconCopy } from "@tabler/icons-react";
+import { Check, Copy } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../../locale";
 import { IconButton } from "../ui/icon-button";
@@ -43,7 +43,7 @@ export function CopyIconButton({ value, label }: CopyIconButtonProps) {
         onClick={copy}
         className={copied ? "text-success hover:text-success" : "text-muted-foreground"}
       >
-        {copied ? <IconCheck size={16} stroke={1.8} /> : <IconCopy size={16} stroke={1.8} />}
+        {copied ? <Check size={16} /> : <Copy size={16} />}
       </IconButton>
     </Tooltip>
   );

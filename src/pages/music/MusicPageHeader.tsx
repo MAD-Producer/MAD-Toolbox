@@ -1,4 +1,4 @@
-import { IconMistOff, IconPlayerPlay, IconPlayerStop } from "@tabler/icons-react";
+import { SpeakerSlash, Play, Stop } from "@phosphor-icons/react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
 import { PageToolbar } from "../../components/common/PageToolbar";
 import { Button } from "../../components/ui/button";
@@ -43,7 +43,7 @@ export function MusicPageHeader({
     <Button
       size="sm"
       className="h-8 gap-1.5"
-      leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+      leftSection={<Play size={16} />}
       loading={runLoading}
       disabled={runDisabled}
       onClick={onRun}
@@ -57,7 +57,7 @@ export function MusicPageHeader({
       <DependencyMissingBadge labels={dependencyLabels} onOpen={onOpenDependencies} />
       {/* label 包裹：整颗 pill 都是开关热区；文字可见后不再依赖 Tooltip 提示含义 */}
       <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2">
-        <IconMistOff size={16} stroke={1.8} className="text-muted-foreground" />
+        <SpeakerSlash size={16} className="text-muted-foreground" />
         <span className="text-xs text-muted-foreground">{t("music.denoise.label")}</span>
         <Switch checked={denoise} onCheckedChange={onDenoiseChange} />
       </label>
@@ -66,7 +66,7 @@ export function MusicPageHeader({
           size="sm"
           variant="outline"
           className="h-8 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
-          leftSection={<IconPlayerStop size={16} stroke={1.8} />}
+          leftSection={<Stop size={16} />}
           loading={stopping}
           autoFocus
           onClick={onStopSearch}

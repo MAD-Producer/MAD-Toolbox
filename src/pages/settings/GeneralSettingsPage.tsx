@@ -1,16 +1,16 @@
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
-  IconArrowBackUp,
-  IconBookDownload,
-  IconDeviceDesktop,
-  IconFolderOpen,
-  IconLanguage,
-  IconMoon,
-  IconPlus,
-  IconSun,
-  IconTrash,
-  IconWorld
-} from "@tabler/icons-react";
+  ArrowCounterClockwise,
+  FloppyDisk,
+  Desktop,
+  FolderOpen,
+  GlobeHemisphereWest,
+  Moon,
+  Plus,
+  Sun,
+  Trash,
+  Globe
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
 import { Button } from "../../components/ui/button";
@@ -81,7 +81,9 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
 
   const save = async () => {
     if (saving || !dirty) return;
-    if (draft.cookieFiles.some((cookieFile) => !cookieFile.alias.trim() || !cookieFile.path.trim())) {
+    if (
+      draft.cookieFiles.some((cookieFile) => !cookieFile.alias.trim() || !cookieFile.path.trim())
+    ) {
       notifications.show({ message: t("settings.general.cookieFilesIncomplete"), color: "yellow" });
       return;
     }
@@ -130,17 +132,17 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
               options={[
                 {
                   value: "light",
-                  icon: <IconSun size={15} stroke={1.7} />,
+                  icon: <Sun size={15} />,
                   label: t("settings.general.themeLight")
                 },
                 {
                   value: "dark",
-                  icon: <IconMoon size={15} stroke={1.7} />,
+                  icon: <Moon size={15} />,
                   label: t("settings.general.themeDark")
                 },
                 {
                   value: "auto",
-                  icon: <IconDeviceDesktop size={15} stroke={1.7} />,
+                  icon: <Desktop size={15} />,
                   label: t("settings.general.themeAuto")
                 }
               ]}
@@ -155,11 +157,11 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
               disabled={changingLanguage}
               onChange={(value) => void changeLanguage(value as LanguageChoice)}
               options={[
-                { value: "zh", icon: <IconLanguage size={15} stroke={1.7} />, label: "简体中文" },
-                { value: "en", icon: <IconWorld size={15} stroke={1.7} />, label: "English" },
+                { value: "zh", icon: <GlobeHemisphereWest size={15} />, label: "简体中文" },
+                { value: "en", icon: <Globe size={15} />, label: "English" },
                 {
                   value: "auto",
-                  icon: <IconDeviceDesktop size={15} stroke={1.7} />,
+                  icon: <Desktop size={15} />,
                   label: t("settings.general.languageAuto")
                 }
               ]}
@@ -185,7 +187,7 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
                         disabled={directory === (settings.defaultOutputDirectory ?? "")}
                         onClick={() => setDirectory(settings.defaultOutputDirectory ?? "")}
                       >
-                        <IconArrowBackUp size={16} stroke={1.8} />
+                        <ArrowCounterClockwise size={16} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -197,7 +199,7 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
                         size="sm"
                         onClick={() => void pickDirectory()}
                       >
-                        <IconFolderOpen size={16} stroke={1.8} />
+                        <FolderOpen size={16} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -239,7 +241,7 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
               <Button
                 variant="outline"
                 className="h-8 shrink-0 gap-1.5 px-2 text-xs"
-                leftSection={<IconPlus size={14} stroke={1.8} />}
+                leftSection={<Plus size={14} />}
                 onClick={() => setCookieFiles((current) => [...current, { alias: "", path: "" }])}
               >
                 {t("settings.general.cookieFilesAdd")}
@@ -268,7 +270,7 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
                             size="sm"
                             onClick={() => void pickCookieFile(index)}
                           >
-                            <IconFolderOpen size={16} stroke={1.8} />
+                            <FolderOpen size={16} />
                           </IconButton>
                         </span>
                       </Tooltip>
@@ -285,7 +287,7 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
                               )
                             }
                           >
-                            <IconTrash size={16} stroke={1.8} />
+                            <Trash size={16} />
                           </IconButton>
                         </span>
                       </Tooltip>
@@ -310,7 +312,7 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
         <footer className="flex shrink-0 justify-end py-4">
           <Button
             className="gap-1.5"
-            leftSection={<IconBookDownload size={16} stroke={1.8} />}
+            leftSection={<FloppyDisk size={16} />}
             loading={saving}
             onClick={() => void save()}
           >

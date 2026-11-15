@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
-  IconCircleCheck,
-  IconCloud,
-  IconCloudDownload,
-  IconDeviceLaptop,
-  IconRefresh,
-  IconTerminal2
-} from "@tabler/icons-react";
+  CheckCircle,
+  Cloud,
+  CloudArrowDown,
+  Laptop,
+  ArrowsClockwise,
+  TerminalWindow
+} from "@phosphor-icons/react";
 import type {
   DependencyDownloadProgress,
   DependencyStatus,
@@ -83,7 +83,8 @@ export function DependencyStatusPanel({
 
   const toggleSelected = (tool: ToolName) =>
     setSelectionOverride((current) => {
-      const base = current?.key === suggestedKey ? current.tools : new Set<ToolName>(suggestedTools);
+      const base =
+        current?.key === suggestedKey ? current.tools : new Set<ToolName>(suggestedTools);
       const next = new Set(base);
       if (!next.delete(tool)) next.add(tool);
       return { key: suggestedKey, tools: next };
@@ -108,7 +109,7 @@ export function DependencyStatusPanel({
           <Badge variant="primary">{t("deps.updateCount", { count: updateCount })}</Badge>
         ) : (
           <Badge variant="success" className="gap-1">
-            <IconCircleCheck size={12} stroke={1.8} />
+            <CheckCircle size={12} />
             {t("deps.allReady")}
           </Badge>
         )
@@ -120,7 +121,7 @@ export function DependencyStatusPanel({
               size="sm"
               variant="secondary"
               className="h-8 gap-1.5 px-2 text-xs"
-              leftSection={<IconCloudDownload size={14} stroke={1.8} />}
+              leftSection={<CloudArrowDown size={14} />}
               loading={installation !== null}
               disabled={selectedTools.length === 0}
               onClick={() => onMirrorInstall(selectedTools)}
@@ -132,7 +133,7 @@ export function DependencyStatusPanel({
             size="sm"
             variant="ghost"
             className="h-8 gap-1.5 px-2 text-xs"
-            leftSection={<IconRefresh size={14} stroke={1.8} />}
+            leftSection={<ArrowsClockwise size={14} />}
             loading={loading}
             onClick={() => {
               if (missing.length > 0) setUserOpened(true);
@@ -180,7 +181,7 @@ export function DependencyStatusPanel({
                         className="h-8 gap-1.5 px-2 text-xs"
                         loading={installing}
                         disabled={installation !== null}
-                        leftSection={<IconCloudDownload size={14} stroke={1.8} />}
+                        leftSection={<CloudArrowDown size={14} />}
                         onClick={() => onMirrorInstall([dependency.tool])}
                       >
                         {mirror.updateAvailable
@@ -196,7 +197,7 @@ export function DependencyStatusPanel({
                         variant="ghost"
                         className="h-8 gap-1.5 px-2 text-xs"
                         disabled={installation !== null}
-                        leftSection={<IconTerminal2 size={14} stroke={1.8} />}
+                        leftSection={<TerminalWindow size={14} />}
                         aria-label={t(
                           dependency.healthCheckFailed ? "deps.repairAria" : "deps.installAria",
                           { name: dependency.label }
@@ -213,9 +214,9 @@ export function DependencyStatusPanel({
                       {dependency.available && (
                         <>
                           {dependency.source === "managed" ? (
-                            <IconCloud size={14} stroke={1.8} />
+                            <Cloud size={14} />
                           ) : (
-                            <IconDeviceLaptop size={14} stroke={1.8} />
+                            <Laptop size={14} />
                           )}
                         </>
                       )}

@@ -1,4 +1,4 @@
-import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
+import { SlidersHorizontal } from "@phosphor-icons/react";
 import { t } from "../../locale";
 import { Badge } from "../../components/ui/badge";
 import { Card } from "../../components/ui/card";
@@ -56,7 +56,7 @@ export function NetworkVideoPage(props: NetworkVideoPageProps) {
         </SettingsSection>
 
         <SettingsSection
-          icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
+          icon={<SlidersHorizontal size={20} />}
           title={t("network.advanced")}
           action={
             workspace.expertMode ? (

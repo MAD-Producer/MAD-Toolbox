@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { IconUpload } from "@tabler/icons-react";
+import { UploadSimple } from "@phosphor-icons/react";
 import { cn } from "../../lib/cn";
 import { t } from "../../locale";
 
@@ -57,7 +57,7 @@ export function MediaDropzone({ onPickFiles, onDropPaths }: MediaDropzoneProps) 
           : "border-border bg-transparent text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
       )}
     >
-      <IconUpload size={30} stroke={1.4} />
+      <UploadSimple size={30} />
       <span className="text-sm font-medium">{t("media.dropzone.hint")}</span>
       <span className="text-xs opacity-75">{t("media.dropzone.clickHint")}</span>
     </button>

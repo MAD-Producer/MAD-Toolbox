@@ -1,5 +1,5 @@
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { IconCheck, IconMinus } from "@tabler/icons-react";
+import { Check, Minus } from "@phosphor-icons/react";
 import type { ComponentPropsWithRef } from "react";
 import { cn } from "../../lib/cn";
 
@@ -21,9 +21,9 @@ export function Checkbox({ className, ...props }: CheckboxProps) {
     >
       <CheckboxPrimitive.Indicator className="flex items-center justify-center text-current">
         {props.checked === "indeterminate" ? (
-          <IconMinus size={12} stroke={2.5} />
+          <Minus size={12} weight="bold" />
         ) : (
-          <IconCheck size={12} stroke={2.5} />
+          <Check size={12} weight="bold" />
         )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

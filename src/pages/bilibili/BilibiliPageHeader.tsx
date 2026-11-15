@@ -1,9 +1,16 @@
-import { IconCircleCheck, IconLogout, IconPlayerPlay, IconQrcode } from "@tabler/icons-react";
+import { CheckCircle, SignOut, Play, QrCode } from "@phosphor-icons/react";
 import { useState } from "react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
 import { PageToolbar } from "../../components/common/PageToolbar";
 import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "../../components/ui/dialog";
 import { Tooltip } from "../../components/ui/tooltip";
 import { t } from "../../locale";
 
@@ -52,9 +59,9 @@ function LogoutButton({ onLogout }: { onLogout: () => Promise<void> }) {
         }
         leftSection={
           hovered ? (
-            <IconLogout size={16} stroke={1.8} className="text-destructive" />
+            <SignOut size={16} className="text-destructive" />
           ) : (
-            <IconCircleCheck size={16} stroke={1.8} className="text-success" />
+            <CheckCircle size={16} className="text-success" />
           )
         }
         onMouseEnter={() => setHovered(true)}
@@ -109,7 +116,7 @@ export function BilibiliPageHeader({
     <Button
       size="sm"
       className="h-8 gap-1.5"
-      leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+      leftSection={<Play size={16} />}
       loading={submitting}
       disabled={submitDisabled}
       onClick={onSubmit}
@@ -128,7 +135,7 @@ export function BilibiliPageHeader({
           size="sm"
           variant="secondary"
           className="h-8 gap-1.5"
-          leftSection={<IconQrcode size={16} stroke={1.8} />}
+          leftSection={<QrCode size={16} />}
           loading={loginPhase === "starting"}
           disabled={loginPhase !== "idle"}
           onClick={onBeginLogin}

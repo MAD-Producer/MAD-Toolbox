@@ -1,11 +1,11 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  IconBrandGithub,
-  IconDownload,
-  IconExternalLink,
-  IconRefresh,
-  IconWorld
-} from "@tabler/icons-react";
+  GithubLogo,
+  DownloadSimple,
+  ArrowSquareOut,
+  ArrowsClockwise,
+  Globe
+} from "@phosphor-icons/react";
 import { Fragment, useState, type ReactNode } from "react";
 import { notifications } from "../../lib/notifications";
 import { useUpdateStore } from "../../stores/update";
@@ -96,7 +96,7 @@ function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) 
                 size="sm"
                 onClick={() => void openUrl(href)}
               >
-                <IconExternalLink size={16} stroke={1.8} />
+                <ArrowSquareOut size={16} />
               </IconButton>
             </span>
           </Tooltip>
@@ -172,7 +172,7 @@ export function AboutSettingsPage() {
               <Button
                 variant="ghost"
                 className="gap-1.5"
-                leftSection={<IconWorld size={16} stroke={1.8} />}
+                leftSection={<Globe size={16} />}
                 onClick={() => void openUrl(TOOLBOX_URL)}
               >
                 {t("settings.about.website")}
@@ -180,7 +180,7 @@ export function AboutSettingsPage() {
               <Button
                 variant="ghost"
                 className="gap-1.5"
-                leftSection={<IconBrandGithub size={16} stroke={1.8} />}
+                leftSection={<GithubLogo size={16} />}
                 onClick={() => void openUrl(GITHUB_URL)}
               >
                 GitHub
@@ -201,14 +201,14 @@ export function AboutSettingsPage() {
                       loading={downloading}
                       onClick={() => void handleDownloadUpdate()}
                     >
-                      <IconDownload size={16} stroke={1.8} />
+                      <DownloadSimple size={16} />
                     </IconButton>
                   </span>
                 </Tooltip>
               ) : (
                 <Button
                   className="gap-1.5"
-                  leftSection={<IconRefresh size={16} stroke={1.8} />}
+                  leftSection={<ArrowsClockwise size={16} />}
                   loading={checking}
                   onClick={() => void handleCheckUpdate()}
                 >
@@ -234,7 +234,7 @@ export function AboutSettingsPage() {
                 size="sm"
                 variant="ghost"
                 className="w-full gap-1.5"
-                leftSection={<IconExternalLink size={16} stroke={1.8} />}
+                leftSection={<ArrowSquareOut size={16} />}
                 onClick={() => void openUrl(link.url)}
               >
                 {t(link.nameKey)}
@@ -260,7 +260,7 @@ export function AboutSettingsPage() {
           <Button
             variant="ghost"
             className="shrink-0 gap-1.5"
-            leftSection={<IconExternalLink size={16} stroke={1.8} />}
+            leftSection={<ArrowSquareOut size={16} />}
             onClick={() => void openUrl("https://www.frameneo.com/")}
           >
             {t("settings.about.frameneoWebsite")}

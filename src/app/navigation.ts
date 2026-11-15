@@ -1,18 +1,18 @@
 import {
-  IconBrandBilibili,
-  IconListCheck,
-  IconMovie,
-  IconMusic,
-  IconWorldDownload,
-  type Icon as TablerIcon
-} from "@tabler/icons-react";
+  TelevisionSimple,
+  Stack,
+  FilmSlate,
+  MusicNotes,
+  Globe,
+  type Icon
+} from "@phosphor-icons/react";
 import type { TranslationKey } from "../locale";
 import type { AppSection, MediaPageId, SettingsPageId } from "./route";
 
 export interface L1NavigationItem {
   section: AppSection;
   labelKey: TranslationKey;
-  icon: TablerIcon;
+  icon: Icon;
 }
 
 export interface L2NavigationItem<
@@ -37,11 +37,11 @@ export interface SidebarGroup {
 }
 
 export const L1_NAVIGATION = [
-  { section: "tasks", labelKey: "nav.tasks", icon: IconListCheck },
-  { section: "bilibili", labelKey: "nav.bilibili", icon: IconBrandBilibili },
-  { section: "network", labelKey: "nav.network", icon: IconWorldDownload },
-  { section: "media", labelKey: "nav.media", icon: IconMovie },
-  { section: "music", labelKey: "nav.music", icon: IconMusic }
+  { section: "tasks", labelKey: "nav.tasks", icon: Stack },
+  { section: "bilibili", labelKey: "nav.bilibili", icon: TelevisionSimple },
+  { section: "network", labelKey: "nav.network", icon: Globe },
+  { section: "media", labelKey: "nav.media", icon: FilmSlate },
+  { section: "music", labelKey: "nav.music", icon: MusicNotes }
 ] as const satisfies readonly L1NavigationItem[];
 
 export const SIDEBAR_GROUPS = [

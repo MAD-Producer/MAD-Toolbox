@@ -1,11 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { toast } from "sonner";
-import {
-  IconAlertTriangleFilled,
-  IconCircleCheckFilled,
-  IconCircleXFilled,
-  IconInfoCircleFilled
-} from "@tabler/icons-react";
+import { Warning, CheckCircle, XCircle, Info } from "@phosphor-icons/react";
 
 /**
  * 通知适配层：对外保持既有 `notifications.show({ color, title, message, ... })` API，
@@ -56,10 +51,10 @@ const ICON_COLOR_BY_TYPE: Record<NotificationType, CSSProperties> = {
 };
 
 const ICON_BY_TYPE: Record<NotificationType, ReactNode> = {
-  success: <IconCircleCheckFilled size={20} style={ICON_COLOR_BY_TYPE.success} />,
-  warning: <IconAlertTriangleFilled size={20} style={ICON_COLOR_BY_TYPE.warning} />,
-  error: <IconCircleXFilled size={20} style={ICON_COLOR_BY_TYPE.error} />,
-  info: <IconInfoCircleFilled size={20} style={ICON_COLOR_BY_TYPE.info} />
+  success: <CheckCircle size={20} weight="fill" style={ICON_COLOR_BY_TYPE.success} />,
+  warning: <Warning size={20} weight="fill" style={ICON_COLOR_BY_TYPE.warning} />,
+  error: <XCircle size={20} weight="fill" style={ICON_COLOR_BY_TYPE.error} />,
+  info: <Info size={20} weight="fill" style={ICON_COLOR_BY_TYPE.info} />
 };
 
 const BORDER_COLOR_BY_TYPE: Record<NotificationType, string> = {

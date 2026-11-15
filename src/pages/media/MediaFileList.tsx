@@ -1,4 +1,4 @@
-import { IconFile, IconX } from "@tabler/icons-react";
+import { File, X } from "@phosphor-icons/react";
 import { memo, useRef } from "react";
 import { IconButton } from "../../components/ui/icon-button";
 import { ScrollArea } from "../../components/ui/scroll-area";
@@ -51,7 +51,7 @@ export const MediaFileList = memo(function MediaFileList({
           const dir = parentDir(path);
           return (
             <li key={path} className="flex items-center gap-2">
-              <IconFile size={16} stroke={1.8} className="shrink-0 text-muted-foreground" />
+              <File size={16} className="shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate text-sm">
                 <span className="font-medium">{name}</span>
                 {dir && <span className="text-xs text-muted-foreground"> {dir}</span>}
@@ -67,7 +67,7 @@ export const MediaFileList = memo(function MediaFileList({
                 className="text-muted-foreground"
                 onClick={() => handleRemove(path, index)}
               >
-                <IconX size={16} stroke={1.8} />
+                <X size={16} />
               </IconButton>
             </li>
           );

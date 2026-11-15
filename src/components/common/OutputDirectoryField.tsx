@@ -1,4 +1,4 @@
-import { IconArrowBackUp, IconFolderOpen } from "@tabler/icons-react";
+import { ArrowCounterClockwise, FolderOpen } from "@phosphor-icons/react";
 import { t } from "../../locale";
 import { IconButton } from "../ui/icon-button";
 import { Input } from "../ui/input";
@@ -45,7 +45,7 @@ export function OutputDirectoryField({
                 });
               }}
             >
-              <IconArrowBackUp size={16} stroke={1.8} />
+              <ArrowCounterClockwise size={16} />
             </IconButton>
           </span>
         </Tooltip>
@@ -59,7 +59,7 @@ export function OutputDirectoryField({
             disabled={disabled}
             onClick={() => void onBrowse()}
           >
-            <IconFolderOpen size={16} stroke={1.8} />
+            <FolderOpen size={16} />
           </IconButton>
         </span>
       </Tooltip>

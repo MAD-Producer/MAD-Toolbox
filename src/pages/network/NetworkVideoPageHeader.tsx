@@ -1,4 +1,4 @@
-import { IconInfoCircle, IconListDetails, IconPlayerPlay } from "@tabler/icons-react";
+import { Info, ListBullets, Play } from "@phosphor-icons/react";
 import { DependencyMissingBadge } from "../../components/common/DependencyMissingBadge";
 import { PageToolbar } from "../../components/common/PageToolbar";
 import { Button } from "../../components/ui/button";
@@ -36,7 +36,7 @@ export function NetworkVideoPageHeader({
     <Button
       size="sm"
       className="h-8 gap-1.5"
-      leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+      leftSection={<Play size={16} />}
       loading={submitting}
       disabled={submitDisabled}
       onClick={onSubmit}
@@ -58,7 +58,7 @@ export function NetworkVideoPageHeader({
             disabled={probeDisabled}
             onClick={() => void onProbe("formats")}
           >
-            <IconListDetails size={16} stroke={1.8} />
+            <ListBullets size={16} />
           </IconButton>
         </span>
       </Tooltip>
@@ -72,7 +72,7 @@ export function NetworkVideoPageHeader({
             disabled={probeDisabled}
             onClick={() => void onProbe("metadata")}
           >
-            <IconInfoCircle size={16} stroke={1.8} />
+            <Info size={16} />
           </IconButton>
         </span>
       </Tooltip>

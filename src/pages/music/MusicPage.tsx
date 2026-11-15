@@ -1,4 +1,4 @@
-import { IconAdjustmentsHorizontal, IconAlertTriangle, IconListDetails, IconLoader2 } from "@tabler/icons-react";
+import { SlidersHorizontal, Warning, ListBullets, CircleNotch } from "@phosphor-icons/react";
 import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -311,12 +311,12 @@ export function MusicPage({
   return (
     <div className="flex min-h-full flex-col gap-4 p-5">
       {active && (
-          <MusicPageHeader
-            mode={form.mode}
-            runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
-            runDisabled={runDisabled}
-            runDisabledReason={runDisabledReason}
-            onRun={() => void run()}
+        <MusicPageHeader
+          mode={form.mode}
+          runLoading={form.mode === "search" ? sessionPhase === "starting" : taskSubmitting}
+          runDisabled={runDisabled}
+          runDisabledReason={runDisabledReason}
+          onRun={() => void run()}
           searching={sessionPhase === "searching" || sessionPhase === "canceling"}
           stopping={sessionPhase === "canceling"}
           onStopSearch={() => void stopSearch()}
@@ -349,7 +349,7 @@ export function MusicPage({
       </SettingsSection>
       <MusicSourcePicker sources={form.sources} onChange={(sources) => updateForm({ sources })} />
       <SettingsSection
-        icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
+        icon={<SlidersHorizontal size={20} />}
         title={t("music.advanced.title")}
         // 渲染期派生：配置出错时高级区强制展开——错误详情指向的字段藏在里面，
         // 不能让用户自己找路（原先用 Effect 观察 prepared.error 再 setState）
@@ -373,7 +373,7 @@ export function MusicPage({
           role="alert"
           className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5"
         >
-          <IconAlertTriangle size={16} stroke={1.8} className="mt-0.5 shrink-0 text-destructive" />
+          <Warning size={16} className="mt-0.5 shrink-0 text-destructive" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-destructive">{t("music.errorTitle")}</p>
             <p className="mt-0.5 text-sm break-words text-foreground">{displayedError}</p>
@@ -382,7 +382,7 @@ export function MusicPage({
       ) : null}
 
       <SettingsSection
-        icon={<IconListDetails size={20} stroke={1.8} />}
+        icon={<ListBullets size={20} />}
         title={t("music.results.title")}
         action={
           searchResponse ? (
@@ -409,7 +409,7 @@ export function MusicPage({
           />
         ) : isSearchBusy(sessionPhase) ? (
           <div className="flex items-center justify-center gap-2 py-6">
-            <IconLoader2 size={16} stroke={1.7} className="animate-spin text-muted-foreground" />
+            <CircleNotch size={16} className="animate-spin text-muted-foreground" />
             <span className="text-sm text-muted-foreground">{t("music.searchingHint")}</span>
           </div>
         ) : (

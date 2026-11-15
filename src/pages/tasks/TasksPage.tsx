@@ -1,11 +1,11 @@
 import {
-  IconActivity,
-  IconAlertTriangle,
-  IconCalendarEvent,
-  IconCircleCheck,
-  IconHistory,
-  IconTrash
-} from "@tabler/icons-react";
+  Pulse,
+  Warning,
+  Calendar,
+  CheckCircle,
+  ClockCounterClockwise,
+  Trash
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { notifications } from "../../lib/notifications";
@@ -175,10 +175,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
   const handleClearHistory = () => {
     if (!clearArmed) {
       setClearArmed(true);
-      clearTimer.current = window.setTimeout(
-        () => setClearArmed(false),
-        CLEAR_CONFIRM_MS
-      );
+      clearTimer.current = window.setTimeout(() => setClearArmed(false), CLEAR_CONFIRM_MS);
       return;
     }
     disarmClear();
@@ -213,19 +210,19 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-3 items-stretch gap-4">
               <StatTile
-                icon={<IconActivity size={16} stroke={1.8} />}
+                icon={<Pulse size={16} />}
                 label={t("tasks.stat.active")}
                 value={hero.active}
                 color="primary"
               />
               <StatTile
-                icon={<IconAlertTriangle size={16} stroke={1.8} />}
+                icon={<Warning size={16} />}
                 label={t("tasks.status.interrupted")}
                 value={hero.interrupted}
                 color="warning"
               />
               <StatTile
-                icon={<IconCircleCheck size={16} stroke={1.8} />}
+                icon={<CheckCircle size={16} />}
                 label={t("tasks.stat.finished")}
                 value={hero.finished}
                 color="muted"
@@ -251,7 +248,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
           <>
             {today.length > 0 && (
               <SettingsSection
-                icon={<IconCalendarEvent size={20} stroke={1.8} />}
+                icon={<Calendar size={20} />}
                 title={t("tasks.today")}
                 action={<Badge>{today.length}</Badge>}
                 opened={todayOpen}
@@ -262,7 +259,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
             )}
             {history.length > 0 && (
               <SettingsSection
-                icon={<IconHistory size={20} stroke={1.8} />}
+                icon={<ClockCounterClockwise size={20} />}
                 title={t("tasks.history")}
                 action={
                   <>
@@ -282,7 +279,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
                           size="sm"
                           variant="ghost"
                           className="h-8 gap-1.5 px-2 text-xs text-destructive hover:bg-destructive/10"
-                          leftSection={<IconTrash size={14} stroke={1.8} />}
+                          leftSection={<Trash size={14} />}
                           onClick={handleClearHistory}
                         >
                           {t("tasks.clearHistory")}

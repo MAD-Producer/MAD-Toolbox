@@ -1,5 +1,13 @@
-import { IconDownload } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { DownloadSimple } from "@phosphor-icons/react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction
+} from "react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -108,9 +116,7 @@ export function MusicSearchResults({
 
   const toggleFormat = (format: string) => {
     setFormats((current) =>
-      current.includes(format)
-        ? current.filter((value) => value !== format)
-        : [...current, format]
+      current.includes(format) ? current.filter((value) => value !== format) : [...current, format]
     );
   };
 
@@ -189,7 +195,7 @@ export function MusicSearchResults({
           <Button
             size="sm"
             className="h-8 gap-1.5 px-2 text-xs"
-            leftSection={<IconDownload size={14} stroke={1.8} />}
+            leftSection={<DownloadSimple size={14} />}
             disabled={!selected.length || taskSubmitting || sessionPhase !== "ready"}
             loading={taskSubmitting}
             onClick={onDownload}

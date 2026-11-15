@@ -1,4 +1,4 @@
-import { IconEye, IconEyeOff } from "@tabler/icons-react";
+import { Eye, EyeSlash } from "@phosphor-icons/react";
 import { useState, type ComponentPropsWithRef } from "react";
 import { cn } from "../../lib/cn";
 import { t } from "../../locale";
@@ -23,7 +23,7 @@ export function PasswordInput({ className, ...props }: PasswordInputProps) {
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
         )}
       >
-        {visible ? <IconEyeOff size={16} stroke={1.7} /> : <IconEye size={16} stroke={1.7} />}
+        {visible ? <EyeSlash size={16} /> : <Eye size={16} />}
       </button>
     </div>
   );

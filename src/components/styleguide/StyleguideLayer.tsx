@@ -1,4 +1,4 @@
-import { IconInfoCircle, IconMoon, IconSettings, IconSun, IconX } from "@tabler/icons-react";
+import { Info, Moon, Gear, Sun, X } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useColorScheme } from "../../lib/theme";
 import { cn } from "../../lib/cn";
@@ -103,18 +103,12 @@ export default function StyleguideLayer() {
             variant="secondary"
             size="sm"
             onClick={toggleTheme}
-            leftSection={
-              resolvedColorScheme === "dark" ? (
-                <IconSun size={16} stroke={1.7} />
-              ) : (
-                <IconMoon size={16} stroke={1.7} />
-              )
-            }
+            leftSection={resolvedColorScheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           >
             {resolvedColorScheme === "dark" ? "切换到浅色" : "切换到深色"}
           </Button>
           <IconButton label="关闭样式指南" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-            <IconX size={16} stroke={1.7} />
+            <X size={16} />
           </IconButton>
         </div>
       </div>
@@ -158,7 +152,7 @@ export default function StyleguideLayer() {
                   </Button>
                 ))}
                 <Button variant={variant} size="icon" aria-label="设置">
-                  <IconSettings size={16} stroke={1.7} />
+                  <Gear size={16} />
                 </Button>
                 <Button variant={variant} loading>
                   加载中
@@ -175,25 +169,25 @@ export default function StyleguideLayer() {
         <Section title="IconButton">
           <div className="flex flex-wrap items-center gap-3">
             <IconButton label="设置">
-              <IconSettings size={16} stroke={1.7} />
+              <Gear size={16} />
             </IconButton>
             <IconButton label="设置（激活态）" active>
-              <IconSettings size={16} stroke={1.7} />
+              <Gear size={16} />
             </IconButton>
             <IconButton label="幽灵按钮" variant="ghost">
-              <IconInfoCircle size={16} stroke={1.7} />
+              <Info size={16} />
             </IconButton>
             <IconButton label="主色按钮" variant="primary">
-              <IconMoon size={16} stroke={1.7} />
+              <Moon size={16} />
             </IconButton>
             <IconButton label="描边按钮" variant="outline">
-              <IconSun size={16} stroke={1.7} />
+              <Sun size={16} />
             </IconButton>
             <IconButton label="小尺寸" size="sm">
-              <IconSettings size={16} stroke={1.7} />
+              <Gear size={16} />
             </IconButton>
             <IconButton label="禁用" disabled>
-              <IconSettings size={16} stroke={1.7} />
+              <Gear size={16} />
             </IconButton>
           </div>
         </Section>
@@ -230,7 +224,7 @@ export default function StyleguideLayer() {
             </Tooltip>
             <Tooltip label="图标按钮同样有提示">
               <IconButton label="信息" variant="ghost">
-                <IconInfoCircle size={16} stroke={1.7} />
+                <Info size={16} />
               </IconButton>
             </Tooltip>
           </div>
@@ -336,7 +330,7 @@ export default function StyleguideLayer() {
                 value={quality}
                 onChange={setQuality}
                 options={[
-                  { value: "high", label: "高清", icon: <IconSun size={15} stroke={1.7} /> },
+                  { value: "high", label: "高清", icon: <Sun size={15} /> },
                   { value: "low", label: "流畅" }
                 ]}
               />

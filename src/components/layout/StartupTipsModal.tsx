@@ -1,5 +1,5 @@
 import useEmblaCarousel from "embla-carousel-react";
-import { IconChevronLeft, IconChevronRight, IconFileMusic, IconNetwork, IconQrcode } from "@tabler/icons-react";
+import { CaretLeft, CaretRight, FileAudio, GlobeSimple, QrCode } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -62,7 +62,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
             <div className="min-w-0 flex-[0_0_100%] overflow-y-auto">
               <div className="flex flex-col gap-3 px-6 pt-2">
                 <div className="flex items-center gap-1.5">
-                  <IconQrcode size={18} stroke={1.8} className="text-primary" />
+                  <QrCode size={18} className="text-primary" />
                   <p className="font-semibold">{t("startup.bilibiliQuality.title")}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">{t("startup.bilibiliQuality.p1")}</p>
@@ -73,7 +73,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
             <div className="min-w-0 flex-[0_0_100%] overflow-y-auto">
               <div className="flex flex-col gap-3 px-6 pt-2">
                 <div className="flex items-center gap-1.5">
-                  <IconNetwork size={18} stroke={1.8} className="text-primary" />
+                  <GlobeSimple size={18} className="text-primary" />
                   <p className="font-semibold">{t("startup.proxy.title")}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">{t("startup.proxy.p1")}</p>
@@ -84,7 +84,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
             <div className="min-w-0 flex-[0_0_100%] overflow-y-auto">
               <div className="flex flex-col gap-3 px-6 pt-2">
                 <div className="flex items-center gap-1.5">
-                  <IconFileMusic size={18} stroke={1.8} className="text-primary" />
+                  <FileAudio size={18} className="text-primary" />
                   <p className="font-semibold">{t("startup.flac.title")}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">{t("startup.flac.p1")}</p>
@@ -101,7 +101,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
             disabled={slide === 0}
             onClick={() => emblaApi?.scrollPrev()}
           >
-            <IconChevronLeft size={18} stroke={1.8} />
+            <CaretLeft size={18} />
           </IconButton>
           {slide === TIPS_LAST_SLIDE ? (
             <Button variant="secondary" className="h-8" onClick={dismissForever}>
@@ -117,7 +117,7 @@ export function StartupTipsModal({ opened, onClose }: StartupTipsModalProps) {
             disabled={slide === TIPS_LAST_SLIDE}
             onClick={() => emblaApi?.scrollNext()}
           >
-            <IconChevronRight size={18} stroke={1.8} />
+            <CaretRight size={18} />
           </IconButton>
         </div>
       </DialogContent>

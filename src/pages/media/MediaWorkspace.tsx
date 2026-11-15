@@ -1,4 +1,4 @@
-import { IconAdjustmentsHorizontal, IconInfoCircle, IconPlayerPlay } from "@tabler/icons-react";
+import { SlidersHorizontal, Info, Play } from "@phosphor-icons/react";
 import { useId, useRef } from "react";
 import type { MediaPageId } from "../../app/route";
 import { MEDIA_L2_NAVIGATION } from "../../app/navigation";
@@ -77,7 +77,7 @@ export function MediaWorkspace({
                 disabled={!workspace.firstInput}
                 onClick={() => void workspace.inspectFirst()}
               >
-                <IconInfoCircle size={16} stroke={1.8} />
+                <Info size={16} />
               </IconButton>
             </span>
           </Tooltip>
@@ -85,7 +85,7 @@ export function MediaWorkspace({
             <Button
               size="sm"
               className="h-8 gap-1.5"
-              leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+              leftSection={<Play size={16} />}
               onClick={() => void workspace.submit()}
               loading={workspace.submitting}
               disabled={workspace.expertMode ? false : workspace.inputs.length === 0}
@@ -98,7 +98,7 @@ export function MediaWorkspace({
                 <Button
                   size="sm"
                   className="h-8 gap-1.5"
-                  leftSection={<IconPlayerPlay size={16} stroke={1.8} />}
+                  leftSection={<Play size={16} />}
                   onClick={() => void workspace.submit()}
                   loading={workspace.submitting}
                   disabled
@@ -204,7 +204,7 @@ export function MediaWorkspace({
         <Card padding="md">{commandPanel}</Card>
       ) : (
         <SettingsSection
-          icon={<IconAdjustmentsHorizontal size={20} stroke={1.8} />}
+          icon={<SlidersHorizontal size={20} />}
           title={t("media.advancedTitle")}
           action={
             workspace.expertMode ? (

@@ -1,4 +1,4 @@
-import { IconChevronRight } from "@tabler/icons-react";
+import { CaretRight } from "@phosphor-icons/react";
 import { useId, type ReactNode } from "react";
 import { Card } from "../ui/card";
 import { Collapse } from "../ui/collapse";
@@ -32,9 +32,9 @@ export function CollapsibleSection({
           aria-controls={contentId}
           className="group flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
         >
-          <IconChevronRight
+          <CaretRight
             size={16}
-            stroke={1.8}
+
             aria-hidden="true"
             className={
               opened
