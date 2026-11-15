@@ -26,6 +26,7 @@ export function deleteTasks(taskIds: string[]): Promise<string[]> {
   return invoke<string[]>("task_delete", { taskIds });
 }
 
-export function exportTaskDiagnostics(taskId: string, targetPath: string): Promise<void> {
-  return invoke<void>("task_export_diagnostics", { taskId, targetPath });
+/** Rust 侧返回导出的诊断文件路径，当前调用方不消费 */
+export function exportTaskDiagnostics(taskId: string, targetPath: string): Promise<string> {
+  return invoke<string>("task_export_diagnostics", { taskId, targetPath });
 }

@@ -1,7 +1,8 @@
-import { Alert, SegmentedControl, Stack } from "@mantine/core";
-import { useEffect, useState } from "react";
+import { IconAlertTriangle } from "@tabler/icons-react";
+import { useState } from "react";
 import { notifications } from "../../lib/notifications";
 import { DependencyStatusPanel } from "../../components/common/DependencyStatusPanel";
+import { Segmented } from "../../components/ui/segmented";
 import type {
   DependencyDownloadProgress,
   DependencyStatus,
@@ -43,19 +44,19 @@ export function DependenciesSettingsPage({
   const [preference, setPreference] = useState(settings.dependencyPreference);
   const [changingPreference, setChangingPreference] = useState(false);
 
-  useEffect(() => {
-    if (!changingPreference) setPreference(settings.dependencyPreference);
-  }, [settings.dependencyPreference, changingPreference]);
-
+  // 乐观更新 + 失败就地回滚（原先靠 Effect 在 changingPreference 复位时把
+  // settings.dependencyPreference 镜像回本地，保存路径是唯一写入方，等价且更直接）
   const changePreference = async (value: string) => {
     const nextPreference = value as AppSettings["dependencyPreference"];
     if (changingPreference || nextPreference === preference) return;
+    const previous = preference;
     setPreference(nextPreference);
     setChangingPreference(true);
     try {
       await onSave(nextPreference);
       onRefresh();
     } catch (error) {
+      setPreference(previous);
       notifications.show({
         message: t("settings.saveFailed", { error: String(error) }),
         color: "red"
@@ -81,18 +82,18 @@ export function DependenciesSettingsPage({
   };
 
   return (
-    <Stack gap="lg">
+    <div className="flex flex-col gap-4">
       <SettingsSectionCard>
         <SettingsRow
           title={t("settings.deps.sourceTitle")}
           description={t("settings.deps.sourceHint")}
         >
-          <SegmentedControl
-            radius="md"
+          <Segmented
+            aria-label={t("settings.deps.sourceTitle")}
             value={preference}
             disabled={changingPreference}
             onChange={(value) => void changePreference(value)}
-            data={[
+            options={[
               { value: "managed", label: t("settings.deps.preferManaged") },
               {
                 value: "system",
@@ -105,9 +106,13 @@ export function DependenciesSettingsPage({
         </SettingsRow>
       </SettingsSectionCard>
       {mirrorError && (
-        <Alert color="yellow" title={t("deps.mirrorCheckFailed")}>
-          {mirrorError}
-        </Alert>
+        <div role="alert" className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-3.5 py-2.5">
+          <IconAlertTriangle size={16} stroke={1.8} className="mt-0.5 shrink-0 text-warning" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{t("deps.mirrorCheckFailed")}</p>
+            <p className="mt-0.5 text-xs text-foreground">{mirrorError}</p>
+          </div>
+        </div>
       )}
       <DependencyStatusPanel
         dependencies={dependencies}
@@ -119,6 +124,6 @@ export function DependenciesSettingsPage({
         queue={mirrorQueue}
         onMirrorInstall={(tools) => void onMirrorInstall(tools)}
       />
-    </Stack>
+    </div>
   );
 }

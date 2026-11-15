@@ -1,17 +1,3 @@
-import {
-  ActionIcon,
-  Button,
-  Divider,
-  Group,
-  SegmentedControl,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-  useMantineColorScheme,
-  type MantineColorScheme
-} from "@mantine/core";
-import { notifications } from "../../lib/notifications";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   IconArrowBackUp,
@@ -25,9 +11,17 @@ import {
   IconTrash,
   IconWorld
 } from "@tabler/icons-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
+import { Button } from "../../components/ui/button";
+import { IconButton } from "../../components/ui/icon-button";
+import { Input } from "../../components/ui/input";
+import { Segmented } from "../../components/ui/segmented";
+import { Separator } from "../../components/ui/separator";
+import { Tooltip } from "../../components/ui/tooltip";
 import type { CookieFileOption } from "../../contracts/types";
+import { useColorScheme, type ColorScheme } from "../../lib/theme";
+import { notifications } from "../../lib/notifications";
 import { t, type LanguageChoice } from "../../locale";
 import type { AppSettings, GeneralSettingsDraft } from "./api";
 import { SettingsRow, SettingsSectionCard } from "./SettingsBlocks";
@@ -38,29 +32,14 @@ interface GeneralSettingsPageProps {
   onSetLanguage: (choice: LanguageChoice) => Promise<void>;
 }
 
-const CONTROL_WIDTH = 320;
-
-function themeOptionLabel(icon: ReactNode, text: string) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      {icon}
-      {text}
-    </span>
-  );
-}
-
 export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: GeneralSettingsPageProps) {
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { colorScheme, setColorScheme } = useColorScheme();
   const [directory, setDirectory] = useState(settings.defaultOutputDirectory || "");
   const [proxy, setProxy] = useState(settings.proxy || "");
   const [saving, setSaving] = useState(false);
   const [language, setLanguage] = useState<LanguageChoice>(settings.language ?? "auto");
   const [changingLanguage, setChangingLanguage] = useState(false);
   const [cookieFiles, setCookieFiles] = useState<CookieFileOption[]>(settings.cookieFiles);
-
-  useEffect(() => {
-    if (!changingLanguage) setLanguage(settings.language);
-  }, [settings.language, changingLanguage]);
 
   const draft: GeneralSettingsDraft = {
     defaultOutputDirectory: directory.trim() || null,
@@ -80,13 +59,17 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
         cookieFile.path !== settings.cookieFiles[index]?.path
     );
 
+  // 乐观更新 + 失败就地回滚（原先靠 Effect 在 changingLanguage 复位时把
+  // settings.language 镜像回本地；语言写入路径只有这里，等价且更直接）
   const changeLanguage = async (choice: LanguageChoice) => {
     if (changingLanguage || choice === language) return;
+    const previous = language;
     setLanguage(choice);
     setChangingLanguage(true);
     try {
       await onSetLanguage(choice);
     } catch (error) {
+      setLanguage(previous);
       notifications.show({
         message: t("settings.saveFailed", { error: String(error) }),
         color: "red"
@@ -98,7 +81,7 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
 
   const save = async () => {
     if (saving || !dirty) return;
-    if (draft.cookieFiles.some((cookieFile) => !cookieFile.alias || !cookieFile.path)) {
+    if (draft.cookieFiles.some((cookieFile) => !cookieFile.alias.trim() || !cookieFile.path.trim())) {
       notifications.show({ message: t("settings.general.cookieFilesIncomplete"), color: "yellow" });
       return;
     }
@@ -135,68 +118,49 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
   };
 
   return (
-    <Stack gap={0} style={{ flex: 1, minHeight: 0 }}>
-      <Stack
-        className="general-settings-scroll"
-        gap="lg"
-        pb="lg"
-        style={{ flex: 1, minHeight: 0, overflow: "auto" }}
-      >
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="general-settings-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-auto pb-5">
         <SettingsSectionCard>
           <SettingsRow title={t("settings.general.themeTitle")}>
-            <SegmentedControl
-              w={CONTROL_WIDTH}
-              radius="md"
+            <Segmented
+              className="w-80"
+              aria-label={t("settings.general.themeTitle")}
               value={colorScheme}
-              onChange={(value) => setColorScheme(value as MantineColorScheme)}
-              data={[
+              onChange={(value) => setColorScheme(value as ColorScheme)}
+              options={[
                 {
                   value: "light",
-                  label: themeOptionLabel(
-                    <IconSun size={15} stroke={1.7} />,
-                    t("settings.general.themeLight")
-                  )
+                  icon: <IconSun size={15} stroke={1.7} />,
+                  label: t("settings.general.themeLight")
                 },
                 {
                   value: "dark",
-                  label: themeOptionLabel(
-                    <IconMoon size={15} stroke={1.7} />,
-                    t("settings.general.themeDark")
-                  )
+                  icon: <IconMoon size={15} stroke={1.7} />,
+                  label: t("settings.general.themeDark")
                 },
                 {
                   value: "auto",
-                  label: themeOptionLabel(
-                    <IconDeviceDesktop size={15} stroke={1.7} />,
-                    t("settings.general.themeAuto")
-                  )
+                  icon: <IconDeviceDesktop size={15} stroke={1.7} />,
+                  label: t("settings.general.themeAuto")
                 }
               ]}
             />
           </SettingsRow>
-          <Divider />
+          <Separator />
           <SettingsRow title={t("settings.general.languageTitle")}>
-            <SegmentedControl
-              w={CONTROL_WIDTH}
-              radius="md"
+            <Segmented
+              className="w-80"
+              aria-label={t("settings.general.languageTitle")}
               value={language}
               disabled={changingLanguage}
               onChange={(value) => void changeLanguage(value as LanguageChoice)}
-              data={[
-                {
-                  value: "zh",
-                  label: themeOptionLabel(<IconLanguage size={15} stroke={1.7} />, "简体中文")
-                },
-                {
-                  value: "en",
-                  label: themeOptionLabel(<IconWorld size={15} stroke={1.7} />, "English")
-                },
+              options={[
+                { value: "zh", icon: <IconLanguage size={15} stroke={1.7} />, label: "简体中文" },
+                { value: "en", icon: <IconWorld size={15} stroke={1.7} />, label: "English" },
                 {
                   value: "auto",
-                  label: themeOptionLabel(
-                    <IconDeviceDesktop size={15} stroke={1.7} />,
-                    t("settings.general.languageAuto")
-                  )
+                  icon: <IconDeviceDesktop size={15} stroke={1.7} />,
+                  label: t("settings.general.languageAuto")
                 }
               ]}
             />
@@ -209,47 +173,53 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
             description={t("settings.general.outputDirectoryHint")}
           >
             <FieldWithActions
-              w={360}
+              className="w-[360px]"
               actions={
                 <>
                   <Tooltip label={t("common.restoreDefault")}>
-                    <ActionIcon
-                      variant="default"
-                      size="input-sm"
-                      disabled={directory === (settings.defaultOutputDirectory ?? "")}
-                      aria-label={t("common.restoreDefault")}
-                      onClick={() => setDirectory(settings.defaultOutputDirectory ?? "")}
-                    >
-                      <IconArrowBackUp size={16} stroke={1.7} />
-                    </ActionIcon>
+                    <span className="inline-flex">
+                      <IconButton
+                        label={t("common.restoreDefault")}
+                        variant="outline"
+                        size="sm"
+                        disabled={directory === (settings.defaultOutputDirectory ?? "")}
+                        onClick={() => setDirectory(settings.defaultOutputDirectory ?? "")}
+                      >
+                        <IconArrowBackUp size={16} stroke={1.8} />
+                      </IconButton>
+                    </span>
                   </Tooltip>
-                  <Tooltip label={t("common.selectDirectory")}>
-                    <ActionIcon
-                      variant="default"
-                      size="input-sm"
-                      aria-label={t("settings.general.selectOutputDirectory")}
-                      onClick={() => void pickDirectory()}
-                    >
-                      <IconFolderOpen size={16} stroke={1.7} />
-                    </ActionIcon>
+                  <Tooltip label={t("settings.general.selectOutputDirectory")}>
+                    <span className="inline-flex">
+                      <IconButton
+                        label={t("settings.general.selectOutputDirectory")}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void pickDirectory()}
+                      >
+                        <IconFolderOpen size={16} stroke={1.8} />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                 </>
               }
             >
-              <TextInput
+              <Input
+                aria-label={t("settings.general.outputDirectoryTitle")}
                 placeholder={t("settings.general.outputDirectoryPlaceholder")}
                 value={directory}
                 onChange={(event) => setDirectory(event.currentTarget.value)}
               />
             </FieldWithActions>
           </SettingsRow>
-          <Divider />
+          <Separator />
           <SettingsRow
             title={t("settings.general.proxyTitle")}
             description={t("settings.general.proxyHint")}
           >
-            <TextInput
-              w={360}
+            <Input
+              className="w-[360px]"
+              aria-label={t("settings.general.proxyTitle")}
               placeholder="http://127.0.0.1:7890"
               value={proxy}
               onChange={(event) => setProxy(event.currentTarget.value)}
@@ -258,28 +228,27 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
         </SettingsSectionCard>
 
         <SettingsSectionCard>
-          <Stack gap="md" px="lg" py="md">
-            <Group justify="space-between" align="center" wrap="nowrap">
-              <Stack gap={2} style={{ minWidth: 0 }}>
-                <Text size="sm" fw={500}>
-                  {t("settings.general.cookieFilesTitle")}
-                </Text>
-                <Text size="xs" c="dimmed">
+          <div className="flex flex-col gap-4 px-5 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t("settings.general.cookieFilesTitle")}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {t("settings.general.cookieFilesHint")}
-                </Text>
-              </Stack>
+                </p>
+              </div>
               <Button
-                variant="default"
-                leftSection={<IconPlus size={15} stroke={1.7} />}
+                variant="outline"
+                className="h-8 shrink-0 gap-1.5 px-2 text-xs"
+                leftSection={<IconPlus size={14} stroke={1.8} />}
                 onClick={() => setCookieFiles((current) => [...current, { alias: "", path: "" }])}
               >
                 {t("settings.general.cookieFilesAdd")}
               </Button>
-            </Group>
+            </div>
             {cookieFiles.map((cookieFile, index) => (
-              <Group key={index} gap="sm" wrap="nowrap" align="center">
-                <TextInput
-                  w={160}
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  className="w-40 shrink-0"
                   aria-label={t("settings.general.cookieFilesAlias")}
                   placeholder={t("settings.general.cookieFilesAlias")}
                   value={cookieFile.alias}
@@ -288,38 +257,42 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
                   }
                 />
                 <FieldWithActions
-                  style={{ flex: 1, minWidth: 0 }}
+                  className="min-w-0 flex-1"
                   actions={
                     <>
                       <Tooltip label={t("common.selectCookieFile")}>
-                        <ActionIcon
-                          variant="default"
-                          size="input-sm"
-                          aria-label={t("common.selectCookieFile")}
-                          onClick={() => void pickCookieFile(index)}
-                        >
-                          <IconFolderOpen size={16} stroke={1.7} />
-                        </ActionIcon>
+                        <span className="inline-flex">
+                          <IconButton
+                            label={t("common.selectCookieFile")}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void pickCookieFile(index)}
+                          >
+                            <IconFolderOpen size={16} stroke={1.8} />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       <Tooltip label={t("settings.general.cookieFilesRemove")}>
-                        <ActionIcon
-                          variant="default"
-                          size="input-sm"
-                          color="red"
-                          aria-label={t("settings.general.cookieFilesRemove")}
-                          onClick={() =>
-                            setCookieFiles((current) =>
-                              current.filter((_, itemIndex) => itemIndex !== index)
-                            )
-                          }
-                        >
-                          <IconTrash size={16} stroke={1.7} />
-                        </ActionIcon>
+                        <span className="inline-flex">
+                          <IconButton
+                            label={t("settings.general.cookieFilesRemove")}
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10"
+                            onClick={() =>
+                              setCookieFiles((current) =>
+                                current.filter((_, itemIndex) => itemIndex !== index)
+                              )
+                            }
+                          >
+                            <IconTrash size={16} stroke={1.8} />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     </>
                   }
                 >
-                  <TextInput
+                  <Input
                     aria-label={t("settings.general.cookieFilesPath")}
                     placeholder={t("settings.general.cookieFilesPath")}
                     value={cookieFile.path}
@@ -328,27 +301,23 @@ export function GeneralSettingsPage({ settings, onSave, onSetLanguage }: General
                     }
                   />
                 </FieldWithActions>
-              </Group>
+              </div>
             ))}
-          </Stack>
+          </div>
         </SettingsSectionCard>
-      </Stack>
+      </div>
       {(dirty || saving) && (
-        <Group
-          component="footer"
-          justify="flex-end"
-          h="calc(var(--mantine-spacing-xl) * 2)"
-          style={{ flexShrink: 0 }}
-        >
+        <footer className="flex shrink-0 justify-end py-4">
           <Button
-            leftSection={<IconBookDownload size={15} />}
+            className="gap-1.5"
+            leftSection={<IconBookDownload size={16} stroke={1.8} />}
             loading={saving}
             onClick={() => void save()}
           >
             {t("settings.general.save")}
           </Button>
-        </Group>
+        </footer>
       )}
-    </Stack>
+    </div>
   );
 }

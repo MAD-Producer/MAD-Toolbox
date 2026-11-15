@@ -1,14 +1,3 @@
-import {
-  ActionIcon,
-  Button,
-  Box,
-  Divider,
-  Group,
-  Image,
-  Stack,
-  Text,
-  Tooltip
-} from "@mantine/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   IconBrandGithub,
@@ -25,6 +14,10 @@ import frameneoLogo from "../../../assets/FRAMENEO_logo.avif";
 import appIcon from "../../assets/logo.png";
 import packageInfo from "../../../package.json";
 import { FieldWithActions } from "../../components/common/FieldWithActions";
+import { Button } from "../../components/ui/button";
+import { IconButton } from "../../components/ui/icon-button";
+import { Separator } from "../../components/ui/separator";
+import { Tooltip } from "../../components/ui/tooltip";
 import { t, type TranslationKey } from "../../locale";
 import { checkForUpdate, installUpdate } from "./api";
 import { SettingsRow, SettingsSectionCard } from "./SettingsBlocks";
@@ -92,35 +85,31 @@ function updateTooltipLabel(
 function AboutListRow({ primary, secondary, leading, href }: AboutListRowProps) {
   return (
     <FieldWithActions
-      px="lg"
-      py="sm"
+      className="px-5 py-3"
       actions={
         href && (
-          <ActionIcon
-            variant="transparent"
-            color="gray"
-            className="about-action"
-            aria-label={t("settings.about.openLink", { name: primary })}
-            onClick={() => void openUrl(href)}
-          >
-            <IconExternalLink size={16} stroke={1.7} />
-          </ActionIcon>
+          <Tooltip label={t("settings.about.openLink", { name: primary })}>
+            <span className="inline-flex">
+              <IconButton
+                label={t("settings.about.openLink", { name: primary })}
+                variant="ghost"
+                size="sm"
+                onClick={() => void openUrl(href)}
+              >
+                <IconExternalLink size={16} stroke={1.8} />
+              </IconButton>
+            </span>
+          </Tooltip>
         )
       }
     >
-      <Group gap="sm" wrap="nowrap">
+      <div className="flex items-center gap-3">
         {leading}
-        <div style={{ minWidth: 0 }}>
-          <Text size="sm" fw={500}>
-            {primary}
-          </Text>
-          {secondary && (
-            <Text size="xs" c="dimmed">
-              {secondary}
-            </Text>
-          )}
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{primary}</p>
+          {secondary && <p className="text-xs text-muted-foreground">{secondary}</p>}
         </div>
-      </Group>
+      </div>
     </FieldWithActions>
   );
 }
@@ -168,140 +157,121 @@ export function AboutSettingsPage() {
   }
 
   return (
-    <Stack gap="lg">
+    <div className="flex flex-col gap-4">
       <SettingsSectionCard title={t("settings.about.title")}>
-        <Box p="lg">
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Group gap="lg" wrap="nowrap" align="center">
-              <Image src={appIcon} alt="MAD Toolbox" h={64} w="auto" radius="sm" flex="0 0 auto" />
-              <Stack gap={8}>
-                <Text className="app-title">MAD Toolbox</Text>
-                <Text size="sm" fw={600}>
-                  v{packageInfo.version}
-                </Text>
-              </Stack>
-            </Group>
-            <Group gap="sm" wrap="nowrap">
+        <div className="p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-5">
+              <img src={appIcon} alt="MAD Toolbox" className="h-16 w-auto shrink-0 rounded-sm" />
+              <div className="flex flex-col gap-2">
+                <span className="app-title">MAD Toolbox</span>
+                <p className="text-sm font-semibold">v{packageInfo.version}</p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
               <Button
-                variant="transparent"
-                color="gray"
-                className="about-action"
-                leftSection={<IconWorld size={16} />}
+                variant="ghost"
+                className="gap-1.5"
+                leftSection={<IconWorld size={16} stroke={1.8} />}
                 onClick={() => void openUrl(TOOLBOX_URL)}
               >
                 {t("settings.about.website")}
               </Button>
               <Button
-                variant="transparent"
-                color="gray"
-                className="about-action"
-                leftSection={<IconBrandGithub size={16} />}
+                variant="ghost"
+                className="gap-1.5"
+                leftSection={<IconBrandGithub size={16} stroke={1.8} />}
                 onClick={() => void openUrl(GITHUB_URL)}
               >
                 GitHub
               </Button>
               {update ? (
-                <Tooltip
-                  label={updateTooltipLabel(update, downloading, progress)}
-                  opened={downloading || undefined}
-                  position="bottom"
-                >
-                  <ActionIcon
-                    size="input-sm"
-                    variant="filled"
-                    color="green"
-                    loading={downloading}
-                    aria-label={t("settings.about.updateToVersion", {
-                      version: update.latestVersion
-                    })}
-                    onClick={() => void handleDownloadUpdate()}
-                  >
-                    <IconDownload size={16} stroke={1.7} />
-                  </ActionIcon>
+                <Tooltip label={updateTooltipLabel(update, downloading, progress)}>
+                  <span className="inline-flex">
+                    <IconButton
+                      label={
+                        downloading
+                          ? progress !== null
+                            ? t("settings.about.downloadingProgress", { percent: progress })
+                            : t("settings.about.downloading")
+                          : t("settings.about.updateToVersion", { version: update.latestVersion })
+                      }
+                      variant="primary"
+                      size="sm"
+                      loading={downloading}
+                      onClick={() => void handleDownloadUpdate()}
+                    >
+                      <IconDownload size={16} stroke={1.8} />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               ) : (
                 <Button
-                  leftSection={<IconRefresh size={16} />}
+                  className="gap-1.5"
+                  leftSection={<IconRefresh size={16} stroke={1.8} />}
                   loading={checking}
                   onClick={() => void handleCheckUpdate()}
                 >
                   {t("settings.about.checkUpdate")}
                 </Button>
               )}
-            </Group>
-          </Group>
-        </Box>
+            </div>
+          </div>
+        </div>
       </SettingsSectionCard>
 
       <SettingsSectionCard title={t("settings.about.team")}>
-        <Group justify="space-between" align="center" wrap="nowrap" p="lg" gap="lg">
-          <Image
+        <div className="flex items-center justify-between gap-6 p-5">
+          <img
             src={organizationLogo}
             alt="MAD Producer Studio"
-            w={480}
-            h="auto"
-            flex="0 0 auto"
-            mx="lg"
-            my="lg"
+            className="mx-5 my-5 w-[480px] max-w-full shrink-0"
           />
-          <Stack gap="xl">
+          <div className="flex shrink-0 flex-col gap-8">
             {TEAM_LINKS.map((link) => (
               <Button
                 key={link.url}
                 size="sm"
-                flex="0 0 auto"
-                fullWidth
-                variant="transparent"
-                color="gray"
-                className="about-action"
-                leftSection={<IconExternalLink size={16} stroke={1.7} />}
+                variant="ghost"
+                className="w-full gap-1.5"
+                leftSection={<IconExternalLink size={16} stroke={1.8} />}
                 onClick={() => void openUrl(link.url)}
               >
                 {t(link.nameKey)}
               </Button>
             ))}
-          </Stack>
-        </Group>
+          </div>
+        </div>
       </SettingsSectionCard>
 
       <SettingsSectionCard title={t("settings.about.specialThanks")}>
-        <Group justify="space-between" align="center" wrap="nowrap" gap="xl" px="lg" py="md">
-          <Group gap="md" wrap="nowrap" style={{ minWidth: 0 }}>
-            <Image
+        <div className="flex items-center justify-between gap-6 px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <img
               src={frameneoLogo}
               alt="FRAMENEO"
-              h={48}
-              w="auto"
-              flex="0 0 auto"
-              className="about-sponsor-logo"
+              className="about-sponsor-logo h-12 w-auto shrink-0"
             />
-            <Stack gap={2} style={{ minWidth: 0 }}>
-              <Text size="sm" fw={500}>
-                FRAMENEO
-              </Text>
-              <Text size="xs" c="dimmed">
-                {t("settings.about.credit.frameneo")}
-              </Text>
-            </Stack>
-          </Group>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">FRAMENEO</p>
+              <p className="text-xs text-muted-foreground">{t("settings.about.credit.frameneo")}</p>
+            </div>
+          </div>
           <Button
-            size="sm"
-            flex="0 0 auto"
-            variant="transparent"
-            color="gray"
-            className="about-action"
-            leftSection={<IconExternalLink size={16} stroke={1.7} />}
+            variant="ghost"
+            className="shrink-0 gap-1.5"
+            leftSection={<IconExternalLink size={16} stroke={1.8} />}
             onClick={() => void openUrl("https://www.frameneo.com/")}
           >
             {t("settings.about.frameneoWebsite")}
           </Button>
-        </Group>
+        </div>
       </SettingsSectionCard>
 
       <SettingsSectionCard title={t("settings.about.credits")}>
         {CREDITS.map((item, index) => (
           <Fragment key={item.name}>
-            {index > 0 && <Divider />}
+            {index > 0 && <Separator />}
             <AboutListRow primary={item.name} secondary={t(item.noteKey)} href={item.url} />
           </Fragment>
         ))}
@@ -312,21 +282,19 @@ export function AboutSettingsPage() {
           title={t("settings.about.copyright")}
           description="Copyright © 2026 MAD Producer Studio"
         />
-        <Divider />
+        <Separator />
         <SettingsRow title={t("settings.about.license")} description="MIT License" />
       </SettingsSectionCard>
 
-      <Stack align="center" gap="xs" mt="xl">
-        <Text fs="italic" ta="center" fz={22} lh={1.8} c="dimmed">
+      <div className="mt-8 flex flex-col items-center gap-2.5">
+        <p className="text-center text-[22px] italic leading-[1.8] text-muted-foreground">
           There are many toolboxes
           <br />
           but this one is for you, <span className="quote-hero-mark">MADer</span>
-        </Text>
+        </p>
         <span className="quote-hero-taper" />
-        <Text size="sm" c="dimmed" fw={700}>
-          MAD Producer Studio
-        </Text>
-      </Stack>
-    </Stack>
+        <p className="text-sm font-bold text-muted-foreground">MAD Producer Studio</p>
+      </div>
+    </div>
   );
 }

@@ -45,8 +45,9 @@ export function checkForUpdate(): Promise<UpdateCheck> {
   return invoke<UpdateCheck>("check_for_update");
 }
 
-export function installUpdate(): Promise<void> {
-  return invoke<void>("install_update");
+/** Rust 侧返回 Result<String, String>（更新日志/结果描述），当前调用方不消费 */
+export function installUpdate(): Promise<string> {
+  return invoke<string>("install_update");
 }
 
 export function fetchDependencyStatus(): Promise<DependencyStatus[]> {

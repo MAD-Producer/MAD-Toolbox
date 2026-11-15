@@ -1,17 +1,3 @@
-import {
-  ActionIcon,
-  Button,
-  Card,
-  Code,
-  Collapse,
-  Group,
-  Progress,
-  Stack,
-  Text,
-  Tooltip,
-  UnstyledButton
-} from "@mantine/core";
-import { notifications } from "../../lib/notifications";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
@@ -27,33 +13,92 @@ import {
   IconFolderOpen,
   IconLinkOff,
   IconLoader,
+  IconRefresh,
   IconTrash,
   IconX,
   type Icon as TablerIcon
 } from "@tabler/icons-react";
-import { memo, useState } from "react";
+import { notifications } from "../../lib/notifications";
+import { memo, useId, useState } from "react";
+import { cn } from "../../lib/cn";
 import type { TaskEnvelope, TaskStatus } from "../../contracts/types";
 import { isWindows } from "../../lib/platform";
 import { t, type TranslationKey } from "../../locale";
 import { useTasksStore } from "../../stores/tasks";
+import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
+import { Collapse } from "../../components/ui/collapse";
+import { IconButton } from "../../components/ui/icon-button";
+import { Progress } from "../../components/ui/progress";
+import { Tooltip } from "../../components/ui/tooltip";
 import { exportTaskDiagnostics } from "./api";
 
+/**
+ * 任务状态视觉元数据。Mantine 色名到语义 token 的映射：
+ * gray→muted-foreground、orange/yellow→warning、green→success、red→destructive
+ */
 const STATUS_META: Record<
   TaskStatus,
-  { labelKey: TranslationKey; color: string; icon: TablerIcon; spinning?: boolean }
+  {
+    labelKey: TranslationKey;
+    toneClass: string;
+    barClass: "primary" | "success" | "warning" | "destructive" | "muted";
+    borderClass: string;
+    icon: TablerIcon;
+    spinning?: boolean;
+  }
 > = {
-  queued: { labelKey: "tasks.status.queued", color: "gray", icon: IconClock },
-  running: { labelKey: "tasks.status.running", color: "orange", icon: IconLoader, spinning: true },
-  canceling: {
-    labelKey: "tasks.status.canceling",
-    color: "orange",
+  queued: {
+    labelKey: "tasks.status.queued",
+    toneClass: "text-muted-foreground",
+    barClass: "muted",
+    borderClass: "border-l-muted-foreground/40",
+    icon: IconClock
+  },
+  running: {
+    labelKey: "tasks.status.running",
+    toneClass: "text-warning",
+    barClass: "warning",
+    borderClass: "border-l-warning",
     icon: IconLoader,
     spinning: true
   },
-  success: { labelKey: "tasks.status.success", color: "green", icon: IconCircleCheck },
-  failed: { labelKey: "tasks.status.failed", color: "red", icon: IconCircleX },
-  canceled: { labelKey: "tasks.status.canceled", color: "gray", icon: IconCancel },
-  interrupted: { labelKey: "tasks.status.interrupted", color: "yellow", icon: IconLinkOff }
+  canceling: {
+    labelKey: "tasks.status.canceling",
+    toneClass: "text-warning",
+    barClass: "warning",
+    borderClass: "border-l-warning",
+    icon: IconLoader,
+    spinning: true
+  },
+  success: {
+    labelKey: "tasks.status.success",
+    toneClass: "text-success",
+    barClass: "success",
+    borderClass: "border-l-success",
+    icon: IconCircleCheck
+  },
+  failed: {
+    labelKey: "tasks.status.failed",
+    toneClass: "text-destructive",
+    barClass: "destructive",
+    borderClass: "border-l-destructive",
+    icon: IconCircleX
+  },
+  canceled: {
+    labelKey: "tasks.status.canceled",
+    toneClass: "text-muted-foreground",
+    barClass: "muted",
+    borderClass: "border-l-muted-foreground/40",
+    icon: IconCancel
+  },
+  interrupted: {
+    labelKey: "tasks.status.interrupted",
+    toneClass: "text-warning",
+    barClass: "warning",
+    borderClass: "border-l-warning",
+    icon: IconLinkOff
+  }
 };
 
 const FAILED_TAIL_LINES = 10;
@@ -71,8 +116,8 @@ const TERMINAL_STATUSES = new Set(["success", "failed", "canceled", "interrupted
 
 interface ProgressView {
   value: number;
-  color: string;
-  animated: boolean;
+  color: "primary" | "success" | "warning" | "destructive" | "muted";
+  indeterminate: boolean;
 }
 
 function progressView(task: TaskEnvelope): ProgressView | null {
@@ -82,15 +127,15 @@ function progressView(task: TaskEnvelope): ProgressView | null {
       return null;
     case "running":
     case "canceling":
-      return { value: last ?? 0, color: "orange", animated: true };
+      return { value: last ?? 0, color: "warning", indeterminate: last == null };
     case "success":
-      return { value: 100, color: "green", animated: false };
+      return { value: 100, color: "success", indeterminate: false };
     case "failed":
-      return { value: last ?? 100, color: "red", animated: false };
+      return { value: last ?? 100, color: "destructive", indeterminate: false };
     case "interrupted":
-      return last == null ? null : { value: last, color: "yellow", animated: false };
+      return last == null ? null : { value: last, color: "warning", indeterminate: false };
     case "canceled":
-      return last == null ? null : { value: last, color: "gray", animated: false };
+      return last == null ? null : { value: last, color: "muted", indeterminate: false };
   }
 }
 
@@ -103,6 +148,7 @@ export const TaskCard = memo(function TaskCard({
   onReuse
 }: TaskCardProps) {
   const [opened, setOpened] = useState(false);
+  const contentId = useId();
   const logs = useTasksStore((s) => s.logs[task.id]);
   const status = STATUS_META[task.status];
   const StatusIcon = status.icon;
@@ -154,150 +200,176 @@ export const TaskCard = memo(function TaskCard({
   };
 
   return (
-    <Card
-      withBorder
-      padding="sm"
-      style={{ borderLeft: `3px solid var(--mantine-color-${status.color}-filled)` }}
-    >
-      <Group justify="space-between" wrap="nowrap">
-        <UnstyledButton
+    <Card padding="sm" className={cn("border-l-[3px]", status.borderClass)}>
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          id={`task-title-${task.id}`}
           onClick={() => setOpened((value) => !value)}
           aria-expanded={opened}
-          style={{ flex: "1 1 auto", minWidth: 0 }}
+          aria-controls={contentId}
+          className="group flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
         >
-          <Group gap="xs" wrap="nowrap">
-            <IconChevronRight
-              size={16}
-              color="var(--mantine-color-dimmed)"
-              style={{
-                flexShrink: 0,
-                transform: opened ? "rotate(90deg)" : "none",
-                transition: "transform 150ms ease"
-              }}
-            />
-            <StatusIcon
-              size={16}
-              role="img"
-              aria-label={t(status.labelKey)}
-              color={`var(--mantine-color-${status.color}-light-color)`}
-              className={status.spinning ? "task-status-spinning" : undefined}
-              style={{ flexShrink: 0 }}
-            />
-            <Text size="sm" fw={500} truncate>
-              {task.title}
-            </Text>
-          </Group>
-        </UnstyledButton>
-        <Group gap={4} wrap="nowrap">
+          <IconChevronRight
+            size={16}
+            stroke={1.8}
+            aria-hidden="true"
+            className={
+              opened
+                ? "shrink-0 rotate-90 text-muted-foreground transition-transform duration-150 group-hover:text-foreground"
+                : "shrink-0 rotate-0 text-muted-foreground transition-transform duration-150 group-hover:text-foreground"
+            }
+          />
+          <StatusIcon
+            size={16}
+            stroke={1.8}
+            role="img"
+            aria-label={t(status.labelKey)}
+            className={`shrink-0 ${status.toneClass} ${status.spinning ? "task-status-spinning" : ""}`}
+          />
+          <span className="truncate text-sm font-medium" title={task.title}>
+            {task.title}
+          </span>
+        </button>
+        <div className="flex shrink-0 items-center gap-1">
           {task.intent.type === "form" && onReuse && (
             <Tooltip label={t("tasks.action.reuse")}>
-              <ActionIcon
-                variant="transparent"
-                color="gray"
+              <IconButton
+                label={t("tasks.action.reuse")}
+                variant="ghost"
+                size="sm"
                 className="task-action"
                 onClick={() => onReuse(task)}
               >
-                <IconCopyPlus size={16} />
-              </ActionIcon>
+                <IconCopyPlus size={16} stroke={1.8} />
+              </IconButton>
             </Tooltip>
           )}
           {cancellable && (
             <Tooltip label={t("tasks.action.cancel")}>
-              <ActionIcon
-                variant="transparent"
-                color="gray"
+              <IconButton
+                label={t("tasks.action.cancel")}
+                variant="ghost"
+                size="sm"
                 className="task-action"
                 onClick={() => onCancel(task.id)}
               >
-                <IconX size={16} />
-              </ActionIcon>
+                <IconX size={16} stroke={1.8} />
+              </IconButton>
+            </Tooltip>
+          )}
+          {task.status === "interrupted" && onRerun && (
+            <Tooltip label={t("tasks.action.rerun")}>
+              <IconButton
+                label={t("tasks.action.rerun")}
+                variant="ghost"
+                size="sm"
+                className="task-action"
+                onClick={() => onRerun(task)}
+              >
+                <IconRefresh size={16} stroke={1.8} />
+              </IconButton>
             </Tooltip>
           )}
           {task.logPath && (
             <Tooltip label={t("tasks.action.openLog")}>
-              <ActionIcon
-                variant="transparent"
-                color="gray"
+              <IconButton
+                label={t("tasks.action.openLog")}
+                variant="ghost"
+                size="sm"
                 className="task-action"
                 onClick={openLogFile}
               >
-                <IconFileText size={16} />
-              </ActionIcon>
+                <IconFileText size={16} stroke={1.8} />
+              </IconButton>
             </Tooltip>
           )}
           {TERMINAL_STATUSES.has(task.status) && (
             <Tooltip label={t("tasks.action.exportDiagnostics")}>
-              <ActionIcon
-                variant="transparent"
-                color="gray"
+              <IconButton
+                label={t("tasks.action.exportDiagnostics")}
+                variant="ghost"
+                size="sm"
                 className="task-action"
                 onClick={() => void exportDiagnostics()}
               >
-                <IconFileDownload size={16} />
-              </ActionIcon>
+                <IconFileDownload size={16} stroke={1.8} />
+              </IconButton>
             </Tooltip>
           )}
           {(task.outputPaths[0] || task.workingDir) && (
             <Tooltip label={t("tasks.action.openOutput")}>
-              <ActionIcon
-                variant="transparent"
-                color="gray"
+              <IconButton
+                label={t("tasks.action.openOutput")}
+                variant="ghost"
+                size="sm"
                 className="task-action task-action-open"
                 onClick={revealOutput}
               >
-                <IconFolderOpen size={16} />
-              </ActionIcon>
+                <IconFolderOpen size={16} stroke={1.8} />
+              </IconButton>
             </Tooltip>
           )}
           {TERMINAL_STATUSES.has(task.status) && (
             <Tooltip label={t("tasks.action.delete")}>
-              <ActionIcon
-                variant="transparent"
-                color="gray"
+              <IconButton
+                label={t("tasks.action.delete")}
+                variant="ghost"
+                size="sm"
                 className="task-action task-action-danger"
                 onClick={() => onDelete(task.id)}
               >
-                <IconTrash size={16} />
-              </ActionIcon>
+                <IconTrash size={16} stroke={1.8} />
+              </IconButton>
             </Tooltip>
           )}
-        </Group>
-      </Group>
+        </div>
+      </div>
 
-      {bar && bar.value > 0 && (
-        <Progress mt={6} size="xs" value={bar.value} color={bar.color} animated={bar.animated} />
+      {bar && (bar.indeterminate || bar.value > 0) && (
+        <div className="mt-1.5">
+          <Progress
+            value={bar.value}
+            color={bar.color}
+            indeterminate={bar.indeterminate}
+            aria-label={`${task.title} · ${t(status.labelKey)}`}
+          />
+        </div>
       )}
 
-      <Collapse expanded={opened}>
-        <Stack gap="xs" mt="xs">
-          <Code block style={{ fontSize: 11, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+      <Collapse open={opened} id={contentId}>
+        <div className="mt-2.5 flex flex-col gap-2.5">
+          <code className="block whitespace-pre-wrap break-all rounded-md bg-muted px-3 py-2 text-xs leading-relaxed">
             {task.tool} {task.argvRedacted.join(" ")}
-          </Code>
+          </code>
           {task.status === "queued" && (
-            <Tooltip label={t("tasks.action.promote")}>
-              <ActionIcon variant="subtle" onClick={() => onPromote(task.id)}>
-                <IconArrowUp size={16} color="var(--mantine-color-dimmed)" />
-              </ActionIcon>
-            </Tooltip>
+            <div>
+              <Tooltip label={t("tasks.action.promote")}>
+                <IconButton
+                  label={t("tasks.action.promote")}
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={() => onPromote(task.id)}
+                >
+                  <IconArrowUp size={16} stroke={1.8} />
+                </IconButton>
+              </Tooltip>
+            </div>
           )}
-          {task.status === "interrupted" && onRerun && (
-            <Group gap="xs">
-              <Text size="xs" c="dimmed">
-                {task.startedAt
-                  ? t("tasks.interruptedAfterStart")
-                  : t("tasks.interruptedBeforeStart")}
-              </Text>
-              <Button size="compact-xs" variant="light" onClick={() => onRerun(task)}>
-                {t("tasks.action.rerun")}
-              </Button>
-            </Group>
+          {task.status === "interrupted" && (
+            <span className="text-xs text-muted-foreground">
+              {task.startedAt
+                ? t("tasks.interruptedAfterStart")
+                : t("tasks.interruptedBeforeStart")}
+            </span>
           )}
           {failedTail && (
-            <Code block c="red" style={{ fontSize: 11, whiteSpace: "pre-wrap" }}>
+            <code className="block whitespace-pre-wrap rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium leading-relaxed text-destructive">
               {failedTail.map((l) => l.line).join("\n")}
-            </Code>
+            </code>
           )}
-        </Stack>
+        </div>
       </Collapse>
     </Card>
   );
