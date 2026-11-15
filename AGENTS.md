@@ -77,7 +77,7 @@
 4. 生命周期管理（定时器/订阅清理、一次性初始化）
 5. 外部系统同步（localStorage、防抖取数等，需注释必要性）
 
-不在名单内 = 不许写。重点禁止：state→state 镜像 Effect、可派生数据用 Effect 同步（渲染期直接算）、渲染期写入 state、用 Effect 观察状态变化来触发通知/重置——改为事件驱动（动作放进数据到达的 `.then`）、渲染期派生（`opened = userOpened ?? hasProblem`）或带键覆盖。每处 Effect 注释标注【Effect 白名单N + 必要性】。完整规范与重构案例见 `docs/UI_MIGRATION_DECISIONS.md` D30。
+不在名单内 = 不许写。重点禁止：state→state 镜像 Effect、可派生数据用 Effect 同步（渲染期直接算）、渲染期写入 state、用 Effect 观察状态变化来触发通知/重置——改为事件驱动（动作放进数据到达的 `.then`）、渲染期派生（`opened = userOpened ?? hasProblem`）或带键覆盖。每处 Effect 注释标注【Effect 白名单N + 必要性】。
 
 ## 7. 注释纪律
 

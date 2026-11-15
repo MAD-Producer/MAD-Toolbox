@@ -11,7 +11,7 @@ import { Warning, CheckCircle, XCircle, Info } from "@phosphor-icons/react";
  * - icon 按类型着语义色（success/warning/error/info token），保持旧版"一眼分级别"的可扫读性
  * - 左侧 2px 语义色边条对应旧版的类型 tinted 底
  * - autoClose 按类型差异化（success 3s/warning 5s/error 10s/info 4s）沿用旧版 AUTO_CLOSE_BY_TYPE
- * - 自绘剩余时长进度条不再复刻（见 docs/UI_MIGRATION_DECISIONS.md D4）
+ * - 自绘剩余时长进度条不再复刻（sonner 自带关闭倒计时外观）
  * - onClose 仅在手动关闭时触发（sonner onDismiss）；自动关闭不回调，旧 Mantine 的自动关闭回调无调用方
  */
 export interface NotificationData {
