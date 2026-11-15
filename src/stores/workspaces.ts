@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { TaskSeed } from "../contracts/types";
 
 export const WORKSPACE_IDS = ["bilibili", "network", "music", "media"] as const;
 
@@ -9,6 +10,8 @@ export type WorkspaceStatus = "unmounted" | "retained" | "releasable";
 export interface WorkspaceSession {
   status: WorkspaceStatus;
   generation: number;
+  /** 待交付的任务种子：deliver 写入、目标页 mount 时消费、evict 时清除 */
+  seed: TaskSeed | null;
 }
 
 type WorkspaceSessions = Record<WorkspaceId, WorkspaceSession>;
@@ -16,15 +19,16 @@ type WorkspaceSessions = Record<WorkspaceId, WorkspaceSession>;
 interface WorkspacesStore {
   sessions: WorkspaceSessions;
   visit: (id: WorkspaceId) => void;
+  /** 交付任务种子并重置会话（generation+1 触发目标页重挂，初始化器恰好消费一次） */
+  deliver: (id: WorkspaceId, seed: TaskSeed) => void;
   markRetained: (id: WorkspaceId, expectedGeneration: number) => void;
   markReleasable: (id: WorkspaceId, expectedGeneration: number) => void;
   evictIfReleasable: (id: WorkspaceId) => void;
-  reset: (id: WorkspaceId) => void;
 }
 
 const createInitialSessions = (): WorkspaceSessions =>
   Object.fromEntries(
-    WORKSPACE_IDS.map((id) => [id, { status: "unmounted", generation: 0 }])
+    WORKSPACE_IDS.map((id) => [id, { status: "unmounted", generation: 0, seed: null }])
   ) as WorkspaceSessions;
 
 export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
@@ -38,6 +42,22 @@ export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
         sessions: {
           ...state.sessions,
           [id]: { ...current, status: "retained" }
+        }
+      };
+    });
+  },
+
+  deliver: (id, seed) => {
+    set((state) => {
+      const current = state.sessions[id];
+      return {
+        sessions: {
+          ...state.sessions,
+          [id]: {
+            status: current.status === "unmounted" ? "unmounted" : "retained",
+            generation: current.generation + 1,
+            seed
+          }
         }
       };
     });
@@ -90,22 +110,8 @@ export const useWorkspacesStore = create<WorkspacesStore>((set) => ({
           ...state.sessions,
           [id]: {
             status: "unmounted",
-            generation: current.generation + 1
-          }
-        }
-      };
-    });
-  },
-
-  reset: (id) => {
-    set((state) => {
-      const current = state.sessions[id];
-      return {
-        sessions: {
-          ...state.sessions,
-          [id]: {
-            status: current.status === "unmounted" ? "unmounted" : "retained",
-            generation: current.generation + 1
+            generation: current.generation + 1,
+            seed: null
           }
         }
       };

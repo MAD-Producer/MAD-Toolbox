@@ -66,8 +66,11 @@ export function removeTasks(state: TasksState, ids: string[]): TasksState {
 }
 
 export function poolOccupancy(tasks: TasksState["tasks"], pool: Pool): number {
+  // 排队中的任务同样占池：队列积压时占用条应显示满载而非虚假空闲
   return Object.values(tasks).filter(
-    (t) => t.pool === pool && (t.status === "running" || t.status === "canceling")
+    (t) =>
+      t.pool === pool &&
+      (t.status === "queued" || t.status === "running" || t.status === "canceling")
   ).length;
 }
 

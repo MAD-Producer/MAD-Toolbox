@@ -8,7 +8,7 @@ import type {
   MirrorDependencyStatus,
   ToolName
 } from "../contracts/dependency";
-import { t } from "../locale";
+import { setLanguageChoice, t } from "../locale";
 import {
   fetchAppSettings,
   fetchDependencyStatus,
@@ -35,6 +35,8 @@ export function useBackend() {
   const mirrorBatch = useRef<ToolName[]>([]);
   const progressListener = useRef<ReturnType<typeof listen> | null>(null);
   const settingsUpdates = useRef<Promise<void>>(Promise.resolve());
+  const missingNotifiedRef = useRef(false);
+  const mirrorUpdatesNotifiedRef = useRef(false);
 
   const refreshMirrorDependencies = useCallback(() => {
     if (mirrorRequest.current) return mirrorRequest.current;
@@ -43,6 +45,21 @@ export function useBackend() {
       .then((result) => {
         setMirrorDependencies(result);
         setMirrorError(null);
+        // 可更新提醒跟随数据到达发出，仅在有更新时记一次（后续刷新静默），
+        // 不用 Effect 观察状态变化来触发通知
+        if (!mirrorUpdatesNotifiedRef.current) {
+          const updates = result.filter((dependency) => dependency.updateAvailable);
+          if (updates.length > 0) {
+            mirrorUpdatesNotifiedRef.current = true;
+            notifications.show({
+              color: "blue",
+              title: t("deps.updatesAvailable"),
+              message: t("deps.updatesAvailableBody", {
+                names: updates.map((dependency) => dependency.tool).join(", ")
+              })
+            });
+          }
+        }
       })
       .catch((error) => setMirrorError(String(error)))
       .finally(() => {
@@ -55,7 +72,23 @@ export function useBackend() {
   const refreshDependencies = useCallback(async () => {
     setLoadingDependencies(true);
     try {
-      setDependencies(await fetchDependencyStatus());
+      const result = await fetchDependencyStatus();
+      setDependencies(result);
+      // 缺依赖提醒只在首次成功加载时发一次（重检/安装后的重复提醒是噪音）
+      if (!missingNotifiedRef.current && result.length > 0) {
+        missingNotifiedRef.current = true;
+        const missing = result.filter((item) => item.required && !item.available);
+        if (missing.length > 0) {
+          notifications.show({
+            color: "yellow",
+            title: t("app.dependenciesMissingTitle"),
+            message: t("app.dependenciesMissingBody", {
+              count: missing.length,
+              names: missing.map((item) => item.label)
+            })
+          });
+        }
+      }
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });
     } finally {
@@ -65,7 +98,11 @@ export function useBackend() {
 
   const refreshSettings = useCallback(async () => {
     try {
-      setSettings(await fetchAppSettings());
+      const result = await fetchAppSettings();
+      setSettings(result);
+      // 语言偏好的唯一写入路径是 changeLanguage（乐观更新+失败回滚），
+      // 这里只负责把持久化语言对齐到 locale 模块（启动加载/主动刷新时）
+      setLanguageChoice(result.language);
     } catch (error) {
       notifications.show({ color: "red", message: String(error) });
     }
@@ -146,12 +183,14 @@ export function useBackend() {
     [refreshDependencies, refreshMirrorDependencies]
   );
 
+  // 【Effect 白名单⑤】挂载时一次性拉取三份后端初始数据（依赖状态/应用设置/镜像清单）
   useEffect(() => {
     void refreshDependencies();
     void refreshSettings();
     void refreshMirrorDependencies();
   }, [refreshDependencies, refreshSettings, refreshMirrorDependencies]);
 
+  // 【Effect 白名单②】订阅后端依赖下载进度事件（安装中持续推送）
   useEffect(() => {
     let disposed = false;
     const promise = listen<DependencyDownloadProgress>(
@@ -167,6 +206,7 @@ export function useBackend() {
     };
   }, []);
 
+  // 【Effect 白名单②】订阅依赖安装完成事件：外部手动安装也会推送，据此刷新状态
   useEffect(() => {
     const promise = listen("dependency-install-finished", () => {
       if (mirrorBatch.current.length > 0) return;
