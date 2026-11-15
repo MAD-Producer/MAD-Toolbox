@@ -3,7 +3,7 @@
 ## 项目信息
 
 - 跨平台（Windows & Mac）多媒体处理工具箱，检查 MAD-Toolbox
-- 使用 [Tauri](https://tauri.app/) 框架开发，前端 React + [Mantine v9](https://mantine.dev/) + Zustand，后端 Rust
+- 使用 [Tauri](https://tauri.app/) 框架开发，前端 React 19 + 自建设计系统（Tailwind 4 + Radix 无头件 + cva）+ Zustand + i18next，后端 Rust
 - 支持bilibili视频下载，YT视频下载，音乐全网下载，视频转码和统一任务调度
 
 ## 1. 先思考再编码
@@ -64,6 +64,20 @@
 ## 6. 前端代码开发
 
 - 硬规则：只有 `*/api.ts` 文件允许 `import { invoke } from "@tauri-apps/api/core"`，组件、hook、store 一律不直接碰 `invoke`。
+- 图标库唯一：只用 `@phosphor-icons/react`，默认 Regular weight（`weight="fill"`/`"bold"` 仅限通知语义图标与 checkbox，属登记过的例外），不引入第二个图标库。
+- 样式只用 `src/components/ui/` 组件层与语义 token（`src/styles/design-system.css`），不引第三方 UI 库，不写绕过 token 的魔法色值。
+
+### Effect 白名单制度（Default Deny）
+
+新增 `useEffect` / `useLayoutEffect` 前先问：它能归入以下白名单吗？
+
+1. 浏览器原生事件订阅
+2. 外部连接订阅（Tauri event 等）
+3. 命令式第三方组件同步（embla、textarea autosize 等）
+4. 生命周期管理（定时器/订阅清理、一次性初始化）
+5. 外部系统同步（localStorage、防抖取数等，需注释必要性）
+
+不在名单内 = 不许写。重点禁止：state→state 镜像 Effect、可派生数据用 Effect 同步（渲染期直接算）、渲染期写入 state、用 Effect 观察状态变化来触发通知/重置——改为事件驱动（动作放进数据到达的 `.then`）、渲染期派生（`opened = userOpened ?? hasProblem`）或带键覆盖。每处 Effect 注释标注【Effect 白名单N + 必要性】。完整规范与重构案例见 `docs/UI_MIGRATION_DECISIONS.md` D30。
 
 ## 7. 注释纪律
 
@@ -77,3 +91,4 @@
 ## 8. 代码提交
 
 - 每次提交代码前必须格式化代码
+- 动过依赖或 lockfile（pnpm add/remove 等）的提交，额外跑 `pnpm format:check`——包管理器重写 lock 时会带回自己的格式
