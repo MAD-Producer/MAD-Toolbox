@@ -2,6 +2,14 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 3.2.0
+
+- feat: 公共 tracker 改用 Adysec 列表直连，保留 24 小时本地缓存与获取失败时的缓存回退
+- refactor: 移除 PT 模式与 aria2 命令编辑，检查种子信息并拒绝下载标记为私有的种子
+- fix: 种子检查、磁力元数据获取和 tracker 更新改在任务调度后执行，加入队列无需等待，准备阶段支持取消
+- fix: 远程种子文件与 Metalink 不再自动跟随下载，种子文件需通过本地文件入口检查后使用
+- refactor: 任务详情移除重复的百分比文字，保留进度条与下载量
+
 ## 3.1.0
 
 - feat: 新增 aria2 下载工作区，支持链接、磁力与种子文件下载，以及 BT/PT 参数设置
