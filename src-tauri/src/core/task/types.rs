@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub enum Feature {
     Bilibili,
     Network,
+    Aria2,
     Media,
     Music,
 }

@@ -285,6 +285,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "bendy"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57cdd50c5215bbee87e15d24a8ab68bdc9c3602adbf43bfc831815ddbf1e62ee"
+dependencies = [
+ "rustversion",
+ "thiserror 2.0.19",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2325,6 +2335,7 @@ name = "mad-toolbox"
 version = "3.0.0"
 dependencies = [
  "base64 0.22.1",
+ "bendy",
  "chrono",
  "encoding_rs",
  "libc",
