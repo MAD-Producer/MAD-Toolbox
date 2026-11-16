@@ -41,6 +41,7 @@ MAD Toolbox是一款专门面向 MAD 创作者的素材获取和媒体处理工�
 
 - **BBDown**：便捷下载 Bilibili 视频，还支持专门下载音频，字幕，封面和弹幕等资源。（实际下载规格由账号登录状态决定）
 - **yt-dlp**：支持YouTube和其他所有符合 yt-dlp 解析格式的链接的媒体资源下载
+- **aria2**：支持直链、磁力和种子文件下载，提供 BT/PT 设置、公共 tracker 更新及下载与做种状态显示
 - **FFmpeg**：支持常见媒体文件的格式转换、重新封装、
   视频/音频/字幕抽流、ASS/SRT、GIF导出、序列帧以及码率、帧率、尺寸、裁切、
   旋转、速度、像素格式和音频参数的高级处理。
@@ -52,8 +53,8 @@ MAD Toolbox是一款专门面向 MAD 创作者的素材获取和媒体处理工�
 ## 技术栈
 
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white&labelColor=24C8DB)](https://tauri.app/)
-[![Matine](https://img.shields.io/badge/Mantine_ui-v9-38B2AC?style=for-the-badge&logo=mantine&logoColor=white&labelColor=319795)](https://mantine.dev/)
-[![Tabler Icons](https://img.shields.io/badge/Tabler_Icons-v3.44-066FD1?style=for-the-badge&logo=tablericons&logoColor=white&labelColor=1E2734)](https://tabler.io/icons)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Phosphor Icons](https://img.shields.io/badge/Phosphor_Icons-v2-1E2734?style=for-the-badge)](https://phosphoricons.com/)
 
 ## 开始使用
 
@@ -85,12 +86,13 @@ winget install --id Gyan.FFmpeg -e
 winget install --id yt-dlp.yt-dlp -e
 winget install --id MediaArea.MediaInfo -e
 winget install --id DenoLand.Deno -e
+winget install --id aria2.aria2 -e
 ```
 
 **MacOS**
 
 ```bash
-brew install ffmpeg yt-dlp media-info deno
+brew install ffmpeg yt-dlp media-info deno aria2
 ```
 
 macOS 上请在依赖页通过 CDN 镜像安装 BBDown。

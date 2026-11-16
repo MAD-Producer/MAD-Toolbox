@@ -40,6 +40,7 @@ Underlying tools:
 
 - **BBDown**: Easily download Bilibili videos, with dedicated support for downloading audio, subtitles, covers, danmaku and other resources. (Actual download quality depends on the account login status)
 - **yt-dlp**: Download media resources from YouTube and any other link supported by yt-dlp's parsing formats
+- **aria2**: Download direct links, magnets and torrent files, with BT/PT settings, public tracker updates, and download and seeding status
 - **FFmpeg**: Supports format conversion and remuxing of common media files, video/audio/subtitle stream extraction, ASS/SRT subtitles, GIF export, image sequences, plus advanced processing of bitrate, frame rate, scaling, cropping, rotation, speed, pixel formats and audio parameters.
 - **musicdl**: Fetch streaming playback resources from major music platforms and download them for preview
 
@@ -49,8 +50,8 @@ Underlying tools:
 ## Tech Stack
 
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white&labelColor=24C8DB)](https://tauri.app/)
-[![Chakra UI](https://img.shields.io/badge/Mantine_ui-v9-38B2AC?style=for-the-badge&logo=mantine&logoColor=white&labelColor=319795)](https://mantine.dev/)
-[![Tabler Icons](https://img.shields.io/badge/Tabler_Icons-v3.44-066FD1?style=for-the-badge&logo=tablericons&logoColor=white&labelColor=1E2734)](https://tabler.io/icons)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Phosphor Icons](https://img.shields.io/badge/Phosphor_Icons-v2-1E2734?style=for-the-badge)](https://phosphoricons.com/)
 
 ## Getting Started
 
@@ -84,12 +85,13 @@ winget install --id Gyan.FFmpeg -e
 winget install --id yt-dlp.yt-dlp -e
 winget install --id MediaArea.MediaInfo -e
 winget install --id DenoLand.Deno -e
+winget install --id aria2.aria2 -e
 ```
 
 **macOS**
 
 ```bash
-brew install ffmpeg yt-dlp media-info deno
+brew install ffmpeg yt-dlp media-info deno aria2
 ```
 
 On macOS, install BBDown from the CDN mirror on the dependencies page.
