@@ -4,6 +4,7 @@ import {
   FilmSlate,
   MusicNotes,
   Globe,
+  Lightning,
   type Icon
 } from "@phosphor-icons/react";
 import type { TranslationKey } from "../locale";
@@ -40,14 +41,19 @@ export const L1_NAVIGATION = [
   { section: "tasks", labelKey: "nav.tasks", icon: Stack },
   { section: "bilibili", labelKey: "nav.bilibili", icon: TelevisionSimple },
   { section: "network", labelKey: "nav.network", icon: Globe },
+  { section: "aria2", labelKey: "nav.aria2", icon: Lightning },
   { section: "media", labelKey: "nav.media", icon: FilmSlate },
   { section: "music", labelKey: "nav.music", icon: MusicNotes }
 ] as const satisfies readonly L1NavigationItem[];
 
 export const SIDEBAR_GROUPS = [
   { id: "main", labelKey: null, items: [L1_NAVIGATION[0]] },
-  { id: "download", labelKey: "nav.groups.download", items: [L1_NAVIGATION[1], L1_NAVIGATION[2]] },
-  { id: "tools", labelKey: "nav.groups.tools", items: [L1_NAVIGATION[3], L1_NAVIGATION[4]] }
+  {
+    id: "download",
+    labelKey: "nav.groups.download",
+    items: [L1_NAVIGATION[1], L1_NAVIGATION[2], L1_NAVIGATION[3]]
+  },
+  { id: "tools", labelKey: "nav.groups.tools", items: [L1_NAVIGATION[4], L1_NAVIGATION[5]] }
 ] as const satisfies readonly SidebarGroup[];
 
 export const MEDIA_L2_NAVIGATION = [

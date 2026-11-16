@@ -9,6 +9,7 @@ export type AppRoute =
   | { section: "tasks" }
   | { section: "bilibili" }
   | { section: "network" }
+  | { section: "aria2" }
   | { section: "music" }
   | { section: "media"; page: MediaPageId }
   | { section: "settings"; page: SettingsPageId };
@@ -49,6 +50,8 @@ export function routeForTask(task: TaskEnvelope): AppRoute {
       return { section: "bilibili" };
     case "network":
       return { section: "network" };
+    case "aria2":
+      return { section: "aria2" };
     case "media":
       return { section: "media", page: mediaPageForTask(task) };
     case "music":

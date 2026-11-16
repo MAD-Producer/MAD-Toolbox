@@ -1,4 +1,4 @@
-export type Feature = "bilibili" | "network" | "media" | "music";
+export type Feature = "bilibili" | "network" | "aria2" | "media" | "music";
 
 export type Pool = "download" | "local";
 
