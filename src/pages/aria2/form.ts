@@ -17,7 +17,6 @@ export interface Aria2FormState {
   cookiesFile: string;
   split: number;
   maxConnectionPerServer: number;
-  ptMode: boolean;
   injectTrackers: boolean;
   dht: boolean;
   peerExchange: boolean;
@@ -43,7 +42,6 @@ export const defaultAria2Form: Aria2FormState = {
   cookiesFile: "",
   split: 16,
   maxConnectionPerServer: 16,
-  ptMode: false,
   injectTrackers: true,
   dht: true,
   peerExchange: true,

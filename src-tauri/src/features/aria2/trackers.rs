@@ -1,6 +1,5 @@
 //! 公共 BT tracker 列表：拉取、按天缓存与回退链。
-//! mt_dependencies 合并 XIU2 和 ngosang 列表，每日更新。
-//! 列表仅通过 mt_dependencies 的自有 CDN 分发，获取失败时使用本地缓存。
+//! 直接读取 adysec 精选列表，获取失败时使用本地缓存。
 //! 缓存放应用数据目录 aria2/ 下。
 
 use std::time::Duration;
@@ -33,7 +32,7 @@ fn cache_path(app: &AppHandle) -> Option<std::path::PathBuf> {
         app_data_dir(app)
             .ok()?
             .join("aria2")
-            .join("trackers-merged.json"),
+            .join("trackers-adysec.json"),
     )
 }
 
@@ -75,7 +74,7 @@ fn cache_fresh(cached: &CachedTrackers) -> bool {
 }
 
 /// aria2 `--bt-tracker` 支持的 announce 协议。
-const ANNOUNCE_PREFIXES: [&str; 5] = ["udp://", "http://", "https://", "ws://", "wss://"];
+const ANNOUNCE_PREFIXES: [&str; 3] = ["udp://", "http://", "https://"];
 
 /// 过滤空行、注释与非 announce 行（一行一个 URL）。
 /// 语义过滤兜住错误内容：上游/镜像误吐 HTML 时不会把标签当 tracker 注入。
@@ -91,8 +90,21 @@ pub(crate) fn parse_trackers(text: &str) -> Vec<String> {
         .collect()
 }
 
-async fn fetch_fresh(app: &AppHandle) -> Result<CachedTrackers, String> {
-    let (_version, text) = crate::core::deps::fetch_mirror_tracker_text(app, "merged").await?;
+async fn fetch_fresh(_app: &AppHandle) -> Result<CachedTrackers, String> {
+    let text = reqwest::Client::builder()
+        .user_agent(concat!("MAD-Toolbox/", env!("CARGO_PKG_VERSION")))
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|e| e.to_string())?
+        .get("https://tracker.adysec.com/trackers_best.txt")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .error_for_status()
+        .map_err(|e| e.to_string())?
+        .text()
+        .await
+        .map_err(|e| e.to_string())?;
     let trackers = parse_trackers(&text);
     if trackers.is_empty() {
         return Err(rust_i18n::t!(
@@ -175,7 +187,6 @@ mod tests {
                 "udp://a:80/announce".to_string(),
                 "http://b/announce".to_string(),
                 "https://c/announce".to_string(),
-                "wss://d/announce".to_string(),
             ]
         );
     }

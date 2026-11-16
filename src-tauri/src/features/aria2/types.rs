@@ -24,9 +24,7 @@ pub struct Aria2Intent {
     pub split: u32,
     /// `--max-connection-per-server`（HTTP/FTP，上限 16）。
     pub max_connection_per_server: u32,
-    /// PT 模式要求已确认 private=1 的本地种子，保留 UDP tracker。
-    pub pt_mode: bool,
-    /// 仅向已确认公开的本地种子追加公共 tracker。
+    /// 向公开 BT 追加公共 tracker。
     pub inject_trackers: bool,
     pub dht: bool,
     pub peer_exchange: bool,
@@ -56,7 +54,6 @@ impl Default for Aria2Intent {
             cookies_file: String::new(),
             split: 16,
             max_connection_per_server: 16,
-            pt_mode: false,
             inject_trackers: true,
             dht: true,
             peer_exchange: true,

@@ -64,6 +64,7 @@ pub fn network_submit(
         env_path: Some(execution_path(&app)),
         intent: adapter::sanitize_intent(&intent),
         parser,
+        prepare: None,
         cleanup_dir: None,
     };
     Ok(SubmitResult {

@@ -1,7 +1,7 @@
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
 import type { CookieFileOption, TaskIntent, TaskSeed } from "../../contracts/types";
-import { parseExpertArgv, useDraftPreviewWorkspace } from "../../hooks/useDraftPreviewWorkspace";
+import { useDraftPreviewWorkspace } from "../../hooks/useDraftPreviewWorkspace";
 import { notifications } from "../../lib/notifications";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { t } from "../../locale";
@@ -75,8 +75,6 @@ export function useAria2Workspace({ active, seed, onRetain, onSubmitted }: Aria2
   const draft = useDraftPreviewWorkspace({
     active,
     onRetain,
-    initialExpertText:
-      seed?.task.intent.type === "manual" ? seed.task.intent.data.argv.join("\n") : null,
     buildPreviewIntent,
     runPreview: aria2Preview
   });
@@ -138,11 +136,9 @@ export function useAria2Workspace({ active, seed, onRetain, onSubmitted }: Aria2
   const refreshTrackers = () => loadTrackers(true);
 
   const submit = async () => {
+    if (submitting) return;
     const submittedRevision = draft.draftRevisionRef.current;
-    const intent: TaskIntent =
-      draft.expertText !== null
-        ? { type: "manual", data: { argv: parseExpertArgv(draft.expertText) } }
-        : { type: "form", data: intentData(form) };
+    const intent: TaskIntent = { type: "form", data: intentData(form) };
     onRetain?.();
     setSubmitting(true);
     try {
@@ -181,10 +177,6 @@ export function useAria2Workspace({ active, seed, onRetain, onSubmitted }: Aria2
     update,
     advancedOpen,
     toggleAdvanced,
-    expertMode: draft.expertText !== null,
-    expertText: draft.expertText,
-    setExpertText: draft.setExpertText,
-    enterExpert: draft.enterExpert,
     preview: draft.preview,
     previewError: draft.previewError,
     submitting,

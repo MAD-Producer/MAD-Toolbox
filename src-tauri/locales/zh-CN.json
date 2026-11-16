@@ -1,7 +1,7 @@
 {
   "backend.aria2.progress.metadata": "正在获取种子信息",
   "backend.aria2.progress.seeding": "下载完成 · 做种中",
-  "backend.aria2.progress.downloading": "下载中 · %{percent}% · %{done} / %{total}",
+  "backend.aria2.progress.downloading": "下载中 · %{done} / %{total}",
   "backend.deps.bbdownCdnHint": "macOS 上请通过 CDN 镜像安装 BBDown。",
   "backend.deps.invalidPackageFile": "镜像包必须使用 ZIP 文件名，不能是路径或 URL。",
   "backend.deps.invalidPackageHash": "镜像包缺少有效的 SHA-256 校验值。",
@@ -11,13 +11,9 @@
   "backend.deps.restoreFailed": "安装失败：%{error}。恢复原安装也失败：%{restore}。原文件已保留在 %{path}。",
   "backend.deps.mirrorInUse": "此依赖可能正在使用，请等待相关排队或运行中的任务结束后再更新。",
   "backend.deps.packageHashMismatch": "下载的 ZIP 与 SHA-256 校验值不符，现有安装未被改动。",
-  "backend.deps.mirrorTrackerMissing": "镜像清单缺少 tracker 列表：%{source}。",
-  "backend.deps.mirrorTrackerHashMismatch": "镜像 tracker 列表与 SHA-256 校验值不符，已改用上游直连。",
   "backend.deps.manualRepair": "未确认此 musicdl 由 pipx 管理。请在原 Python 环境中修复，或将其启动器目录加入 PATH 后重新检测。",
   "backend.deps.healthTimeout": "musicdl 导入检查超过 10 秒，请检查环境后重试。",
-  "backend.aria2.adapter.empty_argv": "命令不能为空",
   "backend.aria2.adapter.invalid_intent": "表单数据无效: %{e}",
-  "backend.aria2.adapter.manual_title": "aria2 手动命令 %{command}",
   "backend.aria2.adapter.missing_uri": "请填写下载地址或选择种子文件",
   "backend.aria2.adapter.title_magnet": "磁力下载 %{hash}",
   "backend.aria2.adapter.title_torrent": "种子下载 %{name}",
@@ -219,6 +215,9 @@
   "backend.update.manifestInvalidUrl": "更新清单地址无效",
   "backend.update.alreadyUpToDate": "当前已是最新版本",
   "backend.update.downloadFailed": "下载或安装更新失败：%{error}",
-  "backend.aria2.adapter.private_torrent_required": "PT 下载需要标记为私有的本地 .torrent 文件，请先从站点保存种子后再选择。",
-  "backend.aria2.commands.invalid_torrent": "无法读取种子元数据，请选择有效且小于 64 MiB 的 .torrent 文件。"
+  "backend.aria2.commands.invalid_torrent": "无法读取种子元数据，请选择有效且小于 64 MiB 的 .torrent 文件。",
+  "backend.aria2.adapter.private_torrent_rejected": "私有种子（PT）不受支持",
+  "backend.aria2.adapter.manual_unsupported": "请使用下载表单，aria2 不支持任意命令模式",
+  "backend.aria2.commands.metadata_failed": "获取种子信息失败或超过 120 秒，请重试",
+  "backend.aria2.progress.preparing": "正在检查下载信息"
 }

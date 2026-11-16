@@ -1,7 +1,7 @@
 {
   "backend.aria2.progress.metadata": "Fetching torrent metadata",
   "backend.aria2.progress.seeding": "Download complete · Seeding",
-  "backend.aria2.progress.downloading": "Downloading · %{percent}% · %{done} / %{total}",
+  "backend.aria2.progress.downloading": "Downloading · %{done} / %{total}",
   "backend.deps.bbdownCdnHint": "On macOS, install BBDown from the CDN mirror.",
   "backend.deps.invalidPackageFile": "The mirror package must be a ZIP filename, not a path or URL.",
   "backend.deps.invalidPackageHash": "The mirror package has no valid SHA-256 checksum.",
@@ -11,13 +11,9 @@
   "backend.deps.restoreFailed": "Installation failed: %{error}. Restoring the previous installation also failed: %{restore}. Its files are preserved at %{path}.",
   "backend.deps.mirrorInUse": "This dependency may be in use. Wait for the relevant queued or running tasks to finish before updating it.",
   "backend.deps.packageHashMismatch": "The downloaded ZIP does not match its SHA-256 checksum. The existing installation has not been changed.",
-  "backend.deps.mirrorTrackerMissing": "The mirror manifest has no tracker list: %{source}.",
-  "backend.deps.mirrorTrackerHashMismatch": "The mirrored tracker list does not match its SHA-256 checksum; falling back to the upstream source.",
   "backend.deps.manualRepair": "This musicdl installation could not be identified as pipx-managed. Repair its original Python environment, or add its launcher directory to PATH and re-check.",
   "backend.deps.healthTimeout": "Importing musicdl timed out after 10 seconds. Check the environment and retry.",
-  "backend.aria2.adapter.empty_argv": "Command cannot be empty",
   "backend.aria2.adapter.invalid_intent": "Invalid form data: %{e}",
-  "backend.aria2.adapter.manual_title": "aria2 manual command %{command}",
   "backend.aria2.adapter.missing_uri": "Please enter a download URL or select a torrent file",
   "backend.aria2.adapter.title_magnet": "Magnet download %{hash}",
   "backend.aria2.adapter.title_torrent": "Torrent download %{name}",
@@ -219,6 +215,9 @@
   "backend.update.manifestInvalidUrl": "Invalid update manifest URL",
   "backend.update.alreadyUpToDate": "You are already on the latest version",
   "backend.update.downloadFailed": "Failed to download or install the update: %{error}",
-  "backend.aria2.adapter.private_torrent_required": "For PT downloads, select a local .torrent file marked private. Save the torrent from your tracker site first.",
-  "backend.aria2.commands.invalid_torrent": "Cannot read the torrent metadata. Select a valid .torrent file smaller than 64 MiB."
+  "backend.aria2.commands.invalid_torrent": "Cannot read the torrent metadata. Select a valid .torrent file smaller than 64 MiB.",
+  "backend.aria2.adapter.private_torrent_rejected": "Private torrents (PT) are not supported",
+  "backend.aria2.adapter.manual_unsupported": "Use the download form; arbitrary aria2 commands are not supported",
+  "backend.aria2.commands.metadata_failed": "Torrent metadata could not be fetched within 120 seconds; please retry",
+  "backend.aria2.progress.preparing": "Checking download information"
 }
