@@ -6,7 +6,7 @@ import { notifications } from "../../lib/notifications";
 import { loadStoredForm, saveStoredForm } from "../../lib/formStorage";
 import { t } from "../../locale";
 import { aria2Preview, aria2Submit, aria2TrackerList, type TrackerListResult } from "./api";
-import { defaultAria2Form, type Aria2FormState, type TrackerSource } from "./form";
+import { defaultAria2Form, type Aria2FormState } from "./form";
 
 const ARIA2_FORM_STORAGE_KEY = "aria2.form";
 
@@ -54,6 +54,7 @@ export function useAria2Workspace({ active, seed, onRetain, onSubmitted }: Aria2
     }
     return {
       ...loadStoredForm(ARIA2_FORM_STORAGE_KEY, defaultAria2Form),
+      seedAfterDownload: false,
       uri: "",
       torrentFile: "",
       allProxy: "",
@@ -107,11 +108,11 @@ export function useAria2Workspace({ active, seed, onRetain, onSubmitted }: Aria2
   }, [form]);
 
   const loadTrackers = useCallback(
-    async (source: TrackerSource, refresh: boolean) => {
+    async (refresh: boolean) => {
       const requestedRevision = draft.draftRevisionRef.current;
       setTrackerLoading(true);
       try {
-        const result = await aria2TrackerList(source, refresh);
+        const result = await aria2TrackerList(refresh);
         if (draft.draftRevisionRef.current === requestedRevision) setTrackerInfo(result);
       } catch (error) {
         if (draft.draftRevisionRef.current === requestedRevision) {
@@ -130,18 +131,11 @@ export function useAria2Workspace({ active, seed, onRetain, onSubmitted }: Aria2
   // 供高级区展示"已加载 N 条"；与防抖预览同类的持续同步路径
   useEffect(() => {
     if (!active) return;
-    void loadTrackers(form.trackerSource, false);
-    // 只在首次激活时预取；切换来源由 selectTrackerSource 显式触发
+    void loadTrackers(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const refreshTrackers = () => loadTrackers(form.trackerSource, true);
-
-  // 切换来源即拉新列表：提示行必须与表单当前来源一致，否则与命令预览互相矛盾
-  const selectTrackerSource = (source: TrackerSource) => {
-    update({ trackerSource: source });
-    void loadTrackers(source, false);
-  };
+  const refreshTrackers = () => loadTrackers(true);
 
   const submit = async () => {
     const submittedRevision = draft.draftRevisionRef.current;
@@ -198,7 +192,6 @@ export function useAria2Workspace({ active, seed, onRetain, onSubmitted }: Aria2
     trackerInfo,
     trackerLoading,
     refreshTrackers,
-    selectTrackerSource,
     pickOutputDirectory,
     pickCookieFile,
     pickTorrentFile

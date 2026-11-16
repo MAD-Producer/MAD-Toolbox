@@ -1,7 +1,6 @@
 //! 公共 BT tracker 列表：拉取、按天缓存与回退链。
-//! 主源 XIU2/TrackersListCollection（每日更新，best.txt），备选 ngosang/trackerslist。
-//! 抓取链优先走镜像通道（mt_dependencies Release 随每日同步发布的列表，经 OpenList
-//! 固定入口分发，国内可达性最好），失败再直连 GitHub raw / jsDelivr 保新鲜。
+//! mt_dependencies 合并 XIU2 和 ngosang 列表，每日更新。
+//! 列表仅通过 mt_dependencies 的自有 CDN 分发，获取失败时使用本地缓存。
 //! 缓存放应用数据目录 aria2/ 下。
 
 use std::time::Duration;
@@ -9,52 +8,18 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
-use crate::core::settings::{app_data_dir, load_app_settings};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum TrackerSource {
-    /// XIU2/TrackersListCollection best.txt（精选，约 20 条）。
-    Xiu2,
-    /// ngosang/trackerslist trackers_best.txt（带存活检测）。
-    Ngosang,
-}
-
-impl TrackerSource {
-    /// 清单 `trackers` 节的键名，同时用作缓存文件名标签。
-    fn key(self) -> &'static str {
-        match self {
-            Self::Xiu2 => "xiu2",
-            Self::Ngosang => "ngosang",
-        }
-    }
-
-    fn urls(self) -> &'static [&'static str] {
-        match self {
-            Self::Xiu2 => &[
-                "https://raw.githubusercontent.com/XIU2/TrackersListCollection/master/best.txt",
-                "https://cdn.jsdelivr.net/gh/XIU2/TrackersListCollection@master/best.txt",
-            ],
-            Self::Ngosang => &[
-                "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt",
-                "https://cdn.jsdelivr.net/gh/ngosang/trackerslist@master/trackers_best.txt",
-            ],
-        }
-    }
-}
+use crate::core::settings::app_data_dir;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CachedTrackers {
     fetched_at: String,
-    source: TrackerSource,
     trackers: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackerListResult {
-    pub source: TrackerSource,
     pub trackers: Vec<String>,
     pub fetched_at: String,
     /// true = 命中本地缓存（未刷新或拉取失败回退）。
@@ -62,31 +27,30 @@ pub struct TrackerListResult {
 }
 
 const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
-const FETCH_TIMEOUT: Duration = Duration::from_secs(15);
 
-fn cache_path(app: &AppHandle, source: TrackerSource) -> Option<std::path::PathBuf> {
+fn cache_path(app: &AppHandle) -> Option<std::path::PathBuf> {
     Some(
         app_data_dir(app)
             .ok()?
             .join("aria2")
-            .join(format!("trackers-{}.json", source.key())),
+            .join("trackers-merged.json"),
     )
 }
 
-fn read_cache(app: &AppHandle, source: TrackerSource) -> Option<CachedTrackers> {
-    let bytes = std::fs::read(cache_path(app, source)?).ok()?;
+fn read_cache(app: &AppHandle) -> Option<CachedTrackers> {
+    let bytes = std::fs::read(cache_path(app)?).ok()?;
     serde_json::from_slice(&bytes).ok()
 }
 
 /// 只读本地缓存（不关心新鲜度、不发网络）：预览命令用。
-pub(crate) fn cached_trackers(app: &AppHandle, source: TrackerSource) -> Vec<String> {
-    read_cache(app, source)
+pub(crate) fn cached_trackers(app: &AppHandle) -> Vec<String> {
+    read_cache(app)
         .map(|cached| cached.trackers)
         .unwrap_or_default()
 }
 
-fn write_cache(app: &AppHandle, source: TrackerSource, cached: &CachedTrackers) {
-    let Some(path) = cache_path(app, source) else {
+fn write_cache(app: &AppHandle, cached: &CachedTrackers) {
+    let Some(path) = cache_path(app) else {
         return;
     };
     if let Some(parent) = path.parent() {
@@ -127,39 +91,8 @@ pub(crate) fn parse_trackers(text: &str) -> Vec<String> {
         .collect()
 }
 
-fn tracker_client(app: &AppHandle) -> Result<reqwest::Client, String> {
-    let mut builder = reqwest::Client::builder().timeout(FETCH_TIMEOUT);
-    if let Some(proxy) = load_app_settings(app).proxy {
-        builder = builder.proxy(reqwest::Proxy::all(proxy).map_err(|error| error.to_string())?);
-    }
-    builder.build().map_err(|error| error.to_string())
-}
-
-async fn fetch_text(app: &AppHandle, urls: &[&str]) -> Result<String, String> {
-    let client = tracker_client(app)?;
-    let mut last_error = String::new();
-    for url in urls {
-        match client.get(*url).send().await {
-            Ok(response) => match response.error_for_status() {
-                Ok(response) => match response.text().await {
-                    Ok(text) => return Ok(text),
-                    Err(error) => last_error = error.to_string(),
-                },
-                Err(error) => last_error = error.to_string(),
-            },
-            Err(error) => last_error = error.to_string(),
-        }
-    }
-    Err(last_error)
-}
-
-async fn fetch_fresh(app: &AppHandle, source: TrackerSource) -> Result<CachedTrackers, String> {
-    // 镜像优先：OpenList 固定入口的分发链路比 GitHub raw 稳定。
-    // 镜像失败或解析不出有效 announce 时继续走上游直连，不让内容错误挡住回退链
-    let text = match crate::core::deps::fetch_mirror_tracker_text(app, source.key()).await {
-        Ok((_version, text)) if !parse_trackers(&text).is_empty() => text,
-        _ => fetch_text(app, source.urls()).await?,
-    };
+async fn fetch_fresh(app: &AppHandle) -> Result<CachedTrackers, String> {
+    let (_version, text) = crate::core::deps::fetch_mirror_tracker_text(app, "merged").await?;
     let trackers = parse_trackers(&text);
     if trackers.is_empty() {
         return Err(rust_i18n::t!(
@@ -170,7 +103,6 @@ async fn fetch_fresh(app: &AppHandle, source: TrackerSource) -> Result<CachedTra
     }
     Ok(CachedTrackers {
         fetched_at: chrono::Utc::now().to_rfc3339(),
-        source,
         trackers,
     })
 }
@@ -178,16 +110,16 @@ async fn fetch_fresh(app: &AppHandle, source: TrackerSource) -> Result<CachedTra
 /// 提交下载用的 tracker 列表：缓存新鲜（24h 内）直接用，否则尝试刷新；
 /// 失败回退本地缓存（无论新旧），再退空。拉取失败不阻断下载——
 /// tracker 只是加速器，DHT 与种子自带 tracker 仍是主路径。
-pub(crate) async fn for_submit(app: &AppHandle, source: TrackerSource) -> Vec<String> {
-    if let Some(cached) = read_cache(app, source).filter(cache_fresh) {
+pub(crate) async fn for_submit(app: &AppHandle) -> Vec<String> {
+    if let Some(cached) = read_cache(app).filter(cache_fresh) {
         return cached.trackers;
     }
-    match fetch_fresh(app, source).await {
+    match fetch_fresh(app).await {
         Ok(cached) => {
-            write_cache(app, source, &cached);
+            write_cache(app, &cached);
             cached.trackers
         }
-        Err(_) => read_cache(app, source)
+        Err(_) => read_cache(app)
             .map(|cached| cached.trackers)
             .unwrap_or_default(),
     }
@@ -196,24 +128,21 @@ pub(crate) async fn for_submit(app: &AppHandle, source: TrackerSource) -> Vec<St
 /// 预览/表单刷新用的完整查询：refresh=true 绕过 TTL 强拉。
 pub(crate) async fn tracker_list(
     app: &AppHandle,
-    source: TrackerSource,
     refresh: bool,
 ) -> Result<TrackerListResult, String> {
     if !refresh {
-        if let Some(cached) = read_cache(app, source).filter(cache_fresh) {
+        if let Some(cached) = read_cache(app).filter(cache_fresh) {
             return Ok(TrackerListResult {
-                source: cached.source,
                 trackers: cached.trackers,
                 fetched_at: cached.fetched_at,
                 cached: true,
             });
         }
     }
-    match fetch_fresh(app, source).await {
+    match fetch_fresh(app).await {
         Ok(cached) => {
-            write_cache(app, source, &cached);
+            write_cache(app, &cached);
             Ok(TrackerListResult {
-                source: cached.source,
                 trackers: cached.trackers,
                 fetched_at: cached.fetched_at,
                 cached: false,
@@ -221,9 +150,8 @@ pub(crate) async fn tracker_list(
         }
         Err(error) => {
             // 拉取失败回退过期缓存，并附失败说明
-            if let Some(cached) = read_cache(app, source) {
+            if let Some(cached) = read_cache(app) {
                 return Ok(TrackerListResult {
-                    source: cached.source,
                     trackers: cached.trackers,
                     fetched_at: cached.fetched_at,
                     cached: true,

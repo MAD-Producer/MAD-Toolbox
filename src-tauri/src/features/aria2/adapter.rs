@@ -218,12 +218,25 @@ fn build_argv(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Vec<String> {
 }
 
 /// 解析 aria2 控制台读出行：`[#a1b2c3 10MiB/100MiB(10%) CN:4 DL:2.5MiB ETA:35s]`。
-/// 做种读出（SEEDING(...)）、Download complete 行、末尾汇总表均返回 None。
+/// 元数据与做种阶段通过 detail 展示；任务成功仍以进程退出为准。
 /// `\r` 刷新的多次更新共处一行时取最后一段——stream_lines 只按 `\n` 切分。
 pub(crate) fn parse_progress(line: &str) -> Option<TaskProgress> {
     let segment = line.split('\r').rfind(|s| !s.trim().is_empty())?;
-    let rest = segment.trim().strip_prefix("[#")?.trim_start();
+    let segment = segment.trim();
+    if segment.starts_with("FILE: [MEMORY][METADATA]") {
+        return Some(TaskProgress {
+            percent: None,
+            detail: Some(rust_i18n::t!("backend.aria2.progress.metadata").to_string()),
+        });
+    }
+    let rest = segment.strip_prefix("[#")?.trim_start();
     let (_gid, rest) = rest.split_once(' ')?;
+    if rest.starts_with("SEED(") {
+        return Some(TaskProgress {
+            percent: Some(100.0),
+            detail: Some(rust_i18n::t!("backend.aria2.progress.seeding").to_string()),
+        });
+    }
     let (done, rest) = rest.split_once('/')?;
     let (total, pct) = rest.split_once('(')?;
     // 读出行括号后还有 CN:/DL:/ETA: 等字段，百分比只取到首个 ')' 为止
@@ -234,7 +247,13 @@ pub(crate) fn parse_progress(line: &str) -> Option<TaskProgress> {
         .trim()
         .parse()
         .ok()?;
-    let detail = format!("{done}/{total}");
+    let detail = rust_i18n::t!(
+        "backend.aria2.progress.downloading",
+        percent = pct.clamp(0.0, 100.0),
+        done = done,
+        total = total
+    )
+    .to_string();
     Some(TaskProgress {
         percent: Some(pct.clamp(0.0, 100.0)),
         detail: Some(detail),
@@ -382,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn public_torrent_applies_default_seeding_and_tracker_injection() {
+    fn public_torrent_disables_seeding_by_default_and_injects_trackers() {
         let mut intent = form();
         intent.torrent_file = "public.torrent".into();
         let ctx = Aria2Ctx {
@@ -394,12 +413,17 @@ mod tests {
             let i = argv.iter().position(|a| a == flag).unwrap();
             argv[i + 1].clone()
         };
-        assert_eq!(find("--seed-ratio"), "1.00");
-        assert!(!argv.contains(&"--seed-time".to_string()));
+        assert_eq!(find("--seed-time"), "0");
+        assert!(!argv.contains(&"--seed-ratio".to_string()));
         assert_eq!(
             find("--bt-tracker"),
             "udp://a:80/announce,http://b/announce"
         );
+        intent.seed_after_download = true;
+        let argv = build_argv(&intent, &ctx);
+        let ratio = argv.iter().position(|arg| arg == "--seed-ratio").unwrap();
+        assert_eq!(argv[ratio + 1], "1.00");
+        assert!(!argv.contains(&"--seed-time".to_string()));
     }
 
     #[test]
@@ -514,7 +538,9 @@ mod tests {
         let progress =
             parse_progress("[#a1b2c3 10MiB/100MiB(10%) CN:4 DL:2.5MiB ETA:35s]").unwrap();
         assert_eq!(progress.percent, Some(10.0));
-        assert_eq!(progress.detail.as_deref(), Some("10MiB/100MiB"));
+        assert!(progress.detail.unwrap().contains("10MiB / 100MiB"));
+        let starting = parse_progress("[#a1b2c3 1MiB/279MiB(0%) CN:4 DL:1MiB]").unwrap();
+        assert_eq!(starting.percent, Some(0.0));
     }
 
     #[test]
@@ -524,8 +550,17 @@ mod tests {
     }
 
     #[test]
-    fn parse_progress_ignores_seeding_and_summary_lines() {
-        assert!(parse_progress("[#a SEEDING(ratio:1.00)]").is_none());
+    fn parse_progress_recognizes_metadata_and_seeding() {
+        let metadata = parse_progress("FILE: [MEMORY][METADATA]ac19fa07").unwrap();
+        assert_eq!(metadata.percent, None);
+        assert!(metadata.detail.is_some());
+        let seeding = parse_progress("[#e4e639 SEED(0.0) CN:44 SD:4 UL:80KiB(2.2MiB)]").unwrap();
+        assert_eq!(seeding.percent, Some(100.0));
+        assert!(seeding.detail.is_some());
+        let seeding_without_upload = parse_progress("[#448811 SEED(0.0) CN:41 SD:5]").unwrap();
+        assert_eq!(seeding_without_upload.percent, Some(100.0));
+        assert_eq!(seeding_without_upload.detail, seeding.detail);
+        assert!(parse_progress("[#a 0B/0B CN:0 SD:0 DL:0B]").is_none());
         assert!(parse_progress("Download complete: /tmp/x").is_none());
         assert!(parse_progress("Download Results:").is_none());
     }

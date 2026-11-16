@@ -1,5 +1,3 @@
-export type TrackerSource = "xiu2" | "ngosang";
-
 /** 下载类型切换是独立表单字段：不能从 torrentFile 是否为空派生（空值时切不动）。
  * 提交时只携带活动来源的源字段——后端 torrentFile 优先于 uri，混发残留值会改写语义。 */
 export type Aria2SourceKind = "uri" | "torrent";
@@ -9,7 +7,6 @@ export interface Aria2FormState {
   uri: string;
   torrentFile: string;
   outputDirectory: string;
-  trackerSource: TrackerSource;
   allProxy: string;
   maxOverallDownloadLimit: string;
   maxDownloadLimit: string;
@@ -36,7 +33,6 @@ export const defaultAria2Form: Aria2FormState = {
   uri: "",
   torrentFile: "",
   outputDirectory: "",
-  trackerSource: "xiu2",
   allProxy: "",
   maxOverallDownloadLimit: "",
   maxDownloadLimit: "",
@@ -53,7 +49,7 @@ export const defaultAria2Form: Aria2FormState = {
   peerExchange: true,
   lpd: false,
   btMaxPeers: 55,
-  seedAfterDownload: true,
+  seedAfterDownload: false,
   seedRatio: 1,
   seedTimeMinutes: 0
 };

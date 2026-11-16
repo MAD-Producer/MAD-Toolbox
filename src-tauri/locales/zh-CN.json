@@ -1,4 +1,7 @@
 {
+  "backend.aria2.progress.metadata": "正在获取种子信息",
+  "backend.aria2.progress.seeding": "下载完成 · 做种中",
+  "backend.aria2.progress.downloading": "下载中 · %{percent}% · %{done} / %{total}",
   "backend.deps.bbdownCdnHint": "macOS 上请通过 CDN 镜像安装 BBDown。",
   "backend.deps.invalidPackageFile": "镜像包必须使用 ZIP 文件名，不能是路径或 URL。",
   "backend.deps.invalidPackageHash": "镜像包缺少有效的 SHA-256 校验值。",

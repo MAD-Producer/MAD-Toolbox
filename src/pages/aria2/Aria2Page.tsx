@@ -75,7 +75,6 @@ export function Aria2Page(props: Aria2PageProps) {
               trackerInfo={workspace.trackerInfo}
               trackerLoading={workspace.trackerLoading}
               onRefreshTrackers={workspace.refreshTrackers}
-              onSelectTrackerSource={workspace.selectTrackerSource}
             />
           </div>
         </SettingsSection>

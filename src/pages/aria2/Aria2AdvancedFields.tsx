@@ -1,27 +1,12 @@
 import { useId } from "react";
-import { ArrowClockwise } from "@phosphor-icons/react";
+import { ArrowClockwise, Stack } from "@phosphor-icons/react";
 import { FieldRow, OptionGroup, SwitchTileGrid } from "../../components/common/FieldRow";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { NumberField } from "../../components/ui/number-field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "../../components/ui/select";
 import { t, type TranslationKey } from "../../locale";
-import { defaultAria2Form, type Aria2FormState, type TrackerSource } from "./form";
+import { defaultAria2Form, type Aria2FormState } from "./form";
 import type { TrackerListResult } from "./api";
-
-const TRACKER_SOURCE_OPTIONS: ReadonlyArray<{
-  value: TrackerSource;
-  labelKey: TranslationKey;
-}> = [
-  { value: "xiu2", labelKey: "aria2.tracker.sourceXiu2" },
-  { value: "ngosang", labelKey: "aria2.tracker.sourceNgosang" }
-];
 
 const BT_SWITCHES: ReadonlyArray<[keyof Aria2FormState, TranslationKey]> = [
   ["ptMode", "aria2.fields.ptMode"],
@@ -39,7 +24,6 @@ interface Aria2AdvancedFieldsProps {
   trackerInfo: TrackerListResult | null;
   trackerLoading: boolean;
   onRefreshTrackers: () => void;
-  onSelectTrackerSource: (source: TrackerSource) => void;
 }
 
 function toTileItems(
@@ -57,7 +41,14 @@ function toTileItems(
 
 function formatFetchedAt(fetchedAt: string): string {
   const parsed = new Date(fetchedAt);
-  return Number.isNaN(parsed.getTime()) ? fetchedAt : parsed.toLocaleString();
+  if (Number.isNaN(parsed.getTime())) return fetchedAt;
+  return new Intl.DateTimeFormat(undefined, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).format(parsed);
 }
 
 export function Aria2AdvancedFields({
@@ -66,8 +57,7 @@ export function Aria2AdvancedFields({
   onUpdate,
   trackerInfo,
   trackerLoading,
-  onRefreshTrackers,
-  onSelectTrackerSource
+  onRefreshTrackers
 }: Aria2AdvancedFieldsProps) {
   const splitId = useId();
   const maxConnId = useId();
@@ -80,8 +70,7 @@ export function Aria2AdvancedFields({
   const overallDlId = useId();
   const dlId = useId();
   const overallUlId = useId();
-  const trackerSelectId = useId();
-  const source = form.trackerSource;
+  const trackerRefreshId = useId();
 
   return (
     <div className="flex flex-col gap-4">
@@ -154,30 +143,19 @@ export function Aria2AdvancedFields({
         <p className="text-xs text-muted-foreground">{t("aria2.tracker.scopeHint")}</p>
         <FieldRow
           label={t("aria2.tracker.label")}
-          htmlFor={trackerSelectId}
-          hint={trackerHint(trackerInfo, source)}
+          htmlFor={trackerRefreshId}
+          hint={trackerHint(trackerInfo)}
         >
-          <div className="flex items-center gap-2">
-            <Select
-              value={source}
-              onValueChange={(value) => onSelectTrackerSource(value as TrackerSource)}
-              disabled={disabled}
-            >
-              <SelectTrigger id={trackerSelectId} aria-label={t("aria2.tracker.label")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TRACKER_SOURCE_OPTIONS.map(({ value, labelKey }) => (
-                  <SelectItem key={value} value={value}>
-                    {t(labelKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex h-9 w-full items-stretch rounded-md border border-input bg-card text-sm">
+            <span className="flex min-w-0 flex-1 items-center gap-2 px-3 text-muted-foreground">
+              <Stack size={16} className="shrink-0" aria-hidden />
+              <span className="truncate">{t("aria2.tracker.merged")}</span>
+            </span>
+            <span className="my-1.5 w-px shrink-0 bg-input" aria-hidden />
             <Button
-              variant="outline"
-              size="sm"
-              className="h-9 shrink-0 gap-1.5"
+              id={trackerRefreshId}
+              variant="ghost"
+              className="shrink-0 gap-1.5 rounded-r-md rounded-l-none px-3"
               leftSection={<ArrowClockwise size={16} />}
               loading={trackerLoading}
               onClick={onRefreshTrackers}
@@ -266,9 +244,8 @@ export function Aria2AdvancedFields({
   );
 }
 
-function trackerHint(trackerInfo: TrackerListResult | null, source: TrackerSource): string {
-  // 列表尚未落到当前来源（切换后的拉取间隙）时不展示旧来源数据
-  if (!trackerInfo || trackerInfo.source !== source) return t("aria2.tracker.notLoaded");
+function trackerHint(trackerInfo: TrackerListResult | null): string {
+  if (!trackerInfo) return t("aria2.tracker.notLoaded");
   return t(trackerInfo.cached ? "aria2.tracker.cachedHint" : "aria2.tracker.freshHint", {
     count: trackerInfo.trackers.length,
     time: formatFetchedAt(trackerInfo.fetchedAt)

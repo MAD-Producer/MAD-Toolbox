@@ -326,7 +326,15 @@ export const TaskCard = memo(function TaskCard({
         </div>
       </div>
 
-      {bar && (bar.indeterminate || bar.value > 0) && (
+      {task.feature === "aria2" && task.status === "running" && task.progress?.detail && (
+        <div className="mt-1 flex items-start gap-2.5 text-xs text-muted-foreground">
+          <span aria-hidden="true" className="w-4 shrink-0" />
+          <span aria-hidden="true" className="w-4 shrink-0" />
+          <span className="min-w-0 break-words">{task.progress.detail}</span>
+        </div>
+      )}
+
+      {bar && (
         <div className="mt-1.5">
           <Progress
             value={bar.value}

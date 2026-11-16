@@ -3,16 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::trackers::TrackerSource;
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Aria2Intent {
     pub uri: String,
     pub torrent_file: String,
     pub output_directory: String,
-    /// 公共 tracker 列表来源（inject_trackers 开启时随提交拉取）。
-    pub tracker_source: TrackerSource,
     /// `--all-proxy`（敏感：可能含账号密码）。
     pub all_proxy: String,
     pub max_overall_download_limit: String,
@@ -50,7 +46,6 @@ impl Default for Aria2Intent {
             uri: String::new(),
             torrent_file: String::new(),
             output_directory: String::new(),
-            tracker_source: TrackerSource::Xiu2,
             all_proxy: String::new(),
             max_overall_download_limit: String::new(),
             max_download_limit: String::new(),
@@ -67,7 +62,7 @@ impl Default for Aria2Intent {
             peer_exchange: true,
             lpd: false,
             bt_max_peers: 55,
-            seed_after_download: true,
+            seed_after_download: false,
             seed_ratio: 1.0,
             seed_time_minutes: 0,
         }

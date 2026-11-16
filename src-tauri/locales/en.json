@@ -1,4 +1,7 @@
 {
+  "backend.aria2.progress.metadata": "Fetching torrent metadata",
+  "backend.aria2.progress.seeding": "Download complete · Seeding",
+  "backend.aria2.progress.downloading": "Downloading · %{percent}% · %{done} / %{total}",
   "backend.deps.bbdownCdnHint": "On macOS, install BBDown from the CDN mirror.",
   "backend.deps.invalidPackageFile": "The mirror package must be a ZIP filename, not a path or URL.",
   "backend.deps.invalidPackageHash": "The mirror package has no valid SHA-256 checksum.",

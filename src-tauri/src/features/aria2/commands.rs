@@ -6,23 +6,12 @@ use std::{io::Read, sync::Arc};
 use tauri::{AppHandle, State};
 
 use super::adapter::{self, Aria2Ctx};
-use super::trackers::{self, TrackerListResult, TrackerSource};
+use super::trackers::{self, TrackerListResult};
 use super::types::Aria2Intent;
 use crate::core::adapter::{preview_result, PreviewResult, SubmitResult};
 use crate::core::deps::{execution_path, resolve_tool, ToolName};
 use crate::core::task::types::{CwdPolicy, Feature, TaskIntent};
 use crate::core::task::{TaskHub, TaskSpec};
-
-/// 从意图中提取 tracker 来源（Manual 意图无表单，按默认源处理）。
-fn intent_tracker_source(intent: &TaskIntent) -> TrackerSource {
-    match intent {
-        TaskIntent::Form(data) => data
-            .get("trackerSource")
-            .and_then(|value| serde_json::from_value(value.clone()).ok())
-            .unwrap_or(TrackerSource::Xiu2),
-        TaskIntent::Manual { .. } => TrackerSource::Xiu2,
-    }
-}
 
 fn torrent_private(bytes: &[u8]) -> Result<bool, bendy::decoding::Error> {
     use bendy::decoding::{Decoder, Error};
@@ -85,7 +74,7 @@ fn read_torrent(intent: &TaskIntent) -> Result<Option<bool>, String> {
 pub fn aria2_preview(app: AppHandle, intent: TaskIntent) -> Result<PreviewResult, String> {
     // 预览只读本地缓存，不发起网络请求——所见 tracker 可能与提交时新鲜拉取的不同
     let ctx = Aria2Ctx {
-        trackers: trackers::cached_trackers(&app, intent_tracker_source(&intent)),
+        trackers: trackers::cached_trackers(&app),
         private_torrent: read_torrent(&intent)?,
     };
     let plan = adapter::plan(&intent, &ctx).map_err(|e| e.to_string())?;
@@ -106,7 +95,7 @@ pub async fn aria2_submit(
     let (tool_path, _) = resolve_tool(&app, &ToolName::Aria2)
         .ok_or_else(|| rust_i18n::t!("backend.aria2.commands.aria2_not_found").to_string())?;
     if adapter::needs_trackers(&intent, &ctx) {
-        ctx.trackers = trackers::for_submit(&app, intent_tracker_source(&intent)).await;
+        ctx.trackers = trackers::for_submit(&app).await;
     }
     let plan = adapter::plan(&intent, &ctx).map_err(|e| e.to_string())?;
     let cwd = match plan.cwd {
@@ -148,10 +137,9 @@ pub async fn aria2_submit(
 #[tauri::command]
 pub async fn aria2_tracker_list(
     app: AppHandle,
-    source: TrackerSource,
     refresh: bool,
 ) -> Result<TrackerListResult, String> {
-    trackers::tracker_list(&app, source, refresh).await
+    trackers::tracker_list(&app, refresh).await
 }
 
 #[cfg(test)]

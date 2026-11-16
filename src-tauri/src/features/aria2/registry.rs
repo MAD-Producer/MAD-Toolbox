@@ -35,7 +35,6 @@ pub const REGISTRY: &[ParamMeta] = &[
     meta("split", "--split"),
     meta("maxConnectionPerServer", "--max-connection-per-server"),
     meta("ptMode", ""),
-    meta("trackerSource", ""),
     meta("injectTrackers", "--bt-tracker"),
     meta("dht", "--enable-dht"),
     meta("peerExchange", "--enable-peer-exchange"),

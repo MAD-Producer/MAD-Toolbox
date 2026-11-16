@@ -304,7 +304,7 @@ async fn fetch_manifest_bytes(app: &AppHandle) -> Result<Vec<u8>, String> {
 }
 
 /// 镜像通道的 tracker 列表文本（aria2 页用）：清单定位资产 → 下载 → 校验 size/sha256。
-/// 返回 `(抓取日期, 列表文本)`；任何失败都让调用方回退上游直连，不阻断下载。
+/// 返回 `(抓取日期, 列表文本)`；失败时由调用方使用本地缓存，不阻断下载。
 pub(crate) async fn fetch_mirror_tracker_text(
     app: &AppHandle,
     source: &str,
