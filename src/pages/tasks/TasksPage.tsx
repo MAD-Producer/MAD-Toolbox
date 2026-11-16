@@ -1,7 +1,7 @@
 import {
   Pulse,
   Warning,
-  Calendar,
+  CalendarDots,
   CheckCircle,
   ClockCounterClockwise,
   Trash
@@ -248,7 +248,7 @@ export function TasksPage({ onRerun, onReuse }: TasksPageProps) {
           <>
             {today.length > 0 && (
               <SettingsSection
-                icon={<Calendar size={20} />}
+                icon={<CalendarDots size={20} />}
                 title={t("tasks.today")}
                 action={<Badge>{today.length}</Badge>}
                 opened={todayOpen}
