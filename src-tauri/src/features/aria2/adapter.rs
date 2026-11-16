@@ -394,9 +394,9 @@ mod tests {
         assert!(argv.contains(&"--show-console-readout=false".to_string()));
         assert!(argv.contains(&"--summary-interval=1".to_string()));
         let split_at = argv.iter().position(|a| a == "--split").unwrap();
-        assert_eq!(argv[split_at + 1], "5");
+        assert_eq!(argv[split_at + 1], "16");
         assert_eq!(argv.last().unwrap(), "https://example.com/file.zip");
-        assert!(argv.contains(&"--seed-ratio".to_string()));
+        assert!(argv.contains(&"--seed-time".to_string()));
         assert!(!argv.contains(&"--bt-tracker".to_string()));
     }
 
@@ -414,6 +414,9 @@ mod tests {
             argv[i + 1].clone()
         };
         assert_eq!(find("--seed-time"), "0");
+        assert_eq!(find("--split"), "16");
+        assert_eq!(find("--max-connection-per-server"), "16");
+        assert_eq!(find("--bt-max-peers"), "200");
         assert!(!argv.contains(&"--seed-ratio".to_string()));
         assert_eq!(
             find("--bt-tracker"),
