@@ -2,6 +2,16 @@
 
 All notable changes to MAD Toolbox are documented here.
 
+## 3.1.0
+
+- feat: 新增 aria2 下载工作区，支持链接、磁力与种子文件下载，以及 BT/PT 参数设置
+- feat: 公共 tracker 合并 XIU2 与 ngosang 列表，通过自有 CDN 更新，获取失败时使用本地缓存
+- feat: 任务卡片显示种子信息获取、下载进度和做种状态，支持复用任务配置
+- perf: aria2 默认 HTTP 分段数和单服务器连接上限提高到 16，BT peer 上限提高到 200
+- fix: 默认关闭下载后做种；修复 0% 时进度条不显示、做种时进度停留在 99% 的问题
+- fix: 有活动任务时关闭窗口提供确认，支持最小化；任务页日历图标改为 CalendarDots
+- fix: 外部依赖清单兼容新增工具，缺少 aria2 时仍可使用已有依赖
+
 ## 3.0.0
 
 - feat: 全新的界面设计——左侧可折叠导航侧栏、统一的设计系统，明暗主题观感更协调
