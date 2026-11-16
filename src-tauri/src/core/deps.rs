@@ -61,6 +61,7 @@ mod python_pin {
 pub(crate) enum ToolName {
     Bbdown,
     YtDlp,
+    Aria2,
     Musicdl,
     Ffmpeg,
     Ffprobe,
@@ -74,6 +75,7 @@ impl ToolName {
         match self {
             Self::Bbdown => "BBDown",
             Self::YtDlp => "yt-dlp",
+            Self::Aria2 => "aria2c",
             Self::Musicdl => "musicdl",
             Self::Ffmpeg => "ffmpeg",
             Self::Ffprobe => "ffprobe",
@@ -93,6 +95,7 @@ impl ToolName {
         match self {
             Self::Bbdown => "BBDown",
             Self::YtDlp => "yt-dlp",
+            Self::Aria2 => "Aria2",
             Self::Musicdl => "musicdl",
             Self::Ffmpeg => "FFmpeg",
             Self::Ffprobe => "ffprobe",
@@ -103,7 +106,10 @@ impl ToolName {
     }
 
     fn required(&self) -> bool {
-        !matches!(self, Self::Ffprobe | Self::Musicdl | Self::Python)
+        !matches!(
+            self,
+            Self::Ffprobe | Self::Musicdl | Self::Python | Self::Aria2
+        )
     }
 
     fn install_command(&self) -> Option<&'static str> {
@@ -117,6 +123,9 @@ impl ToolName {
                 ),
                 Self::YtDlp => Some(
                     "winget install --id yt-dlp.yt-dlp -e --accept-package-agreements --accept-source-agreements",
+                ),
+                Self::Aria2 => Some(
+                    "winget install --id aria2.aria2 -e --accept-package-agreements --accept-source-agreements",
                 ),
                 Self::Ffmpeg => Some(
                     "winget install --id Gyan.FFmpeg -e --accept-package-agreements --accept-source-agreements",
@@ -135,6 +144,7 @@ impl ToolName {
             match self {
                 Self::Bbdown => Some("dotnet tool install --global BBDown"),
                 Self::YtDlp => Some("brew install yt-dlp"),
+                Self::Aria2 => Some("brew install aria2"),
                 Self::Ffmpeg => Some("brew install ffmpeg"),
                 Self::Mediainfo => Some("brew install media-info"),
                 Self::Deno => Some("brew install deno"),
@@ -182,11 +192,24 @@ struct MirrorPackage {
     size: u64,
 }
 
+/// 清单 `trackers` 节的单个列表条目：fileName 相对镜像下载根，version 是抓取日期。
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MirrorTrackerList {
+    version: String,
+    file_name: String,
+    sha256: String,
+    size: u64,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MirrorManifest {
     schema_version: u32,
-    platforms: BTreeMap<String, BTreeMap<ToolName, MirrorPackage>>,
+    #[serde(default)]
+    trackers: BTreeMap<String, MirrorTrackerList>,
+    #[serde(default)]
+    platforms: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
 }
 
 #[derive(Serialize)]
@@ -221,18 +244,28 @@ fn parse_mirror_manifest(
         .get(platform)
         .ok_or_else(|| rust_i18n::t!("backend.deps.mirrorUnsupported").to_string())?;
     let mut selected = BTreeMap::new();
-    for tool in [
-        ToolName::Deno,
-        ToolName::Mediainfo,
-        ToolName::Ffmpeg,
-        ToolName::Bbdown,
-        ToolName::YtDlp,
+    for (key, tool) in [
+        ("deno", ToolName::Deno),
+        ("mediainfo", ToolName::Mediainfo),
+        ("ffmpeg", ToolName::Ffmpeg),
+        ("bbdown", ToolName::Bbdown),
+        ("yt-dlp", ToolName::YtDlp),
+        ("aria2", ToolName::Aria2),
     ] {
-        let package = packages.get(&tool).ok_or_else(|| {
-            rust_i18n::t!("backend.deps.manifestPackageMissing", tool = tool.label()).to_string()
+        let Some(value) = packages.get(key) else {
+            if tool == ToolName::Aria2 {
+                continue;
+            }
+            return Err(
+                rust_i18n::t!("backend.deps.manifestPackageMissing", tool = tool.label())
+                    .to_string(),
+            );
+        };
+        let package: MirrorPackage = serde_json::from_value(value.clone()).map_err(|error| {
+            rust_i18n::t!("backend.deps.manifestFailed", error = error).to_string()
         })?;
         validate_mirror_package(&tool, &package.installation)?;
-        selected.insert(tool, package.clone());
+        selected.insert(tool, package);
     }
     Ok(selected)
 }
@@ -251,7 +284,12 @@ async fn fetch_mirror_packages(
     app: &AppHandle,
 ) -> Result<BTreeMap<ToolName, MirrorPackage>, String> {
     let platform = mirror_platform()?;
-    let bytes = mirror_client(app, Duration::from_secs(20))?
+    let bytes = fetch_manifest_bytes(app).await?;
+    parse_mirror_manifest(&bytes, platform)
+}
+
+async fn fetch_manifest_bytes(app: &AppHandle) -> Result<Vec<u8>, String> {
+    Ok(mirror_client(app, Duration::from_secs(20))?
         .get(MIRROR_MANIFEST_URL)
         .header(reqwest::header::CACHE_CONTROL, "no-cache")
         .send()
@@ -261,8 +299,40 @@ async fn fetch_mirror_packages(
         .map_err(|error| rust_i18n::t!("backend.deps.manifestFailed", error = error).to_string())?
         .bytes()
         .await
+        .map_err(|error| rust_i18n::t!("backend.deps.manifestFailed", error = error).to_string())?
+        .to_vec())
+}
+
+/// 镜像通道的 tracker 列表文本（aria2 页用）：清单定位资产 → 下载 → 校验 size/sha256。
+/// 返回 `(抓取日期, 列表文本)`；失败时由调用方使用本地缓存，不阻断下载。
+pub(crate) async fn fetch_mirror_tracker_text(
+    app: &AppHandle,
+    source: &str,
+) -> Result<(String, String), String> {
+    let bytes = fetch_manifest_bytes(app).await?;
+    let manifest: MirrorManifest = serde_json::from_slice(&bytes)
         .map_err(|error| rust_i18n::t!("backend.deps.manifestFailed", error = error).to_string())?;
-    parse_mirror_manifest(&bytes, platform)
+    if manifest.schema_version != 1 {
+        return Err(rust_i18n::t!("backend.deps.manifestSchemaUnsupported").to_string());
+    }
+    let entry = manifest.trackers.get(source).ok_or_else(|| {
+        rust_i18n::t!("backend.deps.mirrorTrackerMissing", source = source).to_string()
+    })?;
+    let text = mirror_client(app, Duration::from_secs(20))?
+        .get(format!("{MIRROR_DOWNLOAD_BASE}{}", entry.file_name))
+        .send()
+        .await
+        .map_err(|error| error.to_string())?
+        .error_for_status()
+        .map_err(|error| error.to_string())?
+        .text()
+        .await
+        .map_err(|error| error.to_string())?;
+    let digest = format!("{:x}", Sha256::digest(text.as_bytes()));
+    if text.len() as u64 != entry.size || !digest.eq_ignore_ascii_case(&entry.sha256) {
+        return Err(rust_i18n::t!("backend.deps.mirrorTrackerHashMismatch").to_string());
+    }
+    Ok((entry.version.clone(), text))
 }
 
 fn mirror_update_available(
@@ -303,6 +373,7 @@ impl ToolName {
         match self {
             Self::Bbdown => Some("bbdown"),
             Self::YtDlp => Some("yt-dlp"),
+            Self::Aria2 => Some("aria2"),
             Self::Ffmpeg | Self::Ffprobe => Some("ffmpeg"),
             Self::Mediainfo => Some("mediainfo"),
             Self::Deno => Some("deno"),
@@ -510,6 +581,7 @@ async fn mirror_in_use(hub: &TaskHub, tool: &ToolName) -> bool {
                 Some("ffmpeg") => true,
                 Some("bbdown") => task.feature == Feature::Bilibili,
                 Some("yt-dlp" | "deno") => task.feature == Feature::Network,
+                Some("aria2") => task.feature == Feature::Aria2,
                 _ => false,
             }
     })
@@ -711,12 +783,13 @@ fn winget_package_paths(packages_root: &Path) -> Vec<PathBuf> {
     // Portable packages do not always create WinGet Links. Rescan only the
     // packages this app installs so a completed install is visible immediately.
     const MAX_DEPTH: usize = 3;
-    const PACKAGES: [(&str, &str); 5] = [
+    const PACKAGES: [(&str, &str); 6] = [
         ("nilaoda.BBDown_", "BBDown.exe"),
         ("Gyan.FFmpeg_", "ffmpeg.exe"),
         ("yt-dlp.yt-dlp_", "yt-dlp.exe"),
         ("MediaArea.MediaInfo_", "mediainfo.exe"),
         ("DenoLand.Deno_", "deno.exe"),
+        ("aria2.aria2_", "aria2c.exe"),
     ];
 
     let Ok(entries) = std::fs::read_dir(packages_root) else {
@@ -885,6 +958,7 @@ pub(crate) fn execution_path(app: &AppHandle) -> OsString {
     for tool in [
         ToolName::Bbdown,
         ToolName::YtDlp,
+        ToolName::Aria2,
         ToolName::Ffmpeg,
         ToolName::Ffprobe,
         ToolName::Mediainfo,
@@ -1237,6 +1311,7 @@ pub(crate) async fn dependency_status(app: AppHandle) -> Vec<DependencyStatus> {
     let tools = [
         ToolName::Bbdown,
         ToolName::YtDlp,
+        ToolName::Aria2,
         ToolName::Musicdl,
         ToolName::Ffmpeg,
         ToolName::Ffprobe,
@@ -1485,6 +1560,7 @@ mod mirror_tests {
             ("ffmpeg", "ffmpeg"),
             ("bbdown", "BBDown"),
             ("yt-dlp", "yt-dlp_macos"),
+            ("aria2", "aria2c"),
         ] {
             let mut executables =
                 serde_json::Map::from_iter([(tool.to_string(), serde_json::json!(path))]);
@@ -1515,7 +1591,7 @@ mod mirror_tests {
     fn manifest_preserves_selected_platform_package_layout() {
         let bytes = serde_json::to_vec(&manifest_fixture()).unwrap();
         let selected = parse_mirror_manifest(&bytes, "macos-arm64").unwrap();
-        assert_eq!(selected.len(), 5);
+        assert_eq!(selected.len(), 6);
         assert_eq!(
             selected[&ToolName::Mediainfo].installation.executables[&ToolName::Mediainfo],
             PathBuf::from("usr/local/bin/mediainfo")
@@ -1525,6 +1601,49 @@ mod mirror_tests {
             .executables
             .contains_key(&ToolName::Ffprobe));
         assert_eq!(selected[&ToolName::YtDlp].size, 42);
+    }
+
+    #[test]
+    fn manifest_trackers_section_parses_with_and_without_entries() {
+        let mut fixture = manifest_fixture();
+        fixture["trackers"] = serde_json::json!({
+            "xiu2": {
+                "version": "2026-11-15",
+                "fileName": "trackers-xiu2.txt",
+                "sha256": "b".repeat(64),
+                "size": 1234
+            }
+        });
+        let manifest: MirrorManifest =
+            serde_json::from_slice(&serde_json::to_vec(&fixture).unwrap()).unwrap();
+        assert_eq!(manifest.trackers["xiu2"].file_name, "trackers-xiu2.txt");
+        assert_eq!(manifest.trackers["xiu2"].version, "2026-11-15");
+        assert_eq!(manifest.trackers["xiu2"].size, 1234);
+
+        // 旧清单没有 trackers 节：serde(default) 兜底为空，解析不受影响
+        let legacy: MirrorManifest =
+            serde_json::from_slice(&serde_json::to_vec(&manifest_fixture()).unwrap()).unwrap();
+        assert!(legacy.trackers.is_empty());
+    }
+
+    #[test]
+    fn manifest_ignores_unknown_packages_but_validates_supported_packages() {
+        let mut fixture = manifest_fixture();
+        fixture["platforms"]["macos-arm64"]["future-tool"] = serde_json::json!({
+            "executables": {"future-tool": "future"}, "futureField": true
+        });
+        fixture["platforms"]["future-platform"] = serde_json::json!({"deno": null});
+        let selected =
+            parse_mirror_manifest(&serde_json::to_vec(&fixture).unwrap(), "macos-arm64").unwrap();
+        assert_eq!(selected.len(), 6);
+        assert_eq!(
+            selected[&ToolName::Aria2].installation.executables[&ToolName::Aria2],
+            PathBuf::from("aria2c")
+        );
+        fixture["platforms"]["macos-arm64"]["deno"]["size"] = serde_json::json!("invalid");
+        assert!(
+            parse_mirror_manifest(&serde_json::to_vec(&fixture).unwrap(), "macos-arm64").is_err()
+        );
     }
 
     #[test]
@@ -1548,6 +1667,20 @@ mod mirror_tests {
         assert!(
             parse_mirror_manifest(&serde_json::to_vec(&missing).unwrap(), "macos-arm64").is_err()
         );
+    }
+
+    #[test]
+    fn manifest_degrades_gracefully_when_aria2_is_absent() {
+        // aria2 是可选包，缺失时其余工具照常可用
+        let mut legacy = manifest_fixture();
+        legacy["platforms"]["macos-arm64"]
+            .as_object_mut()
+            .unwrap()
+            .remove("aria2");
+        let selected = parse_mirror_manifest(&serde_json::to_vec(&legacy).unwrap(), "macos-arm64")
+            .expect("legacy manifest without aria2 must still parse");
+        assert_eq!(selected.len(), 5);
+        assert!(!selected.contains_key(&ToolName::Aria2));
     }
 
     #[test]

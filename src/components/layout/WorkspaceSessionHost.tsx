@@ -1,10 +1,11 @@
 import { Suspense, type ReactNode } from "react";
 import { useWorkspacesStore, type WorkspaceId } from "../../stores/workspaces";
 import { WorkspaceSlot } from "./WorkspaceSlot";
+import type { TaskSeed } from "../../contracts/types";
 
 export interface WorkspaceDefinition {
   id: WorkspaceId;
-  render: (active: boolean, generation: number) => ReactNode;
+  render: (active: boolean, generation: number, seed: TaskSeed | null) => ReactNode;
 }
 
 interface WorkspaceSessionHostProps {
@@ -34,7 +35,7 @@ export function WorkspaceSessionHost({
         generation={session.generation}
       >
         <Suspense fallback={active ? fallback : null}>
-          {workspace.render(active, session.generation)}
+          {workspace.render(active, session.generation, session.seed)}
         </Suspense>
       </WorkspaceSlot>
     );

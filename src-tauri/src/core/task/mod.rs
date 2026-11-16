@@ -89,6 +89,10 @@ enum HubMsg {
     Cancel {
         id: String,
     },
+    CancelAll,
+    /// 应用退出流程的第一步：之后到达的 Submit 一律落为 canceled，
+    /// 防止取消窗口之后又spawn 新进程（macOS 无 Job Object 兜底）。
+    BeginShutdown,
     Promote {
         id: String,
     },
@@ -138,6 +142,7 @@ impl TaskHub {
             pending: HashMap::new(),
             running: HashMap::new(),
             seqs: HashMap::new(),
+            shutdown: false,
         };
         tokio::spawn(hub_loop(state, rx, tx.clone()));
         TaskHub { tx }
@@ -164,6 +169,18 @@ impl TaskHub {
 
     pub fn cancel(&self, id: &str) {
         let _ = self.tx.send(HubMsg::Cancel { id: id.to_string() });
+    }
+
+    /// 尽力取消全部活动任务（queued/running）：应用退出前的收尾动作。
+    /// 每个任务的取消路径与单任务取消一致；退出方自行等待终态。
+    pub fn cancel_all(&self) {
+        let _ = self.tx.send(HubMsg::CancelAll);
+    }
+
+    /// 进入退出状态：此后提交的任务不再执行（直接落 canceled）。
+    /// 必须先于 cancel_all 发送，堵住「取消后又提交」的竞态窗口。
+    pub fn begin_shutdown(&self) {
+        let _ = self.tx.send(HubMsg::BeginShutdown);
     }
 
     /// 置顶：移到全局队首（§4.4 的全局语义）。
@@ -210,6 +227,8 @@ struct HubState {
     pending: HashMap<String, PendingSpec>,
     running: HashMap<String, RunningTask>,
     seqs: HashMap<String, u64>,
+    /// 退出状态：true 后新 Submit 不再 spawn，只落为 canceled。
+    shutdown: bool,
 }
 
 struct PendingSpec {
@@ -287,10 +306,30 @@ async fn hub_loop(
     while let Some(msg) = rx.recv().await {
         match msg {
             HubMsg::Submit { id, spec } => {
-                st.handle_submit(id, *spec);
-                st.try_dispatch(&tx);
+                // 关闭屏障：占位任务先落库再立即取消（复用 CancelAll 同一条取消路径），
+                // 不派发 spawn——退出期间不产生新进程
+                let cancel_after_submit = st.shutdown;
+                if cancel_after_submit {
+                    st.handle_submit(id.clone(), *spec);
+                    st.handle_cancel(&id);
+                } else {
+                    st.handle_submit(id, *spec);
+                    st.try_dispatch(&tx);
+                }
             }
+            HubMsg::BeginShutdown => st.shutdown = true,
             HubMsg::Cancel { id } => st.handle_cancel(&id),
+            HubMsg::CancelAll => {
+                let ids: Vec<String> = st
+                    .envelopes
+                    .values()
+                    .filter(|envelope| !envelope.status.is_terminal())
+                    .map(|envelope| envelope.id.clone())
+                    .collect();
+                for id in ids {
+                    st.handle_cancel(&id);
+                }
+            }
             HubMsg::Promote { id } => {
                 if let Some(pos) = st.queue.iter().position(|q| q == &id) {
                     let item = st.queue.remove(pos);
@@ -529,7 +568,14 @@ impl HubState {
 
     fn handle_line(&mut self, id: &str, stream: LogStream, line: &str) {
         // 脱敏是持久化与展示的前置条件（§4.5）：日志文件与事件一律用脱敏行
-        let redacted = super::redaction::redact_output_line(line);
+        let mut redacted = super::redaction::redact_output_line(line);
+        if self
+            .envelopes
+            .get(id)
+            .is_some_and(|e| e.feature == Feature::Aria2)
+        {
+            redacted = super::redaction::redact_sensitive_urls(&redacted);
+        }
 
         // 解析器消费原始行（进度数字等不受脱敏影响）
         let mut signals: Vec<TaskProgress> = Vec::new();

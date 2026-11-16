@@ -24,6 +24,7 @@ import { CollapsibleSection } from "./CollapsibleSection";
 const TOOL_PURPOSES: Record<ToolName, TranslationKey> = {
   bbdown: "deps.purpose.bbdown",
   "yt-dlp": "deps.purpose.ytDlp",
+  aria2: "deps.purpose.aria2",
   deno: "deps.purpose.deno",
   ffmpeg: "deps.purpose.ffmpeg",
   ffprobe: "deps.purpose.ffprobe",

@@ -16,6 +16,31 @@ pub(crate) fn task_cancel(hub: State<'_, TaskHub>, task_id: String) {
     hub.cancel(&task_id);
 }
 
+/// 关窗确认后的「继续退出」：尽力取消全部活动任务，等待它们到达终态再退出进程。
+/// Windows 下 Job Object 兜底杀树；macOS 依赖这里的显式取消避免孤儿子进程。
+/// 最长等待 8 秒，超时直接退出（Windows 仍由 Job Object 兜底）。
+#[tauri::command]
+pub(crate) async fn shutdown_app(app: AppHandle, hub: State<'_, TaskHub>) -> Result<(), String> {
+    // 先置退出状态再取消：堵住「取消窗口之后提交/派发新任务」的竞态
+    hub.begin_shutdown();
+    hub.cancel_all();
+    // 整体 deadline（而非只数 sleep 次数）：snapshot 自身耗时也计入预算
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(8);
+    while tokio::time::Instant::now() < deadline {
+        let active = hub
+            .snapshot()
+            .await
+            .iter()
+            .any(|envelope| !envelope.status.is_terminal());
+        if !active {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    }
+    app.exit(0);
+    Ok(())
+}
+
 #[tauri::command]
 pub(crate) fn task_promote(hub: State<'_, TaskHub>, task_id: String) {
     hub.promote(&task_id);

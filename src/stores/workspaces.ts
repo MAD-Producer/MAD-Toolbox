@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { TaskSeed } from "../contracts/types";
 
-export const WORKSPACE_IDS = ["bilibili", "network", "music", "media"] as const;
+export const WORKSPACE_IDS = ["bilibili", "network", "aria2", "music", "media"] as const;
 
 export type WorkspaceId = (typeof WORKSPACE_IDS)[number];
 

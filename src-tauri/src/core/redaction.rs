@@ -29,6 +29,7 @@ pub(crate) fn redact_output_line(line: &str) -> String {
         "proxy-authorization",
         "password",
         "passwd",
+        "passkey",
         "api_key",
         "api-key",
         "cookies",
@@ -70,9 +71,9 @@ pub(crate) fn redact_output_line(line: &str) -> String {
             } else {
                 redacted[start..]
                     .find(|character: char| {
-                        quote
-                            .map(|quote| character == quote)
-                            .unwrap_or_else(|| character.is_whitespace() || character == ';')
+                        quote.map(|quote| character == quote).unwrap_or_else(|| {
+                            character.is_whitespace() || matches!(character, ';' | '&' | '#')
+                        })
                     })
                     .map(|value_offset| start + value_offset)
                     .unwrap_or(redacted.len())
@@ -84,23 +85,67 @@ pub(crate) fn redact_output_line(line: &str) -> String {
     redacted
 }
 
-fn redact_urls(line: &str) -> String {
-    let mut redacted = line.to_string();
-    loop {
-        let http = redacted.find("http://");
-        let https = redacted.find("https://");
-        let start = match (http, https) {
-            (Some(left), Some(right)) => left.min(right),
-            (Some(value), None) | (None, Some(value)) => value,
-            (None, None) => break,
-        };
-        let end = redacted[start..]
-            .find(char::is_whitespace)
-            .map(|offset| start + offset)
-            .unwrap_or(redacted.len());
-        redacted.replace_range(start..end, "<URL_REDACTED>");
+fn redact_uri_credentials(uri: &str, nested: bool) -> String {
+    let Ok(mut url) = reqwest::Url::parse(uri) else {
+        return uri.into();
+    };
+    let mut changed = false;
+    if !url.username().is_empty() || url.password().is_some() {
+        let _ = url.set_username("***");
+        let _ = url.set_password(None);
+        changed = true;
     }
-    redacted
+    let magnet = url.scheme() == "magnet";
+    let mut query_changed = false;
+    let pairs: Vec<(String, String)> = url
+        .query_pairs()
+        .map(|(key, value)| {
+            let masked = match key.to_ascii_lowercase().replace('-', "_").as_str() {
+                "passkey" | "authkey" | "password" | "passwd" | "token" | "access_token"
+                | "refresh_token" | "api_key" | "apikey" | "secret" | "authorization"
+                | "cookie" | "sessdata" | "bili_jct" => "***".to_string(),
+                "tr" if magnet && !nested => redact_uri_credentials(&value, true),
+                _ => value.to_string(),
+            };
+            query_changed |= masked != value;
+            (key.into_owned(), masked)
+        })
+        .collect();
+    if query_changed {
+        url.query_pairs_mut().clear().extend_pairs(pairs);
+    }
+    if changed || query_changed {
+        url.into()
+    } else {
+        uri.into()
+    }
+}
+
+/// 保留下载地址，仅隐藏 URL 中明确的凭据字段和用户名密码。
+pub(crate) fn redact_sensitive_urls(line: &str) -> String {
+    let mut result = String::new();
+    let mut remaining = line;
+    while !remaining.is_empty() {
+        let lower = remaining.to_ascii_lowercase();
+        let start = [
+            "http://", "https://", "ftp://", "sftp://", "udp://", "magnet:",
+        ]
+        .iter()
+        .filter_map(|prefix| lower.find(prefix))
+        .min();
+        let Some(start) = start else {
+            result.push_str(remaining);
+            break;
+        };
+        result.push_str(&remaining[..start]);
+        remaining = &remaining[start..];
+        let end = remaining
+            .find(|c: char| c.is_whitespace() || matches!(c, '\'' | '"' | '<' | '>' | ','))
+            .unwrap_or(remaining.len());
+        result.push_str(&redact_uri_credentials(&remaining[..end], false));
+        remaining = &remaining[end..];
+    }
+    result
 }
 
 pub(crate) fn sanitize_diagnostic_text(
@@ -108,12 +153,46 @@ pub(crate) fn sanitize_diagnostic_text(
     redact_personal_data: bool,
     home: Option<&str>,
 ) -> String {
-    let mut sanitized = redact_output_line(line);
+    let mut sanitized = redact_sensitive_urls(&redact_output_line(line));
     if redact_personal_data {
-        sanitized = redact_urls(&sanitized);
         if let Some(home) = home.filter(|value| !value.is_empty()) {
             sanitized = sanitized.replace(home, "$HOME");
         }
     }
     sanitized
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ordinary_urls_and_parameters_survive_diagnostics() {
+        for line in [
+            "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&dn=example",
+            "https://example.com/file.torrent?id=42&key=video&sig=checksum",
+            "udp://tracker.invalid:80/community/announce",
+            "[#abc123 1MiB/2MiB(50%) CN:1 DL:2MiB]",
+        ] {
+            assert_eq!(redact_sensitive_urls(line), line);
+            assert_eq!(sanitize_diagnostic_text(line, true, None), line);
+        }
+    }
+
+    #[test]
+    fn explicit_credentials_are_masked_without_removing_urls() {
+        for line in [
+            "https://user:SECRET@host/file?id=42",
+            "https://tracker.invalid/announce?passkey=SECRET&id=42",
+            "magnet:?xt=urn:btih:0123456789012345678901234567890123456789&tr=https%3A%2F%2Ftracker.invalid%2Fannounce%3Fpasskey%3DSECRET",
+            "udp://tracker.invalid/announce?passkey=SECRET,https://tracker.invalid/announce?token=SECRET",
+            "Authorization: Bearer SECRET",
+            "Cookie: session=SECRET",
+        ] {
+            let masked = sanitize_diagnostic_text(line, true, None);
+            assert!(!masked.contains("SECRET"), "{masked}");
+            assert_eq!(sanitize_diagnostic_text(&masked, true, None), masked);
+            if line.contains("id=42") { assert!(masked.contains("id=42")); }
+        }
+    }
 }

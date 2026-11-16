@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useColorScheme } from "../lib/theme";
 import { notifications } from "../lib/notifications";
 import { useBackend } from "../hooks/useBackend";
@@ -10,6 +11,7 @@ import { syncNativeWindowTheme } from "./api";
 import { checkForUpdate } from "../pages/settings/api";
 import { useUpdateStore } from "../stores/update";
 import { AppShell } from "../components/layout/AppShell";
+import { CloseGuardDialog } from "../components/layout/CloseGuardDialog";
 import { SplashScreen } from "../components/layout/SplashScreen";
 import { StartupTipsModal, isStartupTipsDismissed } from "../components/layout/StartupTipsModal";
 import StyleguideLayer from "../components/styleguide/StyleguideLayer";
@@ -19,6 +21,7 @@ import {
 } from "../components/layout/WorkspaceSessionHost";
 import { BilibiliPage } from "../pages/bilibili/BilibiliPage";
 import { NetworkVideoPage } from "../pages/network/NetworkVideoPage";
+import { Aria2Page } from "../pages/aria2/Aria2Page";
 import { MediaWorkspace } from "../pages/media/MediaWorkspace";
 import { MusicPage } from "../pages/music/MusicPage";
 import { TasksPage } from "../pages/tasks/TasksPage";
@@ -41,7 +44,12 @@ import {
 } from "./route";
 
 function workspaceIdForRoute(route: AppRoute): WorkspaceId | null {
-  if (route.section === "bilibili" || route.section === "network" || route.section === "music") {
+  if (
+    route.section === "bilibili" ||
+    route.section === "network" ||
+    route.section === "aria2" ||
+    route.section === "music"
+  ) {
     return route.section;
   }
   if (route.section === "media") return "media";
@@ -51,9 +59,13 @@ function workspaceIdForRoute(route: AppRoute): WorkspaceId | null {
 const FEATURE_DEPENDENCIES: Record<WorkspaceId, readonly ToolName[]> = {
   bilibili: ["bbdown"],
   network: ["yt-dlp"],
+  aria2: ["aria2"],
   music: ["musicdl", "python"],
   media: ["ffmpeg"]
 };
+
+/** 与 Sidebar 的活动任务口径一致：占池/待跑/收尾中的任务都算"还有事没做完" */
+const ACTIVE_TASK_STATUSES: readonly TaskEnvelope["status"][] = ["queued", "running", "canceling"];
 
 export default function App() {
   const [route, setRoute] = useState<AppRoute>(DEFAULT_APP_ROUTE);
@@ -61,18 +73,19 @@ export default function App() {
   const [lastSettingsPage, setLastSettingsPage] = useState<SettingsPageId>("general");
   const [booted, setBooted] = useState(false);
   const [tipsOpened, setTipsOpened] = useState(() => !isStartupTipsDismissed());
+  const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const [, setLanguageRevision] = useState(0);
   const backend = useBackend();
   const initTasksStore = useTasksStore((s) => s.init);
+  // 活动任务数仅驱动关窗确认弹窗的计数文案；数值不变时不触发重渲
+  const activeTaskCount = useTasksStore(
+    (s) =>
+      Object.values(s.tasks).filter((task) => ACTIVE_TASK_STATUSES.includes(task.status)).length
+  );
   const initBilibiliLogin = useBilibiliLoginStore((state) => state.init);
   const initMusicSession = useMusicSessionStore((state) => state.init);
   const markWorkspaceRetained = useWorkspacesStore((state) => state.markRetained);
   const markWorkspaceReleasable = useWorkspacesStore((state) => state.markReleasable);
-  // 各 workspace 的待交付种子：按 workspace 独立订阅，retain/markReleasable 等高频变更不会触发 App 重渲
-  const bilibiliSeed = useWorkspacesStore((state) => state.sessions.bilibili.seed);
-  const networkSeed = useWorkspacesStore((state) => state.sessions.network.seed);
-  const musicSeed = useWorkspacesStore((state) => state.sessions.music.seed);
-  const mediaSeed = useWorkspacesStore((state) => state.sessions.media.seed);
 
   // 【Effect 白名单⑤】应用启动引导：三个全局 store 各自订阅后端事件流（幂等，内部有守卫）
   useEffect(() => {
@@ -99,6 +112,22 @@ export default function App() {
         useUpdateStore.getState().setDownloadProgress(received, total);
       }
     );
+    return () => {
+      void promise.then((unlisten) => unlisten());
+    };
+  }, []);
+
+  // 【Effect 白名单②】拦截窗口关闭请求：有活动任务时弹确认（退出/最小化/取消），
+  // 无活动任务放行原生关闭。任务口径读 store 快照而非订阅渲染态，避免高频重渲。
+  useEffect(() => {
+    const promise = getCurrentWindow().onCloseRequested((event) => {
+      const hasActive = Object.values(useTasksStore.getState().tasks).some((task) =>
+        ACTIVE_TASK_STATUSES.includes(task.status)
+      );
+      if (!hasActive) return;
+      event.preventDefault();
+      setCloseGuardOpen(true);
+    });
     return () => {
       void promise.then((unlisten) => unlisten());
     };
@@ -210,16 +239,22 @@ export default function App() {
       useWorkspacesStore.getState().deliver(targetWorkspace, { task, purpose });
       // 打码参数警告在用户点击「重跑」时就地发出（原先在目标页 mount 后的 Effect 里补发）
       if (
-        (target.section === "bilibili" || target.section === "network") &&
+        (target.section === "bilibili" ||
+          target.section === "network" ||
+          target.section === "aria2") &&
         task.intent.type === "manual" &&
-        task.intent.data.argv.some((argument) => argument === "***")
+        task.intent.data.argv.some(
+          (argument) => argument.includes("***") || argument.includes("<URL_REDACTED>")
+        )
       ) {
         notifications.show({
           color: "yellow",
           message: t(
             target.section === "bilibili"
               ? "bilibili.notice.redactedArgs"
-              : "network.expertRedactedWarning"
+              : target.section === "aria2"
+                ? "aria2.expertRedactedWarning"
+                : "network.expertRedactedWarning"
           )
         });
       }
@@ -285,10 +320,10 @@ export default function App() {
   const workspaces: readonly WorkspaceDefinition[] = [
     {
       id: "bilibili",
-      render: (active, generation) => (
+      render: (active, generation, seed) => (
         <BilibiliPage
           active={active}
-          seed={active ? bilibiliSeed : null}
+          seed={seed}
           onRetain={() => markWorkspaceRetained("bilibili", generation)}
           onSubmitted={() => markWorkspaceReleasable("bilibili", generation)}
           dependencyLabels={missingLabelsFor("bilibili")}
@@ -298,10 +333,10 @@ export default function App() {
     },
     {
       id: "network",
-      render: (active, generation) => (
+      render: (active, generation, seed) => (
         <NetworkVideoPage
           active={active}
-          seed={active ? networkSeed : null}
+          seed={seed}
           onRetain={() => markWorkspaceRetained("network", generation)}
           onSubmitted={() => markWorkspaceReleasable("network", generation)}
           dependencyLabels={missingLabelsFor("network")}
@@ -313,11 +348,27 @@ export default function App() {
       )
     },
     {
+      id: "aria2",
+      render: (active, generation, seed) => (
+        <Aria2Page
+          active={active}
+          seed={seed}
+          onRetain={() => markWorkspaceRetained("aria2", generation)}
+          onSubmitted={() => markWorkspaceReleasable("aria2", generation)}
+          dependencyLabels={missingLabelsFor("aria2")}
+          onOpenDependencies={openDependencySettings}
+          globalProxy={backend.settings?.proxy ?? null}
+          cookieFiles={backend.settings?.cookieFiles ?? []}
+          onAddCookieFile={openGeneralSettings}
+        />
+      )
+    },
+    {
       id: "music",
-      render: (active, generation) => (
+      render: (active, generation, seed) => (
         <MusicPage
           active={active}
-          seed={active ? musicSeed : null}
+          seed={seed}
           dependency={backend.dependencyMap.get("musicdl") ?? null}
           pythonDependency={backend.dependencyMap.get("python") ?? null}
           defaultOutputDirectory={backend.settings?.defaultOutputDirectory ?? null}
@@ -333,11 +384,11 @@ export default function App() {
     },
     {
       id: "media",
-      render: (active, generation) => (
+      render: (active, generation, seed) => (
         <MediaWorkspace
           active={active}
           page={route.section === "media" ? route.page : lastMediaPage}
-          seed={active ? mediaSeed : null}
+          seed={seed}
           onNavigatePage={navigateSecondary}
           onRetain={() => markWorkspaceRetained("media", generation)}
           onSubmitted={() => markWorkspaceReleasable("media", generation)}
@@ -384,6 +435,11 @@ export default function App() {
         ) : null}
       </AppShell>
       <StartupTipsModal opened={tipsOpened} onClose={() => setTipsOpened(false)} />
+      <CloseGuardDialog
+        opened={closeGuardOpen}
+        activeCount={activeTaskCount}
+        onCancel={() => setCloseGuardOpen(false)}
+      />
       {import.meta.env.DEV && <StyleguideLayer />}
     </Fragment>
   );

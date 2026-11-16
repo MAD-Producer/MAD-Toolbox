@@ -1,6 +1,6 @@
 [package]
 name = "mad-toolbox"
-version = "3.0.0"
+version = "3.1.0"
 description = "A GUI toolbox for BBDown, yt-dlp, FFmpeg and MediaInfo"
 authors = ["MAD Toolbox Contributors"]
 license = "MIT"
@@ -16,6 +16,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 base64 = "0.22"
+bendy = "0.6.1"
 chrono = { version = "0.4", features = ["serde"] }
 encoding_rs = "0.8"
 reqwest = { version = "0.13", features = ["cookies", "json"] }
