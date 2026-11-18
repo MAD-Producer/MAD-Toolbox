@@ -138,6 +138,8 @@ fn build_argv(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Vec<String> {
         "--no-conf=true".into(),
         "--follow-torrent=false".into(),
         "--follow-metalink=false".into(),
+        // 取消即杀进程树，aria2 来不及保存进度；默认 60 秒才落盘一次控制文件
+        "--auto-save-interval=1".into(),
     ];
 
     let mut push_value = |flag: &str, value: &str| {
@@ -460,6 +462,7 @@ mod tests {
         let argv = build_argv(&form(), &Aria2Ctx::default());
         assert!(argv.contains(&"--follow-torrent=false".into()));
         assert!(argv.contains(&"--follow-metalink=false".into()));
+        assert!(argv.contains(&"--auto-save-interval=1".into()));
     }
 
     #[test]
