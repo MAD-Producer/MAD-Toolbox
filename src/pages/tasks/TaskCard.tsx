@@ -373,7 +373,7 @@ export const TaskCard = memo(function TaskCard({
             </span>
           )}
           {failedTail && (
-            <code className="block whitespace-pre-wrap rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium leading-relaxed text-destructive">
+            <code className="block whitespace-pre-wrap wrap-anywhere rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium leading-relaxed text-destructive">
               {failedTail.map((l) => l.line).join("\n")}
             </code>
           )}
