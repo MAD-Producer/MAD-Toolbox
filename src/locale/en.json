@@ -405,7 +405,6 @@
   "network.probe.metadataButton": "View metadata",
   "network.probe.metadataTitle": "Metadata",
   "aria2.advanced": "Advanced",
-  "aria2.expertRedactedWarning": "Redacted values (***) in the edited command were not saved. Fill them in again before running",
   "aria2.submitted": "Task added to queue",
   "aria2.submit": "Add to task queue",
   "aria2.utpNote": "Note: aria2 has no uTP (BEP-29) support. Peers that only accept uTP may be unreachable, so connectivity is weaker than clients like qBittorrent.",
@@ -581,5 +580,6 @@
   "startup.description": "Three tips that affect download quality, paged",
   "aria2.fields.sourceHint": "Re-enter masked credentials when reusing a configuration.",
   "aria2.tracker.scopeHint": "Public BT only; private torrents (PT) are rejected. Torrents are checked when the task starts. Open remote torrent files after downloading them.",
-  "aria2.tracker.sourceAdysec": "adysec best trackers"
+  "aria2.tracker.sourceAdysec": "adysec best trackers",
+  "aria2.manualRerunUnsupported": "aria2 command mode is no longer supported. The form was opened with default settings; enter the download again"
 }

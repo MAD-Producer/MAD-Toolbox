@@ -90,12 +90,8 @@ pub(crate) fn parse_trackers(text: &str) -> Vec<String> {
         .collect()
 }
 
-async fn fetch_fresh(_app: &AppHandle) -> Result<CachedTrackers, String> {
-    let text = reqwest::Client::builder()
-        .user_agent(concat!("MAD-Toolbox/", env!("CARGO_PKG_VERSION")))
-        .timeout(Duration::from_secs(20))
-        .build()
-        .map_err(|e| e.to_string())?
+async fn fetch_fresh(app: &AppHandle) -> Result<CachedTrackers, String> {
+    let text = crate::core::deps::mirror_client(app, Duration::from_secs(20))?
         .get("https://tracker.adysec.com/trackers_best.txt")
         .send()
         .await

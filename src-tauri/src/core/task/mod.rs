@@ -37,26 +37,22 @@ use types::{
 /// feature 提交的输出解析器：原始行 → 进度信号。枢纽据信号更新信封/转发事件。
 pub type LineParser = Arc<dyn Fn(&str) -> Vec<TaskProgress> + Send + Sync>;
 
+/// 准备结果：(执行 argv, 脱敏 argv, 任务临时目录)。
+pub type PreparationResult = Result<(Vec<String>, Vec<String>, Option<tempfile::TempDir>), String>;
+
 pub type Preparation = Box<
     dyn FnOnce(
             Arc<dyn Fn(String) + Send + Sync>,
-        ) -> std::pin::Pin<
-            Box<
-                dyn std::future::Future<
-                        Output = Result<
-                            (Vec<String>, Vec<String>, Option<tempfile::TempDir>),
-                            String,
-                        >,
-                    > + Send,
-            >,
-        > + Send,
+        )
+            -> std::pin::Pin<Box<dyn std::future::Future<Output = PreparationResult> + Send>>
+        + Send,
 >;
 
 async fn run_preparation(
     prepare: Preparation,
     log: Arc<dyn Fn(String) + Send + Sync>,
     canceled: oneshot::Receiver<()>,
-) -> Result<(Vec<String>, Vec<String>, Option<tempfile::TempDir>), String> {
+) -> PreparationResult {
     tokio::select! {
         biased;
         _ = canceled => Err("Preparation canceled".into()),
@@ -140,7 +136,7 @@ enum HubMsg {
     Prepared {
         id: String,
         pending: Box<PendingSpec>,
-        result: Result<(Vec<String>, Vec<String>, Option<tempfile::TempDir>), String>,
+        result: PreparationResult,
     },
     Exited {
         id: String,
@@ -398,7 +394,7 @@ async fn hub_loop(
                         }
                         Err(error) => {
                             st.handle_line(&id, LogStream::System, &error);
-                            st.handle_exited(&id, Some(1));
+                            st.handle_exited(&id, None);
                         }
                     }
                 } else {
@@ -513,22 +509,21 @@ impl HubState {
         envelope.status = next;
         envelope.started_at = Some(Utc::now());
 
-        let mut writer = match TaskLogWriter::create(&self.logs_dir, id) {
+        let writer = match TaskLogWriter::create(&self.logs_dir, id) {
             Ok(writer) => {
                 envelope.log_path = Some(writer.path.to_string_lossy().into_owned());
                 Some(writer)
             }
             Err(_) => None,
         };
-        if let Some(w) = writer.as_mut() {
-            // 头行用脱敏 argv——日志文件同样是持久化面
-            w.write_line(
-                LogStream::System,
-                &format!("$ {} {}", envelope.tool, envelope.argv_redacted.join(" ")),
-            );
-        }
 
         let prepare = pending.prepare.take();
+        if prepare.is_some() {
+            envelope.progress = Some(TaskProgress {
+                percent: None,
+                detail: Some(rust_i18n::t!("backend.task.preparing").to_string()),
+            });
+        }
         let (cancel, canceled) = oneshot::channel();
         self.running.insert(
             id.to_string(),
@@ -572,6 +567,15 @@ impl HubState {
         pending: PendingSpec,
         tx: &mpsc::UnboundedSender<HubMsg>,
     ) {
+        if let (Some(envelope), Some(run)) = (self.envelopes.get(id), self.running.get_mut(id)) {
+            if let Some(w) = run.writer.as_mut() {
+                // 头行用脱敏 argv——日志文件同样是持久化面
+                w.write_line(
+                    LogStream::System,
+                    &format!("$ {} {}", envelope.tool, envelope.argv_redacted.join(" ")),
+                );
+            }
+        }
         let result = pending
             .cwd
             .as_ref()
@@ -735,7 +739,7 @@ impl HubState {
         envelope.exit_code = code;
         envelope.finished_at = Some(Utc::now());
         envelope.progress = None;
-        if let Some(w) = run.writer.as_mut() {
+        if let (Some(w), Some(_)) = (run.writer.as_mut(), &run.killer) {
             w.write_line(
                 LogStream::System,
                 &rust_i18n::t!(

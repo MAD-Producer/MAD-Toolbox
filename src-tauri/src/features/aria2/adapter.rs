@@ -22,6 +22,7 @@ pub enum AdapterError {
     InvalidIntent(String),
     ManualUnsupported,
     PrivateTorrentRejected,
+    UnsupportedUri,
 }
 
 impl std::fmt::Display for AdapterError {
@@ -49,6 +50,13 @@ impl std::fmt::Display for AdapterError {
                     f,
                     "{}",
                     rust_i18n::t!("backend.aria2.adapter.private_torrent_rejected")
+                )
+            }
+            AdapterError::UnsupportedUri => {
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.aria2.adapter.unsupported_uri")
                 )
             }
         }
@@ -79,10 +87,7 @@ fn plan_form(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Result<AdapterPlan, Adapte
         let valid = reqwest::Url::parse(uri)
             .is_ok_and(|url| matches!(url.scheme(), "http" | "https" | "ftp" | "sftp" | "magnet"));
         if !valid {
-            return Err(AdapterError::InvalidIntent(
-                "Use an HTTP(S), FTP, SFTP or magnet URL; open local torrents with the file picker"
-                    .into(),
-            ));
+            return Err(AdapterError::UnsupportedUri);
         }
     }
     let argv = build_argv(intent, ctx);
@@ -209,12 +214,6 @@ fn build_argv(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Vec<String> {
 pub(crate) fn parse_progress(line: &str) -> Option<TaskProgress> {
     let segment = line.split('\r').rfind(|s| !s.trim().is_empty())?;
     let segment = segment.trim();
-    if segment == "[MAD] preparing" {
-        return Some(TaskProgress {
-            percent: None,
-            detail: Some(rust_i18n::t!("backend.aria2.progress.preparing").to_string()),
-        });
-    }
     if segment.starts_with("FILE: [MEMORY][METADATA]") {
         return Some(TaskProgress {
             percent: None,
@@ -431,7 +430,10 @@ mod tests {
                 uri: uri.into(),
                 ..Default::default()
             };
-            assert!(plan_form(&intent, &Aria2Ctx::default()).is_err());
+            assert_eq!(
+                plan_form(&intent, &Aria2Ctx::default()).unwrap_err(),
+                AdapterError::UnsupportedUri
+            );
         }
     }
 

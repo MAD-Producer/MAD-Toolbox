@@ -219,5 +219,6 @@
   "backend.aria2.adapter.private_torrent_rejected": "私有种子（PT）不受支持",
   "backend.aria2.adapter.manual_unsupported": "请使用下载表单，aria2 不支持任意命令模式",
   "backend.aria2.commands.metadata_failed": "获取种子信息失败或超过 120 秒，请重试",
-  "backend.aria2.progress.preparing": "正在检查下载信息"
+  "backend.aria2.adapter.unsupported_uri": "请使用 HTTP(S)、FTP、SFTP 或磁力链接；本地种子请通过文件选择打开",
+  "backend.task.preparing": "正在准备任务"
 }

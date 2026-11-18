@@ -219,5 +219,6 @@
   "backend.aria2.adapter.private_torrent_rejected": "Private torrents (PT) are not supported",
   "backend.aria2.adapter.manual_unsupported": "Use the download form; arbitrary aria2 commands are not supported",
   "backend.aria2.commands.metadata_failed": "Torrent metadata could not be fetched within 120 seconds; please retry",
-  "backend.aria2.progress.preparing": "Checking download information"
+  "backend.aria2.adapter.unsupported_uri": "Use an HTTP(S), FTP, SFTP or magnet URL; open local torrents with the file picker",
+  "backend.task.preparing": "Preparing task"
 }

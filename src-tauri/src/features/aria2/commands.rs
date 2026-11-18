@@ -68,7 +68,7 @@ async fn prepare_torrent(
     proxy: Option<&str>,
     tool_path: &std::path::Path,
     form: &Aria2Intent,
-    argv: &mut Vec<String>,
+    argv: &mut [String],
     log: Arc<dyn Fn(String) + Send + Sync>,
 ) -> Result<Option<tempfile::TempDir>, String> {
     let magnet = form.torrent_file.trim().is_empty()
@@ -76,9 +76,15 @@ async fn prepare_torrent(
     if !magnet && form.torrent_file.trim().is_empty() {
         return Ok(None);
     }
+    // build_argv 契约：argv 以 `-- <source>` 结尾
+    let source_index = argv
+        .len()
+        .checked_sub(1)
+        .filter(|&index| index > 0 && argv[index - 1] == "--")
+        .ok_or_else(|| "aria2 argv must end with `-- <source>`".to_string())?;
     let directory = tempfile::tempdir().map_err(|e| e.to_string())?;
     let source = if magnet {
-        let mut metadata_argv = argv[..argv.len() - 2].to_vec();
+        let mut metadata_argv = argv[..source_index - 1].to_vec();
         metadata_argv.extend([
             "--bt-metadata-only=true".into(),
             "--bt-save-metadata=true".into(),
@@ -139,7 +145,7 @@ async fn prepare_torrent(
     let snapshot = directory.path().join("validated.torrent");
     std::fs::write(&snapshot, bytes).map_err(|e| e.to_string())?;
     // 执行已校验的快照，防止排队期间原种子被替换；intent 保留用户原始输入供复用。
-    *argv.last_mut().unwrap() = snapshot.to_string_lossy().into_owned();
+    argv[source_index] = snapshot.to_string_lossy().into_owned();
     Ok(Some(directory))
 }
 
@@ -172,7 +178,6 @@ pub async fn aria2_submit(
     let prepare_app = app.clone();
     let prepare: crate::core::task::Preparation = Box::new(move |log| {
         Box::pin(async move {
-            log("[MAD] preparing".into());
             let mut ctx = Aria2Ctx::default();
             if adapter::needs_trackers(&prepare_intent, &ctx) {
                 ctx.trackers = trackers::for_submit(&prepare_app).await;

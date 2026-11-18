@@ -192,7 +192,6 @@ struct MirrorPackage {
     size: u64,
 }
 
-/// 清单 `trackers` 节的单个列表条目：fileName 相对镜像下载根，version 是抓取日期。
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MirrorManifest {
@@ -259,7 +258,7 @@ fn parse_mirror_manifest(
     Ok(selected)
 }
 
-fn mirror_client(app: &AppHandle, timeout: Duration) -> Result<reqwest::Client, String> {
+pub(crate) fn mirror_client(app: &AppHandle, timeout: Duration) -> Result<reqwest::Client, String> {
     let mut builder = reqwest::Client::builder()
         .user_agent(format!("MAD-Toolbox/{}", app.package_info().version))
         .timeout(timeout);
