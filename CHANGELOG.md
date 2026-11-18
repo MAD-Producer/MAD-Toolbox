@@ -9,6 +9,9 @@ All notable changes to MAD Toolbox are documented here.
 - fix: 种子检查、磁力元数据获取和 tracker 更新改在任务调度后执行，加入队列无需等待，准备阶段支持取消
 - fix: 远程种子文件与 Metalink 不再自动跟随下载，种子文件需通过本地文件入口检查后使用
 - refactor: 任务详情移除重复的百分比文字，保留进度条与下载量
+- fix: 修复点击主窗口关闭按钮无效、在任务确认弹窗中选择「退出」后窗口仍未关闭的问题
+- docs: 「关于」页的依赖列表新增 Aria2，注明其用于 BitTorrent 下载
+- chore: 将 Tailwind CSS 相关构建依赖移至 `devDependencies`，同步 npm 和 pnpm 锁文件
 
 ## 3.1.0
 
