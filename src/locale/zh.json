@@ -459,6 +459,7 @@
   "network.submitted": "任务已加入队列",
   "settings.about.checkUpdate": "检查软件更新",
   "settings.about.copyright": "版权",
+  "settings.about.credit.aria2": "提供 BitTorrent 下载功能",
   "settings.about.credit.bbdown": "提供Bilibili视频下载功能",
   "settings.about.credit.deno": "为部分 JavaScript 提供运行时支撑",
   "settings.about.credit.ffmpeg": "媒体转码与处理核心",

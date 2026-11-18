@@ -459,6 +459,7 @@
   "network.submitted": "Task added to queue",
   "settings.about.checkUpdate": "Check for updates",
   "settings.about.copyright": "Copyright",
+  "settings.about.credit.aria2": "Powers BitTorrent downloads",
   "settings.about.credit.bbdown": "Powers Bilibili video downloads",
   "settings.about.credit.deno": "Runtime support for some JavaScript components",
   "settings.about.credit.ffmpeg": "Core engine for media transcoding and processing",
