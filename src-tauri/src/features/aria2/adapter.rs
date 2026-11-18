@@ -20,8 +20,9 @@ pub struct Aria2Ctx {
 pub enum AdapterError {
     MissingUri,
     InvalidIntent(String),
-    EmptyArgv,
-    PrivateTorrentRequired,
+    ManualUnsupported,
+    PrivateTorrentRejected,
+    UnsupportedUri,
 }
 
 impl std::fmt::Display for AdapterError {
@@ -37,14 +38,25 @@ impl std::fmt::Display for AdapterError {
                     rust_i18n::t!("backend.aria2.adapter.invalid_intent", e = e)
                 )
             }
-            AdapterError::EmptyArgv => {
-                write!(f, "{}", rust_i18n::t!("backend.aria2.adapter.empty_argv"))
-            }
-            AdapterError::PrivateTorrentRequired => {
+            AdapterError::ManualUnsupported => {
                 write!(
                     f,
                     "{}",
-                    rust_i18n::t!("backend.aria2.adapter.private_torrent_required")
+                    rust_i18n::t!("backend.aria2.adapter.manual_unsupported")
+                )
+            }
+            AdapterError::PrivateTorrentRejected => {
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.aria2.adapter.private_torrent_rejected")
+                )
+            }
+            AdapterError::UnsupportedUri => {
+                write!(
+                    f,
+                    "{}",
+                    rust_i18n::t!("backend.aria2.adapter.unsupported_uri")
                 )
             }
         }
@@ -58,7 +70,7 @@ pub fn plan(intent: &TaskIntent, ctx: &Aria2Ctx) -> Result<AdapterPlan, AdapterE
                 .map_err(|e| AdapterError::InvalidIntent(e.to_string()))?;
             plan_form(&form, ctx)
         }
-        TaskIntent::Manual { argv } => plan_manual(argv),
+        TaskIntent::Manual { .. } => Err(AdapterError::ManualUnsupported),
     }
 }
 
@@ -68,8 +80,15 @@ fn plan_form(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Result<AdapterPlan, Adapte
     if torrent.is_empty() && uri.is_empty() {
         return Err(AdapterError::MissingUri);
     }
-    if intent.pt_mode && (torrent.is_empty() || ctx.private_torrent != Some(true)) {
-        return Err(AdapterError::PrivateTorrentRequired);
+    if ctx.private_torrent == Some(true) {
+        return Err(AdapterError::PrivateTorrentRejected);
+    }
+    if torrent.is_empty() {
+        let valid = reqwest::Url::parse(uri)
+            .is_ok_and(|url| matches!(url.scheme(), "http" | "https" | "ftp" | "sftp" | "magnet"));
+        if !valid {
+            return Err(AdapterError::UnsupportedUri);
+        }
     }
     let argv = build_argv(intent, ctx);
     let argv_redacted = redact_argv(&argv);
@@ -95,33 +114,11 @@ fn plan_form(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Result<AdapterPlan, Adapte
     })
 }
 
-fn plan_manual(argv: &[String]) -> Result<AdapterPlan, AdapterError> {
-    if argv.iter().all(|a| a.trim().is_empty()) {
-        return Err(AdapterError::EmptyArgv);
-    }
-    let argv_redacted = redact_argv(argv);
-    // 标题会落库并推送到任务卡，必须与 argv_redacted 同源——
-    // 原始 argv.first() 可能是 --all-proxy=http://user:pass@… 这类敏感参数
-    Ok(AdapterPlan {
-        tool: "aria2c",
-        title: rust_i18n::t!(
-            "backend.aria2.adapter.manual_title",
-            command = argv_redacted.first().map(String::as_str).unwrap_or("")
-        )
-        .to_string(),
-        argv: argv.to_vec(),
-        argv_redacted,
-        pool: Pool::Download,
-        cwd: CwdPolicy::Inherit,
-        output_paths: Vec::new(),
-    })
-}
-
-/// 普通 BT 模式按用户设置追加 tracker；PT 和已识别的私有种子除外。
+/// 按用户设置为公开 BT 追加 tracker。
 pub(crate) fn needs_trackers(intent: &TaskIntent, ctx: &Aria2Ctx) -> bool {
     match intent {
         TaskIntent::Form(data) => serde_json::from_value::<Aria2Intent>(data.clone())
-            .map(|form| ctx.private_torrent != Some(true) && !form.pt_mode && form.inject_trackers)
+            .map(|form| ctx.private_torrent != Some(true) && form.inject_trackers)
             .unwrap_or(false),
         TaskIntent::Manual { .. } => false,
     }
@@ -139,6 +136,10 @@ fn build_argv(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Vec<String> {
         "--show-console-readout=false".into(),
         "--summary-interval=1".into(),
         "--no-conf=true".into(),
+        "--follow-torrent=false".into(),
+        "--follow-metalink=false".into(),
+        // 取消即杀进程树，aria2 来不及保存进度；默认 60 秒才落盘一次控制文件
+        "--auto-save-interval=1".into(),
     ];
 
     let mut push_value = |flag: &str, value: &str| {
@@ -181,26 +182,18 @@ fn build_argv(intent: &Aria2Intent, ctx: &Aria2Ctx) -> Vec<String> {
     } else {
         argv.extend(["--seed-time".into(), "0".into()]);
     }
-    if ctx.private_torrent == Some(true) {
-        // aria2 对 private=1 按任务禁用 DHT；全局开关须保留以支持 UDP tracker。
-        argv.push("--enable-dht=true".into());
+    if !intent.dht {
+        argv.push("--enable-dht=false".into());
         argv.push("--enable-dht6=false".into());
+    }
+    if !intent.peer_exchange {
         argv.push("--enable-peer-exchange=false".into());
-        argv.push("--bt-enable-lpd=false".into());
-    } else {
-        if !intent.dht {
-            argv.push("--enable-dht=false".into());
-            argv.push("--enable-dht6=false".into());
-        }
-        if !intent.peer_exchange {
-            argv.push("--enable-peer-exchange=false".into());
-        }
-        if intent.lpd {
-            argv.push("--bt-enable-lpd=true".into());
-        }
-        if !intent.pt_mode && intent.inject_trackers && !ctx.trackers.is_empty() {
-            argv.extend(["--bt-tracker".into(), ctx.trackers.join(",")]);
-        }
+    }
+    if intent.lpd {
+        argv.push("--bt-enable-lpd=true".into());
+    }
+    if intent.inject_trackers && !ctx.trackers.is_empty() {
+        argv.extend(["--bt-tracker".into(), ctx.trackers.join(",")]);
     }
     if intent.bt_max_peers != 55 {
         argv.extend(["--bt-max-peers".into(), intent.bt_max_peers.to_string()]);
@@ -249,7 +242,6 @@ pub(crate) fn parse_progress(line: &str) -> Option<TaskProgress> {
         .ok()?;
     let detail = rust_i18n::t!(
         "backend.aria2.progress.downloading",
-        percent = pct.clamp(0.0, 100.0),
         done = done,
         total = total
     )
@@ -430,58 +422,47 @@ mod tests {
     }
 
     #[test]
-    fn private_torrent_keeps_udp_trackers_without_public_injection() {
-        for pt_mode in [false, true] {
-            let mut intent = form();
-            intent.torrent_file = "private.torrent".into();
-            intent.pt_mode = pt_mode;
-            intent.dht = false;
-            intent.lpd = true;
-            let ctx = Aria2Ctx {
-                trackers: vec!["udp://public.invalid/announce".into()],
-                private_torrent: Some(true),
-            };
-            let argv = plan_form(&intent, &ctx).unwrap().argv;
-            assert!(argv.contains(&"--enable-dht=true".to_string()));
-            assert!(argv.contains(&"--enable-peer-exchange=false".to_string()));
-            assert!(argv.contains(&"--bt-enable-lpd=false".to_string()));
-            assert!(!argv.contains(&"--bt-tracker".to_string()));
-            assert!(!needs_trackers(
-                &TaskIntent::Form(serde_json::to_value(&intent).unwrap()),
-                &ctx
-            ));
-        }
-    }
-
-    #[test]
-    fn pt_requires_verified_private_metadata() {
+    fn local_torrents_cannot_bypass_validation_through_uri_input() {
         for uri in [
-            "https://example.com/download.php",
-            "magnet:?xt=urn:btih:ABC",
+            "private.torrent",
+            "C:/Downloads/private.torrent",
+            "file:///tmp/private.torrent",
         ] {
             let intent = Aria2Intent {
                 uri: uri.into(),
-                pt_mode: true,
                 ..Default::default()
             };
             assert_eq!(
                 plan_form(&intent, &Aria2Ctx::default()).unwrap_err(),
-                AdapterError::PrivateTorrentRequired
+                AdapterError::UnsupportedUri
             );
         }
-        let intent = Aria2Intent {
-            torrent_file: "public.torrent".into(),
-            pt_mode: true,
-            ..Default::default()
-        };
+    }
+
+    #[test]
+    fn private_torrents_and_manual_commands_are_rejected() {
         let ctx = Aria2Ctx {
-            private_torrent: Some(false),
+            private_torrent: Some(true),
             ..Default::default()
         };
         assert_eq!(
-            plan_form(&intent, &ctx).unwrap_err(),
-            AdapterError::PrivateTorrentRequired
+            plan_form(&form(), &ctx).unwrap_err(),
+            AdapterError::PrivateTorrentRejected
         );
+        assert_eq!(
+            plan(
+                &TaskIntent::Manual {
+                    argv: vec!["private.torrent".into()]
+                },
+                &Aria2Ctx::default()
+            )
+            .unwrap_err(),
+            AdapterError::ManualUnsupported
+        );
+        let argv = build_argv(&form(), &Aria2Ctx::default());
+        assert!(argv.contains(&"--follow-torrent=false".into()));
+        assert!(argv.contains(&"--follow-metalink=false".into()));
+        assert!(argv.contains(&"--auto-save-interval=1".into()));
     }
 
     #[test]
@@ -591,33 +572,6 @@ mod tests {
     }
 
     #[test]
-    fn manual_argv_abbreviation_and_passwords_are_redacted() {
-        let plan = plan_manual(&[
-            "--all-proxy=http://user:pass@proxy:8080".to_string(),
-            "--heade=Authorization: Bearer secret".to_string(),
-            "--http-passwd".to_string(),
-            "p@ss".to_string(),
-            "--rpc-secret=topsecret".to_string(),
-        ])
-        .unwrap();
-        assert!(!plan.title.contains("user:pass"));
-        assert!(!plan.argv_redacted.join(" ").contains("user:pass"));
-        assert!(plan.argv[0].contains("user:pass"));
-        assert!(!plan
-            .argv_redacted
-            .iter()
-            .any(|a| a.contains("Bearer secret")));
-        assert!(plan
-            .argv_redacted
-            .contains(&"--heade=Authorization: ***".to_string()));
-        // 缩写后随的值也打码
-        assert!(plan.argv_redacted.contains(&"***".to_string()));
-        assert!(!plan.argv_redacted.iter().any(|a| a == "p@ss"));
-        assert!(!plan.argv_redacted.iter().any(|a| a.contains("topsecret")));
-        assert!(plan.argv_redacted.contains(&"--rpc-secret=***".to_string()));
-    }
-
-    #[test]
     fn tracker_lookup_supports_magnets_remote_and_local_torrents() {
         let mut intent = form();
         let mut ctx = Aria2Ctx {
@@ -652,12 +606,6 @@ mod tests {
         ));
         assert!(!build_argv(&intent, &ctx).contains(&"--bt-tracker".into()));
         intent.inject_trackers = true;
-        intent.pt_mode = true;
-        assert!(!needs_trackers(
-            &TaskIntent::Form(serde_json::to_value(&intent).unwrap()),
-            &ctx
-        ));
-        assert!(!build_argv(&intent, &ctx).contains(&"--bt-tracker".into()));
         assert!(!needs_trackers(
             &TaskIntent::Manual {
                 argv: vec!["--version".into()]

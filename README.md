@@ -40,7 +40,7 @@ Underlying tools:
 
 - **BBDown**: Easily download Bilibili videos, with dedicated support for downloading audio, subtitles, covers, danmaku and other resources. (Actual download quality depends on the account login status)
 - **yt-dlp**: Download media resources from YouTube and any other link supported by yt-dlp's parsing formats
-- **aria2**: Download direct links, magnets and torrent files, with BT/PT settings, public tracker updates, and download and seeding status
+- **aria2**: Download direct links, magnets and torrent files, with public BT settings, adysec tracker updates, and download and seeding status; private torrents are not supported
 - **FFmpeg**: Supports format conversion and remuxing of common media files, video/audio/subtitle stream extraction, ASS/SRT subtitles, GIF export, image sequences, plus advanced processing of bitrate, frame rate, scaling, cropping, rotation, speed, pixel formats and audio parameters.
 - **musicdl**: Fetch streaming playback resources from major music platforms and download them for preview
 

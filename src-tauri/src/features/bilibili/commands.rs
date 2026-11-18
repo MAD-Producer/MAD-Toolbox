@@ -75,6 +75,7 @@ pub fn bilibili_submit(
         // 落库的意图必须先脱敏（§4.5）；本次执行用的完整 argv 不受影响
         intent: adapter::sanitize_intent(&intent),
         parser: None, // BBDown 进度解析待样板后接入
+        prepare: None,
         cleanup_dir: None,
     };
     Ok(SubmitResult {

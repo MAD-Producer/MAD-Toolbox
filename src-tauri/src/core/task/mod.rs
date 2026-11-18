@@ -37,6 +37,29 @@ use types::{
 /// feature 提交的输出解析器：原始行 → 进度信号。枢纽据信号更新信封/转发事件。
 pub type LineParser = Arc<dyn Fn(&str) -> Vec<TaskProgress> + Send + Sync>;
 
+/// 准备结果：(执行 argv, 脱敏 argv, 任务临时目录)。
+pub type PreparationResult = Result<(Vec<String>, Vec<String>, Option<tempfile::TempDir>), String>;
+
+pub type Preparation = Box<
+    dyn FnOnce(
+            Arc<dyn Fn(String) + Send + Sync>,
+        )
+            -> std::pin::Pin<Box<dyn std::future::Future<Output = PreparationResult> + Send>>
+        + Send,
+>;
+
+async fn run_preparation(
+    prepare: Preparation,
+    log: Arc<dyn Fn(String) + Send + Sync>,
+    canceled: oneshot::Receiver<()>,
+) -> PreparationResult {
+    tokio::select! {
+        biased;
+        _ = canceled => Err("Preparation canceled".into()),
+        result = async { prepare(log).await } => result,
+    }
+}
+
 /// feature 提交任务的全部材料。工具路径/工作目录由 feature 侧解析完毕，
 /// 枢纽不做任何工具特判。
 pub struct TaskSpec {
@@ -56,6 +79,8 @@ pub struct TaskSpec {
     /// 已脱敏的意图（feature 侧负责 sanitize——落库前置条件，§4.5）。
     pub intent: TaskIntent,
     pub parser: Option<LineParser>,
+    /// 调度后执行的准备步骤，与下载共用队列槽位，可取消。
+    pub prepare: Option<Preparation>,
     /// 任务独占的临时目录；排队取消、启动失败、进程终态或枢纽关闭时自动清理。
     pub cleanup_dir: Option<PathBuf>,
 }
@@ -107,6 +132,11 @@ enum HubMsg {
         id: String,
         stream: LogStream,
         line: String,
+    },
+    Prepared {
+        id: String,
+        pending: Box<PendingSpec>,
+        result: PreparationResult,
     },
     Exited {
         id: String,
@@ -206,7 +236,8 @@ impl TaskHub {
 }
 
 struct RunningTask {
-    killer: TreeKiller,
+    killer: Option<TreeKiller>,
+    prepare_cancel: Option<oneshot::Sender<()>>,
     parser: Option<LineParser>,
     writer: Option<TaskLogWriter>,
     _cleanup_dir: CleanupDir,
@@ -237,6 +268,7 @@ struct PendingSpec {
     cwd: Option<PathBuf>,
     env_path: Option<OsString>,
     parser: Option<LineParser>,
+    prepare: Option<Preparation>,
     cleanup_dir: CleanupDir,
 }
 
@@ -337,6 +369,39 @@ async fn hub_loop(
                 }
             }
             HubMsg::Line { id, stream, line } => st.handle_line(&id, stream, &line),
+            HubMsg::Prepared {
+                id,
+                mut pending,
+                result,
+            } => {
+                if st
+                    .envelopes
+                    .get(&id)
+                    .is_some_and(|e| e.status == TaskStatus::Running)
+                {
+                    match result {
+                        Ok((argv, argv_redacted, directory)) => {
+                            if let Some(mut envelope) = st.envelopes.get(&id).cloned() {
+                                envelope.argv_redacted = argv_redacted;
+                                envelope.progress = None;
+                                st.persist_and_emit(envelope);
+                            }
+                            pending.argv = argv;
+                            if let Some(directory) = directory {
+                                pending.cleanup_dir = CleanupDir(Some(directory.keep()));
+                            }
+                            st.start_process(&id, *pending, &tx);
+                        }
+                        Err(error) => {
+                            st.handle_line(&id, LogStream::System, &error);
+                            st.handle_exited(&id, None);
+                        }
+                    }
+                } else {
+                    st.handle_exited(&id, None);
+                }
+                st.try_dispatch(&tx);
+            }
             HubMsg::Exited { id, code } => {
                 st.handle_exited(&id, code);
                 st.try_dispatch(&tx);
@@ -395,6 +460,7 @@ impl HubState {
                 cwd: spec.cwd,
                 env_path: spec.env_path,
                 parser: spec.parser,
+                prepare: spec.prepare,
                 cleanup_dir: CleanupDir(spec.cleanup_dir),
             },
         );
@@ -431,7 +497,7 @@ impl HubState {
     }
 
     fn start_task(&mut self, id: &str, tx: &mpsc::UnboundedSender<HubMsg>) {
-        let Some(pending) = self.pending.remove(id) else {
+        let Some(mut pending) = self.pending.remove(id) else {
             return;
         };
         let Some(mut envelope) = self.envelopes.get(id).cloned() else {
@@ -443,60 +509,107 @@ impl HubState {
         envelope.status = next;
         envelope.started_at = Some(Utc::now());
 
-        let mut writer = match TaskLogWriter::create(&self.logs_dir, id) {
+        let writer = match TaskLogWriter::create(&self.logs_dir, id) {
             Ok(writer) => {
                 envelope.log_path = Some(writer.path.to_string_lossy().into_owned());
                 Some(writer)
             }
             Err(_) => None,
         };
-        if let Some(w) = writer.as_mut() {
-            // 头行用脱敏 argv——日志文件同样是持久化面
-            w.write_line(
-                LogStream::System,
-                &format!("$ {} {}", envelope.tool, envelope.argv_redacted.join(" ")),
-            );
-        }
 
-        match spawn_and_stream(
-            id,
-            &pending.tool_path,
-            &pending.argv,
-            pending.cwd.as_deref(),
-            pending.env_path.as_deref(),
-            load_app_settings(&self.app).proxy.as_deref(),
-            tx,
-        ) {
-            Ok(killer) => {
-                self.running.insert(
-                    id.to_string(),
-                    RunningTask {
-                        killer,
-                        parser: pending.parser,
-                        writer,
-                        _cleanup_dir: pending.cleanup_dir,
-                    },
-                );
-                self.persist_and_emit(envelope);
-            }
-            Err(err) => {
-                // spawn 失败即失败终态，不占用池
-                if let Some(w) = writer.as_mut() {
-                    w.write_line(
-                        LogStream::System,
-                        &rust_i18n::t!("backend.task.startFailed", error = err),
-                    );
-                }
-                envelope.status = TaskStatus::Failed;
-                envelope.finished_at = Some(Utc::now());
-                let seq = self.next_seq(id);
-                self.sink.emit(&TaskEvent::Log {
-                    task_id: id.to_string(),
-                    stream: LogStream::System,
-                    line: rust_i18n::t!("backend.task.startFailed", error = err).to_string(),
-                    seq,
+        let prepare = pending.prepare.take();
+        if prepare.is_some() {
+            envelope.progress = Some(TaskProgress {
+                percent: None,
+                detail: Some(rust_i18n::t!("backend.task.preparing").to_string()),
+            });
+        }
+        let (cancel, canceled) = oneshot::channel();
+        self.running.insert(
+            id.to_string(),
+            RunningTask {
+                killer: None,
+                prepare_cancel: prepare.as_ref().map(|_| cancel),
+                parser: pending.parser.clone(),
+                writer,
+                _cleanup_dir: CleanupDir(None),
+            },
+        );
+        self.persist_and_emit(envelope);
+        if let Some(prepare) = prepare {
+            let id = id.to_string();
+            let tx = tx.clone();
+            let log_id = id.clone();
+            let log_tx = tx.clone();
+            let log = Arc::new(move |line| {
+                let _ = log_tx.send(HubMsg::Line {
+                    id: log_id.clone(),
+                    stream: LogStream::Stdout,
+                    line,
                 });
-                self.persist_and_emit(envelope);
+            });
+            tokio::spawn(async move {
+                let result = run_preparation(prepare, log, canceled).await;
+                let _ = tx.send(HubMsg::Prepared {
+                    id,
+                    pending: Box::new(pending),
+                    result,
+                });
+            });
+        } else {
+            self.start_process(id, pending, tx);
+        }
+    }
+
+    fn start_process(
+        &mut self,
+        id: &str,
+        pending: PendingSpec,
+        tx: &mpsc::UnboundedSender<HubMsg>,
+    ) {
+        if let (Some(envelope), Some(run)) = (self.envelopes.get(id), self.running.get_mut(id)) {
+            if let Some(w) = run.writer.as_mut() {
+                // 头行用脱敏 argv——日志文件同样是持久化面
+                w.write_line(
+                    LogStream::System,
+                    &format!("$ {} {}", envelope.tool, envelope.argv_redacted.join(" ")),
+                );
+            }
+        }
+        let result = pending
+            .cwd
+            .as_ref()
+            .map(std::fs::create_dir_all)
+            .transpose()
+            .and_then(|_| {
+                spawn_and_stream(
+                    id,
+                    &pending.tool_path,
+                    &pending.argv,
+                    pending.cwd.as_deref(),
+                    pending.env_path.as_deref(),
+                    load_app_settings(&self.app).proxy.as_deref(),
+                    tx,
+                )
+            });
+        match result {
+            Ok(killer) => {
+                if let Some(run) = self.running.get_mut(id) {
+                    run.killer = Some(killer);
+                    run.prepare_cancel = None;
+                    run._cleanup_dir = pending.cleanup_dir;
+                }
+            }
+            Err(error) => {
+                self.handle_line(
+                    id,
+                    LogStream::System,
+                    &rust_i18n::t!("backend.task.startFailed", error = error),
+                );
+                let _ = tx.send(HubMsg::Exited {
+                    id: id.to_string(),
+                    code: None,
+                });
             }
         }
     }
@@ -521,8 +634,13 @@ impl HubState {
                 self.persist_and_emit(envelope);
             }
             TaskStatus::Running => {
-                if let Some(run) = self.running.get(id) {
-                    run.killer.kill_tree();
+                if let Some(run) = self.running.get_mut(id) {
+                    if let Some(killer) = &run.killer {
+                        killer.kill_tree();
+                    }
+                    if let Some(cancel) = run.prepare_cancel.take() {
+                        let _ = cancel.send(());
+                    }
                 }
                 envelope.status = next; // canceling；退出确认由 Exited 消息完成
                 self.persist_and_emit(envelope);
@@ -621,7 +739,7 @@ impl HubState {
         envelope.exit_code = code;
         envelope.finished_at = Some(Utc::now());
         envelope.progress = None;
-        if let Some(w) = run.writer.as_mut() {
+        if let (Some(w), Some(_)) = (run.writer.as_mut(), &run.killer) {
             w.write_line(
                 LogStream::System,
                 &rust_i18n::t!(
@@ -656,5 +774,40 @@ fn status_label(status: TaskStatus) -> &'static str {
         TaskStatus::Failed => "failed",
         TaskStatus::Canceled => "canceled",
         TaskStatus::Interrupted => "interrupted",
+    }
+}
+
+#[cfg(test)]
+mod preparation_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn canceled_queue_work_never_runs_preparation() {
+        let (cancel, canceled) = oneshot::channel();
+        cancel.send(()).unwrap();
+        let prepare: Preparation = Box::new(|_| panic!("canceled work must not start"));
+        assert!(run_preparation(prepare, Arc::new(|_| {}), canceled)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn cancel_drops_active_preparation_and_its_temporary_files() {
+        let (cancel, canceled) = oneshot::channel();
+        let (started, ready) = oneshot::channel();
+        let prepare: Preparation = Box::new(move |_| {
+            Box::pin(async move {
+                let directory = tempfile::tempdir().unwrap();
+                started.send(directory.path().to_path_buf()).unwrap();
+                std::future::pending::<()>().await;
+                Ok((vec![], vec![], Some(directory)))
+            })
+        });
+        let running = tokio::spawn(run_preparation(prepare, Arc::new(|_| {}), canceled));
+        let path = ready.await.unwrap();
+        assert!(path.exists());
+        cancel.send(()).unwrap();
+        assert!(running.await.unwrap().is_err());
+        assert!(!path.exists());
     }
 }

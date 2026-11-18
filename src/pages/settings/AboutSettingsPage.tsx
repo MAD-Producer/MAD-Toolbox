@@ -50,6 +50,11 @@ const CREDITS = [
     url: "https://github.com/nilaoda/BBDown"
   },
   {
+    name: "Aria2",
+    noteKey: "settings.about.credit.aria2",
+    url: "https://github.com/aria2/aria2"
+  },
+  {
     name: "Musicdl",
     noteKey: "settings.about.credit.musicdl",
     url: "https://pypi.org/project/musicdl/2.6.1/"

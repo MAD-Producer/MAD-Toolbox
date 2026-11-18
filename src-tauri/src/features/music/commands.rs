@@ -428,6 +428,7 @@ pub(crate) async fn musicdl_download(
             "denoise": downsample,
         })),
         parser: Some(download_progress_parser()),
+        prepare: None,
         cleanup_dir: Some(task_directory.into_path()),
     });
     Ok(TaskSubmitResult { task_id })
@@ -534,6 +535,7 @@ pub(crate) async fn musicdl_playlist(
             "denoise": request.downsample,
         })),
         parser: Some(download_progress_parser()),
+        prepare: None,
         cleanup_dir: Some(task_directory.into_path()),
     });
     Ok(TaskSubmitResult { task_id })

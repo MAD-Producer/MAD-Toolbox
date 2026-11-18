@@ -34,7 +34,6 @@ pub const REGISTRY: &[ParamMeta] = &[
     meta("cookiesFile", "--load-cookies"),
     meta("split", "--split"),
     meta("maxConnectionPerServer", "--max-connection-per-server"),
-    meta("ptMode", ""),
     meta("injectTrackers", "--bt-tracker"),
     meta("dht", "--enable-dht"),
     meta("peerExchange", "--enable-peer-exchange"),

@@ -192,22 +192,10 @@ struct MirrorPackage {
     size: u64,
 }
 
-/// 清单 `trackers` 节的单个列表条目：fileName 相对镜像下载根，version 是抓取日期。
-#[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct MirrorTrackerList {
-    version: String,
-    file_name: String,
-    sha256: String,
-    size: u64,
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MirrorManifest {
     schema_version: u32,
-    #[serde(default)]
-    trackers: BTreeMap<String, MirrorTrackerList>,
     #[serde(default)]
     platforms: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
 }
@@ -270,7 +258,7 @@ fn parse_mirror_manifest(
     Ok(selected)
 }
 
-fn mirror_client(app: &AppHandle, timeout: Duration) -> Result<reqwest::Client, String> {
+pub(crate) fn mirror_client(app: &AppHandle, timeout: Duration) -> Result<reqwest::Client, String> {
     let mut builder = reqwest::Client::builder()
         .user_agent(format!("MAD-Toolbox/{}", app.package_info().version))
         .timeout(timeout);
@@ -301,38 +289,6 @@ async fn fetch_manifest_bytes(app: &AppHandle) -> Result<Vec<u8>, String> {
         .await
         .map_err(|error| rust_i18n::t!("backend.deps.manifestFailed", error = error).to_string())?
         .to_vec())
-}
-
-/// 镜像通道的 tracker 列表文本（aria2 页用）：清单定位资产 → 下载 → 校验 size/sha256。
-/// 返回 `(抓取日期, 列表文本)`；失败时由调用方使用本地缓存，不阻断下载。
-pub(crate) async fn fetch_mirror_tracker_text(
-    app: &AppHandle,
-    source: &str,
-) -> Result<(String, String), String> {
-    let bytes = fetch_manifest_bytes(app).await?;
-    let manifest: MirrorManifest = serde_json::from_slice(&bytes)
-        .map_err(|error| rust_i18n::t!("backend.deps.manifestFailed", error = error).to_string())?;
-    if manifest.schema_version != 1 {
-        return Err(rust_i18n::t!("backend.deps.manifestSchemaUnsupported").to_string());
-    }
-    let entry = manifest.trackers.get(source).ok_or_else(|| {
-        rust_i18n::t!("backend.deps.mirrorTrackerMissing", source = source).to_string()
-    })?;
-    let text = mirror_client(app, Duration::from_secs(20))?
-        .get(format!("{MIRROR_DOWNLOAD_BASE}{}", entry.file_name))
-        .send()
-        .await
-        .map_err(|error| error.to_string())?
-        .error_for_status()
-        .map_err(|error| error.to_string())?
-        .text()
-        .await
-        .map_err(|error| error.to_string())?;
-    let digest = format!("{:x}", Sha256::digest(text.as_bytes()));
-    if text.len() as u64 != entry.size || !digest.eq_ignore_ascii_case(&entry.sha256) {
-        return Err(rust_i18n::t!("backend.deps.mirrorTrackerHashMismatch").to_string());
-    }
-    Ok((entry.version.clone(), text))
 }
 
 fn mirror_update_available(
@@ -1601,29 +1557,6 @@ mod mirror_tests {
             .executables
             .contains_key(&ToolName::Ffprobe));
         assert_eq!(selected[&ToolName::YtDlp].size, 42);
-    }
-
-    #[test]
-    fn manifest_trackers_section_parses_with_and_without_entries() {
-        let mut fixture = manifest_fixture();
-        fixture["trackers"] = serde_json::json!({
-            "xiu2": {
-                "version": "2026-11-15",
-                "fileName": "trackers-xiu2.txt",
-                "sha256": "b".repeat(64),
-                "size": 1234
-            }
-        });
-        let manifest: MirrorManifest =
-            serde_json::from_slice(&serde_json::to_vec(&fixture).unwrap()).unwrap();
-        assert_eq!(manifest.trackers["xiu2"].file_name, "trackers-xiu2.txt");
-        assert_eq!(manifest.trackers["xiu2"].version, "2026-11-15");
-        assert_eq!(manifest.trackers["xiu2"].size, 1234);
-
-        // 旧清单没有 trackers 节：serde(default) 兜底为空，解析不受影响
-        let legacy: MirrorManifest =
-            serde_json::from_slice(&serde_json::to_vec(&manifest_fixture()).unwrap()).unwrap();
-        assert!(legacy.trackers.is_empty());
     }
 
     #[test]

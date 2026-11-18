@@ -9,7 +9,6 @@ import { defaultAria2Form, type Aria2FormState } from "./form";
 import type { TrackerListResult } from "./api";
 
 const BT_SWITCHES: ReadonlyArray<[keyof Aria2FormState, TranslationKey]> = [
-  ["ptMode", "aria2.fields.ptMode"],
   ["injectTrackers", "aria2.fields.injectTrackers"],
   ["dht", "aria2.fields.dht"],
   ["peerExchange", "aria2.fields.peerExchange"],
@@ -149,7 +148,7 @@ export function Aria2AdvancedFields({
           <div className="flex h-9 w-full items-stretch rounded-md border border-input bg-card text-sm">
             <span className="flex min-w-0 flex-1 items-center gap-2 px-3 text-muted-foreground">
               <Stack size={16} className="shrink-0" aria-hidden />
-              <span className="truncate">{t("aria2.tracker.merged")}</span>
+              <span className="truncate">{t("aria2.tracker.sourceAdysec")}</span>
             </span>
             <span className="my-1.5 w-px shrink-0 bg-input" aria-hidden />
             <Button

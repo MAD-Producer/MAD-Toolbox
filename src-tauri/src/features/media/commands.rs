@@ -93,6 +93,7 @@ fn ffmpeg_spec(
         env_path: Some(execution_path(app)),
         intent, // media 无敏感字段，intent 无需 sanitize
         parser: None,
+        prepare: None,
         cleanup_dir: None,
     }
 }

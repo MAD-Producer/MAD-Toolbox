@@ -238,10 +238,10 @@ export default function App() {
       // （原先靠目标页 mount 后的 Effect 回调 onSeedConsumed 清除 App 级 state）
       useWorkspacesStore.getState().deliver(targetWorkspace, { task, purpose });
       // 打码参数警告在用户点击「重跑」时就地发出（原先在目标页 mount 后的 Effect 里补发）
-      if (
-        (target.section === "bilibili" ||
-          target.section === "network" ||
-          target.section === "aria2") &&
+      if (target.section === "aria2" && task.intent.type === "manual") {
+        notifications.show({ color: "yellow", message: t("aria2.manualRerunUnsupported") });
+      } else if (
+        (target.section === "bilibili" || target.section === "network") &&
         task.intent.type === "manual" &&
         task.intent.data.argv.some(
           (argument) => argument.includes("***") || argument.includes("<URL_REDACTED>")
@@ -252,9 +252,7 @@ export default function App() {
           message: t(
             target.section === "bilibili"
               ? "bilibili.notice.redactedArgs"
-              : target.section === "aria2"
-                ? "aria2.expertRedactedWarning"
-                : "network.expertRedactedWarning"
+              : "network.expertRedactedWarning"
           )
         });
       }
